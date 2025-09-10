@@ -153,10 +153,12 @@ All API endpoints are relative to the application base URL with `/api` prefix.
 ### Advertisements
 
 #### GET `/api/advertisements`
-**Purpose**: Retrieve advertisements with optional advertiser filtering
+**Purpose**: Retrieve advertisements with optional filtering
 
 **Query Parameters**:
+- `network_id` (required): Filter by network ID
 - `advertiser_id` (optional): Filter by advertiser ID
+- `zone_id` (optional): Filter by zone ID
 
 **Response**:
 ```json
@@ -179,7 +181,7 @@ All API endpoints are relative to the application base URL with `/api` prefix.
 ```
 
 **Error Responses**:
-- `400`: Invalid advertiser_id parameter
+- `400`: Invalid network_id, advertiser_id, or zone_id parameter
 - `500`: Server error
 
 ## 🔄 Sync Endpoints

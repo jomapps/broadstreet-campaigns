@@ -144,27 +144,11 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
     );
   }
 
-  // Check if campaign is selected
-  if (!selectedCampaign) {
-    return (
-      <div className="text-center py-12">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-green-800 mb-2">Campaign Required</h3>
-          <p className="text-green-700 mb-4">
-            Please select a campaign from the sidebar filters to view advertisements.
-          </p>
-          <p className="text-sm text-green-600">
-            Advertisements are part of specific campaigns, so you need to choose which campaign&apos;s advertisements you want to see.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (advertisements.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No advertisements found for the selected campaign. Try syncing data first.</p>
+        <p className="text-gray-500">No advertisements found for the selected filters. Try syncing data first.</p>
       </div>
     );
   }
