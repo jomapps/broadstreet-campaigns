@@ -3,17 +3,26 @@ import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
 import AdvertisementActions from '@/components/advertisements/AdvertisementActions';
 
-interface AdvertisementCardProps {
-  advertisement: {
-    id: number;
-    name: string;
-    updated_at: string;
-    type: string;
-    advertiser: string;
-    active: { url?: string | null };
-    active_placement: boolean;
-    preview_url: string;
+// Type for lean query result (plain object without Mongoose methods)
+type AdvertisementLean = {
+  _id: string;
+  __v: number;
+  id: number;
+  name: string;
+  updated_at: string;
+  type: string;
+  advertiser: string;
+  active: {
+    url?: string | null;
   };
+  active_placement: boolean;
+  preview_url: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+interface AdvertisementCardProps {
+  advertisement: AdvertisementLean;
 }
 
 function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
@@ -114,7 +123,7 @@ function LoadingSkeleton() {
 
 async function AdvertisementsList() {
   await connectDB();
-  const advertisements = await Advertisement.find({}).sort({ updated_at: -1 }).lean();
+  const advertisements = await Advertisement.find({}).sort({ updated_at: -1 }).lean() as AdvertisementLean[];
 
   if (advertisements.length === 0) {
     return (

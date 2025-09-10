@@ -2,74 +2,88 @@ import { Suspense } from 'react';
 import connectDB from '@/lib/mongodb';
 import Network from '@/lib/models/network';
 import NetworkActions from '@/components/networks/NetworkActions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+// Type for lean query result (plain object without Mongoose methods)
+type NetworkLean = {
+  _id: string;
+  __v: number;
+  id: number;
+  name: string;
+  web_home_url?: string;
+  logo?: { url: string };
+  valet_active: boolean;
+  advertiser_count?: number;
+  zone_count?: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 interface NetworkCardProps {
-  network: {
-    id: number;
-    name: string;
-    web_home_url?: string;
-    logo?: { url: string };
-    valet_active: boolean;
-    advertiser_count?: number;
-    zone_count?: number;
-  };
+  network: NetworkLean;
 }
 
 function NetworkCard({ network }: NetworkCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
+    <Card className="h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group-hover:scale-[1.02]">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            {network.logo?.url && (
+            {network.logo?.url ? (
               <img
                 src={network.logo.url}
                 alt={`${network.name} logo`}
-                className="w-8 h-8 rounded object-cover"
+                className="w-12 h-12 rounded-lg object-cover border"
               />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">{network.name.charAt(0)}</span>
+              </div>
             )}
-            <h3 className="text-lg font-semibold text-gray-900">{network.name}</h3>
-          </div>
-          
-          {network.web_home_url && (
-            <a
-              href={network.web_home_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block"
-            >
-              {network.web_home_url}
-            </a>
-          )}
-          
-          <div className="mt-4 grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm text-gray-600">Advertisers</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {network.advertiser_count || 0}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Zones</p>
-              <p className="text-lg font-semibold text-gray-900">
-                {network.zone_count || 0}
-              </p>
+              <CardTitle className="text-lg">{network.name}</CardTitle>
+              <CardDescription>ID: {network.id}</CardDescription>
             </div>
           </div>
-        </div>
-        
-        <div className="flex flex-col items-end space-y-2">
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            network.valet_active 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
+          
+          <Badge variant={network.valet_active ? "default" : "secondary"}>
             {network.valet_active ? 'Valet Active' : 'Standard'}
-          </span>
-          <span className="text-xs text-gray-500">ID: {network.id}</span>
+          </Badge>
         </div>
-      </div>
-    </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {network.web_home_url && (
+          <a
+            href={network.web_home_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:text-primary/80 inline-flex items-center space-x-1 transition-colors"
+          >
+            <span>{network.web_home_url}</span>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
+        )}
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-sm text-muted-foreground mb-1">Advertisers</p>
+            <p className="text-xl font-bold">
+              {network.advertiser_count || 0}
+            </p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3">
+            <p className="text-sm text-muted-foreground mb-1">Zones</p>
+            <p className="text-xl font-bold">
+              {network.zone_count || 0}
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -103,7 +117,7 @@ function LoadingSkeleton() {
 
 async function NetworksList() {
   await connectDB();
-  const networks = await Network.find({}).sort({ name: 1 }).lean();
+  const networks = await Network.find({}).sort({ name: 1 }).lean() as NetworkLean[];
 
   if (networks.length === 0) {
     return (
@@ -124,23 +138,34 @@ async function NetworksList() {
 
 export default function NetworksPage() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Networks</h1>
-          <p className="text-gray-600 mt-1">
-            Different websites where campaigns are run
-          </p>
+    <div className="space-y-8">
+      {/* Header Section */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight">Networks</h1>
+            <p className="text-xl text-muted-foreground">
+              Different websites where campaigns are run
+            </p>
+          </div>
+          
+          <Suspense fallback={<div className="bg-muted animate-pulse h-10 w-32 rounded-lg"></div>}>
+            <NetworkActions />
+          </Suspense>
         </div>
-        
-        <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <NetworkActions />
-        </Suspense>
       </div>
 
-      <Suspense fallback={<LoadingSkeleton />}>
-        <NetworksList />
-      </Suspense>
+      {/* Networks Grid */}
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight">Available Networks</h2>
+          <p className="text-muted-foreground">Manage and view all your advertising networks</p>
+        </div>
+        
+        <Suspense fallback={<LoadingSkeleton />}>
+          <NetworksList />
+        </Suspense>
+      </div>
     </div>
   );
 }

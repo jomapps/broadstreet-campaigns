@@ -50,7 +50,6 @@ const AdvertiserSchema = new Schema<IAdvertiser>({
   timestamps: true,
 });
 
-// Create index on the id field for faster queries
-AdvertiserSchema.index({ id: 1 });
+// Note: id field already has unique: true which creates an index
 
 export default mongoose.models.Advertiser || mongoose.model<IAdvertiser>('Advertiser', AdvertiserSchema);

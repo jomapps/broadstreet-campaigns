@@ -5,19 +5,26 @@ import Network from '@/lib/models/network';
 import { getSizeInfo } from '@/lib/utils/zone-parser';
 import ZoneActions from '@/components/zones/ZoneActions';
 
+// Type for lean query result (plain object without Mongoose methods)
+type ZoneLean = {
+  _id: string;
+  __v: number;
+  id: number;
+  name: string;
+  network_id: number;
+  alias?: string | null;
+  self_serve: boolean;
+  size_type?: 'SQ' | 'PT' | 'LS' | null;
+  size_number?: number | null;
+  category?: string | null;
+  block?: string | null;
+  is_home?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 interface ZoneCardProps {
-  zone: {
-    id: number;
-    name: string;
-    network_id: number;
-    alias?: string | null;
-    self_serve: boolean;
-    size_type?: 'SQ' | 'PT' | 'LS' | null;
-    size_number?: number | null;
-    category?: string | null;
-    block?: string | null;
-    is_home?: boolean;
-  };
+  zone: ZoneLean;
   networkName?: string;
 }
 
@@ -120,7 +127,7 @@ function LoadingSkeleton() {
 async function ZonesList() {
   await connectDB();
   
-  const zones = await Zone.find({}).sort({ name: 1 }).lean();
+  const zones = await Zone.find({}).sort({ name: 1 }).lean() as ZoneLean[];
   
   // Get network names
   const networkIds = [...new Set(zones.map(z => z.network_id))];

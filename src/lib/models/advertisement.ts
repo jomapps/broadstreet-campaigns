@@ -56,7 +56,7 @@ const AdvertisementSchema = new Schema<IAdvertisement>({
 });
 
 // Create indexes for faster queries
-AdvertisementSchema.index({ id: 1 });
+// Note: id field already has unique: true which creates an index
 AdvertisementSchema.index({ advertiser: 1 });
 AdvertisementSchema.index({ type: 1 });
 AdvertisementSchema.index({ active_placement: 1 });

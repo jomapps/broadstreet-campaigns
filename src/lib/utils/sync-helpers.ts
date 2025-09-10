@@ -200,23 +200,59 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
       try {
         const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advertiser.id);
 
-        const campaignDocs = campaigns.map(campaign => ({
-          id: campaign.id,
-          name: campaign.name,
-          advertiser_id: campaign.advertiser_id,
-          start_date: campaign.start_date,
-          end_date: campaign.end_date,
-          max_impression_count: campaign.max_impression_count,
-          display_type: campaign.display_type,
-          active: campaign.active,
-          weight: campaign.weight,
-          path: campaign.path,
-          archived: campaign.archived,
-          pacing_type: campaign.pacing_type,
-          impression_max_type: campaign.impression_max_type,
-          paused: campaign.paused,
-          notes: campaign.notes,
-        }));
+        const campaignDocs = campaigns.map(campaign => {
+          // Preserve raw payload for round-trip safety
+          const raw = campaign;
+
+          // Normalize weight: Broadstreet may return strings like "default" or "remnant"
+          const weightRaw = (campaign as any).weight as unknown as string | number | undefined;
+          let weight: number | undefined;
+          if (typeof weightRaw === 'number') {
+            weight = weightRaw;
+          } else if (typeof weightRaw === 'string') {
+            const lower = weightRaw.toLowerCase();
+            // map known strings to sane numeric defaults
+            if (lower === 'default') weight = 50;
+            else if (lower === 'remnant') weight = 10;
+            else {
+              const parsed = Number(weightRaw);
+              weight = Number.isFinite(parsed) ? parsed : undefined;
+            }
+          }
+
+          // Dates: keep raw and normalized (optional)
+          const startDateRaw = (campaign as any).start_date as string | undefined;
+          const endDateRaw = (campaign as any).end_date as string | undefined;
+
+          // display_type: keep raw and normalized (optional)
+          const displayTypeRaw = (campaign as any).display_type as string | undefined;
+          const allowedDisplay = ['no_repeat', 'allow_repeat_campaign', 'allow_repeat_advertisement', 'force_repeat_campaign'] as const;
+          const displayType = allowedDisplay.includes(displayTypeRaw as any) ? displayTypeRaw : undefined;
+
+          return {
+            id: campaign.id,
+            name: campaign.name,
+            advertiser_id: campaign.advertiser_id,
+            start_date: startDateRaw,
+            end_date: endDateRaw,
+            max_impression_count: campaign.max_impression_count,
+            display_type: displayType,
+            active: campaign.active,
+            weight,
+            path: campaign.path,
+            archived: campaign.archived,
+            pacing_type: campaign.pacing_type,
+            impression_max_type: campaign.impression_max_type,
+            paused: campaign.paused,
+            notes: campaign.notes,
+            // raw preservation
+            weight_raw: typeof weightRaw === 'string' ? weightRaw : undefined,
+            display_type_raw: displayTypeRaw,
+            start_date_raw: startDateRaw,
+            end_date_raw: endDateRaw,
+            raw,
+          };
+        });
 
         if (campaignDocs.length > 0) {
           await Campaign.insertMany(campaignDocs);
@@ -303,8 +339,14 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
   }
 }
 
-export async function syncAll(): Promise<{ success: boolean; results: Record<string, any> }> {
-  const results: Record<string, any> = {};
+interface SyncResult {
+  success: boolean;
+  count: number;
+  error?: string;
+}
+
+export async function syncAll(): Promise<{ success: boolean; results: Record<string, SyncResult> }> {
+  const results: Record<string, SyncResult> = {};
 
   try {
     console.log('Starting full sync...');
@@ -316,7 +358,7 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
     results.campaigns = await syncCampaigns();
     results.advertisements = await syncAdvertisements();
 
-    const allSuccessful = Object.values(results).every((result: any) => result.success);
+    const allSuccessful = Object.values(results).every((result: SyncResult) => result.success);
 
     return { success: allSuccessful, results };
   } catch (error) {
@@ -324,7 +366,11 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
       success: false,
       results: {
         ...results,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: {
+          success: false,
+          count: 0,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
       }
     };
   }

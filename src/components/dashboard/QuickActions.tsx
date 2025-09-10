@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import FallbackAdWizard from '@/components/fallback-ad/FallbackAdWizard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function QuickActions() {
   const [showFallbackAdWizard, setShowFallbackAdWizard] = useState(false);
@@ -25,28 +26,38 @@ export default function QuickActions() {
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            onClick={() => setShowFallbackAdWizard(true)}
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-left"
-          >
-            <div>
-              <h3 className="font-medium text-gray-900">Create Fallback Ad</h3>
-              <p className="text-sm text-gray-600">Create fallback ad placements for campaigns</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group-hover:scale-[1.02]" onClick={() => setShowFallbackAdWizard(true)}>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">Create Fallback Ad</h3>
+                <p className="text-sm text-muted-foreground group-hover:text-primary/80 transition-colors">Create fallback ad placements for campaigns</p>
+              </div>
             </div>
-          </button>
-          <button
-            onClick={handleSyncAll}
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 text-left"
-          >
-            <div>
-              <h3 className="font-medium text-gray-900">Sync Data</h3>
-              <p className="text-sm text-gray-600">Sync all data from Broadstreet API</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-green-500/5 hover:border-green-500/20 group-hover:scale-[1.02]" onClick={handleSyncAll}>
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg group-hover:text-green-700 transition-colors">Sync Data</h3>
+                <p className="text-sm text-muted-foreground group-hover:text-green-600 transition-colors">Sync all data from Broadstreet API</p>
+              </div>
             </div>
-          </button>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {showFallbackAdWizard && (

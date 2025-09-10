@@ -4,18 +4,25 @@ import Campaign from '@/lib/models/campaign';
 import Advertiser from '@/lib/models/advertiser';
 import CampaignActions from '@/components/campaigns/CampaignActions';
 
+// Type for lean query result (plain object without Mongoose methods)
+type CampaignLean = {
+  _id: string;
+  __v: number;
+  id: number;
+  name: string;
+  advertiser_id: number;
+  start_date: string;
+  end_date?: string;
+  active: boolean;
+  weight: number;
+  max_impression_count?: number;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 interface CampaignCardProps {
-  campaign: {
-    id: number;
-    name: string;
-    advertiser_id: number;
-    start_date: string;
-    end_date?: string;
-    active: boolean;
-    weight: number;
-    max_impression_count?: number;
-    notes?: string;
-  };
+  campaign: CampaignLean;
   advertiserName?: string;
 }
 
@@ -119,7 +126,7 @@ function LoadingSkeleton() {
 async function CampaignsList() {
   await connectDB();
   
-  const campaigns = await Campaign.find({}).sort({ start_date: -1 }).lean();
+  const campaigns = await Campaign.find({}).sort({ start_date: -1 }).lean() as CampaignLean[];
   
   // Get advertiser names
   const advertiserIds = [...new Set(campaigns.map(c => c.advertiser_id))];

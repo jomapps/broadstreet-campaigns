@@ -4,18 +4,24 @@ export interface ICampaign extends Document {
   id: number;
   name: string;
   advertiser_id: number;
-  start_date: string;
+  start_date?: string;
   end_date?: string;
   max_impression_count?: number;
-  display_type: 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign';
+  display_type?: 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign';
   active: boolean;
-  weight: number;
+  weight?: number;
   path: string;
   archived?: boolean;
   pacing_type?: 'asap' | 'even';
   impression_max_type?: 'cap' | 'goal';
   paused?: boolean;
   notes?: string;
+  // Raw fields to preserve API payload for future write-backs
+  weight_raw?: string;
+  display_type_raw?: string;
+  start_date_raw?: string;
+  end_date_raw?: string;
+  raw?: any;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,7 +42,6 @@ const CampaignSchema = new Schema<ICampaign>({
   },
   start_date: {
     type: String,
-    required: true,
   },
   end_date: {
     type: String,
@@ -47,7 +52,6 @@ const CampaignSchema = new Schema<ICampaign>({
   display_type: {
     type: String,
     enum: ['no_repeat', 'allow_repeat_campaign', 'allow_repeat_advertisement', 'force_repeat_campaign'],
-    required: true,
   },
   active: {
     type: Boolean,
@@ -55,7 +59,6 @@ const CampaignSchema = new Schema<ICampaign>({
   },
   weight: {
     type: Number,
-    required: true,
   },
   path: {
     type: String,
@@ -80,12 +83,28 @@ const CampaignSchema = new Schema<ICampaign>({
   notes: {
     type: String,
   },
+  // Preserve raw API values for robust round-tripping
+  weight_raw: {
+    type: String,
+  },
+  display_type_raw: {
+    type: String,
+  },
+  start_date_raw: {
+    type: String,
+  },
+  end_date_raw: {
+    type: String,
+  },
+  raw: {
+    type: Schema.Types.Mixed,
+  },
 }, {
   timestamps: true,
 });
 
 // Create indexes for faster queries
-CampaignSchema.index({ id: 1 });
+// Note: id field already has unique: true which creates an index
 CampaignSchema.index({ advertiser_id: 1 });
 CampaignSchema.index({ active: 1 });
 

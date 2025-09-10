@@ -3,15 +3,22 @@ import connectDB from '@/lib/mongodb';
 import Advertiser from '@/lib/models/advertiser';
 import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
 
+// Type for lean query result (plain object without Mongoose methods)
+type AdvertiserLean = {
+  _id: string;
+  __v: number;
+  id: number;
+  name: string;
+  logo?: { url: string };
+  web_home_url?: string;
+  notes?: string | null;
+  admins?: Array<{ name: string; email: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 interface AdvertiserCardProps {
-  advertiser: {
-    id: number;
-    name: string;
-    logo?: { url: string };
-    web_home_url?: string;
-    notes?: string | null;
-    admins?: Array<{ name: string; email: string }>;
-  };
+  advertiser: AdvertiserLean;
 }
 
 function AdvertiserCard({ advertiser }: AdvertiserCardProps) {
@@ -99,7 +106,7 @@ function LoadingSkeleton() {
 
 async function AdvertisersList() {
   await connectDB();
-  const advertisers = await Advertiser.find({}).sort({ name: 1 }).lean();
+  const advertisers = await Advertiser.find({}).sort({ name: 1 }).lean() as AdvertiserLean[];
 
   if (advertisers.length === 0) {
     return (

@@ -65,7 +65,7 @@ const ZoneSchema = new Schema<IZone>({
 });
 
 // Create indexes for faster queries
-ZoneSchema.index({ id: 1 });
+// Note: id field already has unique: true which creates an index
 ZoneSchema.index({ network_id: 1 });
 ZoneSchema.index({ size_type: 1 });
 ZoneSchema.index({ category: 1 });

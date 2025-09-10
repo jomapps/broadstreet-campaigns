@@ -17,11 +17,6 @@ export async function GET(request: Request) {
 
     await connectDB();
     
-    // Get advertiser name to filter advertisements
-    const advertiserName = await Advertisement.findOne({ 
-      advertiser: { $exists: true } 
-    }).distinct('advertiser');
-    
     // Filter advertisements by advertiser name (since we don't have advertiser_id in the model)
     const advertisements = await Advertisement.find({}).sort({ name: 1 }).lean();
     

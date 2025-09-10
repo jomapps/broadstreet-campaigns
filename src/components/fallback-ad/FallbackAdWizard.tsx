@@ -52,7 +52,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to load networks' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -69,7 +69,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to load advertisers' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -86,7 +86,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to load campaigns' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -103,7 +103,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to load advertisements' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -124,7 +124,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to preview zones' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));
@@ -152,7 +152,7 @@ export default function FallbackAdWizard({ onClose }: FallbackAdWizardProps) {
       } else {
         setState(prev => ({ ...prev, error: data.message }));
       }
-    } catch (error) {
+    } catch {
       setState(prev => ({ ...prev, error: 'Failed to create placements' }));
     } finally {
       setState(prev => ({ ...prev, isLoading: false }));

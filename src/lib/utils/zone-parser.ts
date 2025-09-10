@@ -67,7 +67,12 @@ export function parseZoneName(zoneName: string): ParsedZoneInfo {
 /**
  * Get zones that match specific size types
  */
-export function getZonesBySize(zones: any[], sizeTypes: ZoneSize[]): any[] {
+interface Zone {
+  name: string;
+  [key: string]: unknown;
+}
+
+export function getZonesBySize(zones: Zone[], sizeTypes: ZoneSize[]): Zone[] {
   return zones.filter(zone => {
     const parsed = parseZoneName(zone.name);
     return parsed.size_type && sizeTypes.includes(parsed.size_type);
@@ -90,8 +95,8 @@ export function getSizeInfo(sizeType: ZoneSize): { dimensions: string; descripti
 /**
  * Group zones by category
  */
-export function groupZonesByCategory(zones: any[]): Record<string, any[]> {
-  const grouped: Record<string, any[]> = {
+export function groupZonesByCategory(zones: Zone[]): Record<string, Zone[]> {
+  const grouped: Record<string, Zone[]> = {
     'Home': [],
     'Uncategorized': [],
   };
@@ -117,7 +122,7 @@ export function groupZonesByCategory(zones: any[]): Record<string, any[]> {
 /**
  * Sort zones by size number (lower numbers first, then no numbers)
  */
-export function sortZonesByPosition(zones: any[]): any[] {
+export function sortZonesByPosition(zones: Zone[]): Zone[] {
   return zones.sort((a, b) => {
     const parsedA = parseZoneName(a.name);
     const parsedB = parseZoneName(b.name);
