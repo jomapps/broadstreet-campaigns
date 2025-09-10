@@ -1,7 +1,10 @@
-import { Suspense } from 'react';
-import connectDB from '@/lib/mongodb';
-import Advertiser from '@/lib/models/advertiser';
+'use client';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useFilters } from '@/contexts/FilterContext';
 import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 // Type for lean query result (plain object without Mongoose methods)
 type AdvertiserLean = {
@@ -19,14 +22,25 @@ type AdvertiserLean = {
 
 interface AdvertiserCardProps {
   advertiser: AdvertiserLean;
+  isSelected: boolean;
+  onSelect: (advertiser: AdvertiserLean) => void;
 }
 
-function AdvertiserCard({ advertiser }: AdvertiserCardProps) {
+function AdvertiserCard({ advertiser, isSelected, onSelect }: AdvertiserCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className={`bg-white rounded-lg shadow-sm border p-6 transition-all duration-200 ${
+      isSelected 
+        ? 'border-primary shadow-md shadow-primary/10' 
+        : 'border-gray-200 hover:border-gray-300'
+    }`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onSelect(advertiser)}
+              className="mt-1"
+            />
             {advertiser.logo?.url && (
               <img
                 src={advertiser.logo.url}
@@ -49,7 +63,14 @@ function AdvertiserCard({ advertiser }: AdvertiserCardProps) {
           )}
         </div>
         
-        <span className="text-xs text-gray-500">ID: {advertiser.id}</span>
+        <div className="flex flex-col items-end space-y-1">
+          {isSelected && (
+            <Badge variant="default" className="text-xs">
+              Selected
+            </Badge>
+          )}
+          <span className="text-xs text-gray-500">ID: {advertiser.id}</span>
+        </div>
       </div>
       
       {advertiser.notes && (
@@ -104,22 +125,40 @@ function LoadingSkeleton() {
   );
 }
 
-async function AdvertisersList() {
-  await connectDB();
-  const advertisers = await Advertiser.find({}).sort({ name: 1 }).lean() as AdvertiserLean[];
+function AdvertisersList() {
+  const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers } = useFilters();
+
+  if (isLoadingAdvertisers) {
+    return <LoadingSkeleton />;
+  }
 
   if (advertisers.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No advertisers found. Try syncing data first.</p>
+        <p className="text-gray-500">
+          {!selectedNetwork ? 'Select a network to view advertisers' : 'No advertisers found. Try syncing data first.'}
+        </p>
       </div>
     );
   }
 
+  const handleAdvertiserSelect = (advertiser: AdvertiserLean) => {
+    if (selectedAdvertiser?.id === advertiser.id) {
+      setSelectedAdvertiser(null);
+    } else {
+      setSelectedAdvertiser(advertiser);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {advertisers.map((advertiser) => (
-        <AdvertiserCard key={advertiser.id} advertiser={advertiser} />
+        <AdvertiserCard 
+          key={advertiser.id} 
+          advertiser={advertiser}
+          isSelected={selectedAdvertiser?.id === advertiser.id}
+          onSelect={handleAdvertiserSelect}
+        />
       ))}
     </div>
   );

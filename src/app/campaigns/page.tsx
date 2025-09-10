@@ -1,8 +1,10 @@
-import { Suspense } from 'react';
-import connectDB from '@/lib/mongodb';
-import Campaign from '@/lib/models/campaign';
-import Advertiser from '@/lib/models/advertiser';
+'use client';
+
+import { Suspense, useEffect, useState } from 'react';
+import { useFilters } from '@/contexts/FilterContext';
 import CampaignActions from '@/components/campaigns/CampaignActions';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 
 // Type for lean query result (plain object without Mongoose methods)
 type CampaignLean = {
@@ -24,9 +26,11 @@ type CampaignLean = {
 interface CampaignCardProps {
   campaign: CampaignLean;
   advertiserName?: string;
+  isSelected: boolean;
+  onSelect: (campaign: CampaignLean) => void;
 }
 
-function CampaignCard({ campaign, advertiserName }: CampaignCardProps) {
+function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: CampaignCardProps) {
   const startDate = new Date(campaign.start_date);
   const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
   const now = new Date();
@@ -34,16 +38,34 @@ function CampaignCard({ campaign, advertiserName }: CampaignCardProps) {
   const isActive = campaign.active && startDate <= now && (!endDate || endDate >= now);
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className={`bg-white rounded-lg shadow-sm border p-6 transition-all duration-200 ${
+      isSelected 
+        ? 'border-primary shadow-md shadow-primary/10' 
+        : 'border-gray-200 hover:border-gray-300'
+    }`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
-          {advertiserName && (
-            <p className="text-sm text-gray-600 mt-1">Advertiser: {advertiserName}</p>
-          )}
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onSelect(campaign)}
+              className="mt-1"
+            />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
+              {advertiserName && (
+                <p className="text-sm text-gray-600 mt-1">Advertiser: {advertiserName}</p>
+              )}
+            </div>
+          </div>
         </div>
         
         <div className="flex flex-col items-end space-y-2">
+          {isSelected && (
+            <Badge variant="default" className="text-xs">
+              Selected
+            </Badge>
+          )}
           <span className={`px-2 py-1 text-xs rounded-full ${
             isActive 
               ? 'bg-green-100 text-green-800' 
@@ -123,31 +145,40 @@ function LoadingSkeleton() {
   );
 }
 
-async function CampaignsList() {
-  await connectDB();
-  
-  const campaigns = await Campaign.find({}).sort({ start_date: -1 }).lean() as CampaignLean[];
-  
-  // Get advertiser names
-  const advertiserIds = [...new Set(campaigns.map(c => c.advertiser_id))];
-  const advertisers = await Advertiser.find({ id: { $in: advertiserIds } }).lean();
-  const advertiserMap = new Map(advertisers.map(a => [a.id, a.name]));
+function CampaignsList() {
+  const { selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
+
+  if (isLoadingCampaigns) {
+    return <LoadingSkeleton />;
+  }
 
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No campaigns found. Try syncing data first.</p>
+        <p className="text-gray-500">
+          {!selectedAdvertiser ? 'Select an advertiser to view campaigns' : 'No campaigns found. Try syncing data first.'}
+        </p>
       </div>
     );
   }
+
+  const handleCampaignSelect = (campaign: CampaignLean) => {
+    if (selectedCampaign?.id === campaign.id) {
+      setSelectedCampaign(null);
+    } else {
+      setSelectedCampaign(campaign);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {campaigns.map((campaign) => (
         <CampaignCard 
           key={campaign.id} 
-          campaign={campaign} 
-          advertiserName={advertiserMap.get(campaign.advertiser_id)}
+          campaign={campaign}
+          advertiserName={selectedAdvertiser?.name}
+          isSelected={selectedCampaign?.id === campaign.id}
+          onSelect={handleCampaignSelect}
         />
       ))}
     </div>

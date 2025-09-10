@@ -1,6 +1,7 @@
+'use client';
+
 import { Suspense } from 'react';
-import connectDB from '@/lib/mongodb';
-import Network from '@/lib/models/network';
+import { useFilters } from '@/contexts/FilterContext';
 import NetworkActions from '@/components/networks/NetworkActions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,9 +116,12 @@ function LoadingSkeleton() {
   );
 }
 
-async function NetworksList() {
-  await connectDB();
-  const networks = await Network.find({}).sort({ name: 1 }).lean() as NetworkLean[];
+function NetworksList() {
+  const { networks, isLoadingNetworks } = useFilters();
+
+  if (isLoadingNetworks) {
+    return <LoadingSkeleton />;
+  }
 
   if (networks.length === 0) {
     return (
