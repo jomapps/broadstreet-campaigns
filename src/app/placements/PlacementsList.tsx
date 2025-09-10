@@ -59,34 +59,30 @@ function PlacementCard({ placement }: PlacementCardProps) {
     (!endDate || endDate >= now);
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      {/* Header with title and status */}
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-gray-900 truncate">
             {placement.advertisement?.name || `Ad #${placement.advertisement_id}`}
           </h3>
-          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-600">
-            {placement.campaign && (
-              <span>Campaign: {placement.campaign.name}</span>
-            )}
-            {placement.zone && (
-              <span>Zone: {placement.zone.name}</span>
-            )}
-          </div>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {placement.campaign?.name || `Campaign #${placement.campaign_id}`}
+          </p>
         </div>
         
-        <div className="flex flex-col items-end space-y-2">
+        <div className="flex flex-col items-end space-y-1 ml-2">
           {isActive ? (
-            <Badge variant="default" className="text-xs bg-green-100 text-green-800">
+            <Badge variant="default" className="text-xs bg-green-100 text-green-800 px-2 py-0.5">
               Active
             </Badge>
           ) : (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs px-2 py-0.5">
               Inactive
             </Badge>
           )}
           {placement.zone?.size_type && (
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+            <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
               {placement.zone.size_type}
               {placement.zone.size_number && ` ${placement.zone.size_number}`}
             </span>
@@ -94,89 +90,71 @@ function PlacementCard({ placement }: PlacementCardProps) {
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Advertisement</p>
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium text-gray-900">
-              {placement.advertisement?.name || `#${placement.advertisement_id}`}
-            </p>
-            {placement.advertisement?.type && (
-              <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
-                {placement.advertisement.type}
-              </span>
-            )}
-          </div>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Zone</p>
-          <p className="text-sm font-medium text-gray-900">
+      {/* Main content in compact layout */}
+      <div className="space-y-2 mb-3">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-500">Zone:</span>
+          <span className="font-medium text-gray-900">
             {placement.zone?.name || `#${placement.zone_id}`}
             {placement.zone?.alias && (
               <span className="text-gray-500 ml-1">({placement.zone.alias})</span>
             )}
-          </p>
+          </span>
         </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Campaign</p>
-          <p className="text-sm font-medium text-gray-900">
-            {placement.campaign?.name || `#${placement.campaign_id}`}
-          </p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Advertiser</p>
-          <p className="text-sm font-medium text-gray-900">
+        
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-500">Advertiser:</span>
+          <span className="font-medium text-gray-900">
             {placement.advertiser?.name || 'Unknown'}
-          </p>
+          </span>
         </div>
+        
+        {placement.campaign && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Duration:</span>
+            <span className="font-medium text-gray-900">
+              {startDate ? startDate.toLocaleDateString() : 'N/A'}
+              {endDate && ` - ${endDate.toLocaleDateString()}`}
+            </span>
+          </div>
+        )}
+        
+        {placement.advertisement?.type && (
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Type:</span>
+            <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
+              {placement.advertisement.type}
+            </span>
+          </div>
+        )}
       </div>
       
-      {placement.campaign && (
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <p className="text-sm text-gray-600">Start Date</p>
-            <p className="text-sm font-medium text-gray-900">
-              {startDate ? startDate.toLocaleDateString() : 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">End Date</p>
-            <p className="text-sm font-medium text-gray-900">
-              {endDate ? endDate.toLocaleDateString() : 'No end date'}
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {placement.network && (
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">Network</p>
-          <p className="text-sm font-medium text-gray-900">{placement.network.name}</p>
-        </div>
-      )}
-      
+      {/* Restrictions */}
       {placement.restrictions && placement.restrictions.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600 mb-2">Restrictions</p>
+        <div className="mb-3 pt-2 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mb-1">Restrictions:</p>
           <div className="flex flex-wrap gap-1">
-            {placement.restrictions.map((restriction, index) => (
+            {placement.restrictions.slice(0, 3).map((restriction, index) => (
               <span
                 key={index}
-                className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800"
+                className="px-1.5 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800"
               >
                 {restriction}
               </span>
             ))}
+            {placement.restrictions.length > 3 && (
+              <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+                +{placement.restrictions.length - 3} more
+              </span>
+            )}
           </div>
         </div>
       )}
       
-      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between items-center text-xs text-gray-500">
+      {/* Footer with metadata */}
+      <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
         <span>Created: {new Date(placement.createdAt).toLocaleDateString()}</span>
-        <span>ID: {placement._id.slice(-8)}</span>
+        <span>ID: {placement._id.slice(-6)}</span>
       </div>
     </div>
   );
@@ -232,7 +210,7 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
           <p className="text-gray-500">No placements match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredPlacements.map((placement) => (
             <PlacementCard 
               key={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`} 
