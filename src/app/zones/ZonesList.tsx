@@ -9,7 +9,7 @@ import { getSizeInfo } from '@/lib/utils/zone-parser';
 type ZoneLean = {
   _id: string;
   __v: number;
-  id: number;
+  id?: number;
   name: string;
   network_id: number;
   alias?: string | null;
@@ -19,6 +19,27 @@ type ZoneLean = {
   category?: string | null;
   block?: string | null;
   is_home?: boolean;
+  // LocalZone specific fields
+  created_locally?: boolean;
+  synced_with_api?: boolean;
+  created_at?: string;
+  synced_at?: string;
+  original_broadstreet_id?: number;
+  sync_errors?: string[];
+  // Additional LocalZone fields
+  advertisement_count?: number;
+  allow_duplicate_ads?: boolean;
+  concurrent_campaigns?: number;
+  advertisement_label?: string;
+  archived?: boolean;
+  display_type?: 'standard' | 'rotation';
+  rotation_interval?: number;
+  animation_type?: string;
+  width?: number;
+  height?: number;
+  rss_shuffle?: boolean;
+  style?: string;
+  source?: 'api' | 'local';
   createdAt: string;
   updatedAt: string;
 };
@@ -30,12 +51,24 @@ interface ZoneCardProps {
 
 function ZoneCard({ zone, networkName }: ZoneCardProps) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
+  const isLocalZone = zone.source === 'local' || zone.created_locally;
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md ${
+      isLocalZone 
+        ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
+        : 'border-gray-200 bg-white hover:shadow-gray-300'
+    }`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{zone.name}</h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-lg font-semibold text-gray-900">{zone.name}</h3>
+            {isLocalZone && (
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white shadow-sm">
+                🏠 Local
+              </span>
+            )}
+          </div>
           {networkName && (
             <p className="text-sm text-gray-600 mt-1">Network: {networkName}</p>
           )}
@@ -51,12 +84,16 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
               {zone.size_number && zone.size_number}
             </span>
           )}
-          <span className="text-xs text-gray-500">ID: {zone.id}</span>
+          <span className="text-xs text-gray-500">
+            ID: {zone.id || zone._id.slice(-8)}
+          </span>
         </div>
       </div>
       
       {sizeInfo && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+        <div className={`mb-4 p-3 rounded-lg ${
+          isLocalZone ? 'bg-orange-200' : 'bg-gray-50'
+        }`}>
           <p className="text-sm font-medium text-gray-900">{sizeInfo.description}</p>
           <p className="text-sm text-gray-600">Dimensions: {sizeInfo.dimensions}px</p>
         </div>
@@ -118,7 +155,8 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
       (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      zone.id.toString().includes(searchTerm)
+      (zone.id && zone.id.toString().includes(searchTerm)) ||
+      zone._id.includes(searchTerm)
     );
   }, [zones, searchTerm, networkMap]);
 
@@ -165,7 +203,7 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredZones.map((zone) => (
             <ZoneCard 
-              key={zone.id} 
+              key={zone._id} 
               zone={zone} 
               networkName={networkMap.get(zone.network_id)}
             />

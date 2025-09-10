@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ interface ZoneCreationFormProps {
 
 export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreationFormProps) {
   const { selectedNetwork } = useFilters();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
@@ -233,6 +235,9 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
       
       // Show success message
       alert(`Zone "${result.zone.name}" created successfully!`);
+      
+      // Refresh the page to show the new zone
+      router.refresh();
       
       onClose();
     } catch (error) {
