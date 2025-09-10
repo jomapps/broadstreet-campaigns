@@ -113,15 +113,18 @@ class BroadstreetAPI {
 
   // Placements
   async getPlacements(campaignId: number): Promise<Placement[]> {
-    const response = await this.request<{ placement: Placement }>(`/placements?campaign_id=${campaignId}`);
-    // API returns single placement object, but we need to return array
-    // Also need to add campaign_id since it's not in the API response
-    if (response.placement) {
-      return [{
-        ...response.placement,
+    const response = await this.request<Placement[]>(`/placements?campaign_id=${campaignId}`);
+    
+    // API returns array of placement objects directly
+    // Need to add campaign_id since it's not in the API response
+    if (Array.isArray(response)) {
+      return response.map(placement => ({
+        ...placement,
         campaign_id: campaignId
-      }];
+      }));
     }
+    
+    // If not an array, return empty array
     return [];
   }
 

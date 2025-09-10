@@ -95,15 +95,29 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
             });
           }
         });
-      } catch (error) {
-        console.error(`Error syncing advertisers for network ${network.id}:`, error);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for network ${network.id} advertisers`);
+        } else {
+          console.error(`Error syncing advertisers for network ${network.id}:`, error);
+        }
       }
     }
 
     // Insert all unique advertisers
     const advertiserDocs = Array.from(allAdvertisers.values());
     if (advertiserDocs.length > 0) {
-      await Advertiser.insertMany(advertiserDocs);
+      try {
+        await Advertiser.insertMany(advertiserDocs);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for advertisers (${advertiserDocs.length} records)`);
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
     }
 
     // Update sync log
@@ -165,15 +179,29 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
             });
           }
         });
-      } catch (error) {
-        console.error(`Error syncing zones for network ${network.id}:`, error);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for network ${network.id} zones`);
+        } else {
+          console.error(`Error syncing zones for network ${network.id}:`, error);
+        }
       }
     }
 
     // Insert all unique zones
     const zoneDocs = Array.from(allZones.values());
     if (zoneDocs.length > 0) {
-      await Zone.insertMany(zoneDocs);
+      try {
+        await Zone.insertMany(zoneDocs);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for zones (${zoneDocs.length} records)`);
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
     }
 
     // Update sync log
@@ -273,15 +301,29 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
             });
           }
         });
-      } catch (error) {
-        console.error(`Error syncing campaigns for advertiser ${advertiser.id}:`, error);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for advertiser ${advertiser.id} campaigns`);
+        } else {
+          console.error(`Error syncing campaigns for advertiser ${advertiser.id}:`, error);
+        }
       }
     }
 
     // Insert all unique campaigns
     const campaignDocs = Array.from(allCampaigns.values());
     if (campaignDocs.length > 0) {
-      await Campaign.insertMany(campaignDocs);
+      try {
+        await Campaign.insertMany(campaignDocs);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for campaigns (${campaignDocs.length} records)`);
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
     }
 
     // Update sync log
@@ -340,15 +382,29 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
             });
           }
         });
-      } catch (error) {
-        console.error(`Error syncing advertisements for network ${network.id}:`, error);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for network ${network.id} advertisements`);
+        } else {
+          console.error(`Error syncing advertisements for network ${network.id}:`, error);
+        }
       }
     }
 
     // Insert all unique advertisements
     const advertisementDocs = Array.from(allAdvertisements.values());
     if (advertisementDocs.length > 0) {
-      await Advertisement.insertMany(advertisementDocs);
+      try {
+        await Advertisement.insertMany(advertisementDocs);
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for advertisements (${advertisementDocs.length} records)`);
+        } else {
+          throw error; // Re-throw non-duplicate errors
+        }
+      }
     }
 
     // Update sync log
@@ -385,51 +441,50 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
     await connectDB();
     await syncLog.save();
 
-    // Get all campaigns first
+    // Clear all placements from campaigns first
+    await Campaign.updateMany({}, { $unset: { placements: 1 } });
+
+    // Get all campaigns and fetch their placements
     const campaigns = await Campaign.find({});
-
-    // Clear existing placements
-    await Placement.deleteMany({});
-
-    // Collect all unique placements
-    const allPlacements = new Map<string, any>();
+    let totalPlacements = 0;
 
     for (const campaign of campaigns) {
       try {
         const apiPlacements = await broadstreetAPI.getPlacements(campaign.id);
         
-        apiPlacements.forEach(placement => {
-          // Create a unique key for the placement (advertisement_id + zone_id + campaign_id)
-          const placementKey = `${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`;
-          
-          // Only add if we haven't seen this placement combination before
-          if (!allPlacements.has(placementKey)) {
-            allPlacements.set(placementKey, {
-              advertisement_id: placement.advertisement_id,
-              zone_id: placement.zone_id,
-              campaign_id: placement.campaign_id,
-              restrictions: placement.restrictions || undefined,
-            });
-          }
-        });
-      } catch (error) {
-        console.error(`Error syncing placements for campaign ${campaign.id}:`, error);
+        if (apiPlacements.length > 0) {
+          // Update the campaign with placements using MongoDB _id
+          const updateResult = await Campaign.updateOne(
+            { _id: campaign._id },
+            { 
+              placements: apiPlacements.map(placement => ({
+                advertisement_id: placement.advertisement_id,
+                zone_id: placement.zone_id,
+                restrictions: placement.restrictions || [],
+              }))
+            }
+          );
+          console.log(`Campaign ${campaign.id}: Updated ${updateResult.modifiedCount} document(s), matched ${updateResult.matchedCount} document(s)`);
+        }
+        
+        totalPlacements += apiPlacements.length;
+      } catch (error: any) {
+        // Handle duplicate key errors gracefully
+        if (error.code === 11000) {
+          console.log(`Duplicate key errors ignored for campaign ${campaign.id} placements`);
+        } else {
+          console.error(`Error syncing placements for campaign ${campaign.id}:`, error);
+        }
       }
-    }
-
-    // Insert all unique placements
-    const placementDocs = Array.from(allPlacements.values());
-    if (placementDocs.length > 0) {
-      await Placement.insertMany(placementDocs);
     }
 
     // Update sync log
     syncLog.status = 'success';
-    syncLog.recordCount = placementDocs.length;
+    syncLog.recordCount = totalPlacements;
     syncLog.endTime = new Date();
     await syncLog.save();
 
-    return { success: true, count: placementDocs.length };
+    return { success: true, count: totalPlacements };
   } catch (error) {
     syncLog.status = 'error';
     syncLog.error = error instanceof Error ? error.message : 'Unknown error';

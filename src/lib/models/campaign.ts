@@ -16,6 +16,11 @@ export interface ICampaign extends Document {
   impression_max_type?: 'cap' | 'goal';
   paused?: boolean;
   notes?: string;
+  placements?: Array<{
+    advertisement_id: number;
+    zone_id: number;
+    restrictions?: string[];
+  }>;
   // Raw fields to preserve API payload for future write-backs
   weight_raw?: string;
   display_type_raw?: string;
@@ -83,6 +88,19 @@ const CampaignSchema = new Schema<ICampaign>({
   notes: {
     type: String,
   },
+  placements: [{
+    advertisement_id: {
+      type: Number,
+      required: true,
+    },
+    zone_id: {
+      type: Number,
+      required: true,
+    },
+    restrictions: [{
+      type: String,
+    }],
+  }],
   // Preserve raw API values for robust round-tripping
   weight_raw: {
     type: String,

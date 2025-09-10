@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Placement from '@/lib/models/placement';
 import Advertisement from '@/lib/models/advertisement';
 import Campaign from '@/lib/models/campaign';
 import Zone from '@/lib/models/zone';
@@ -16,48 +15,52 @@ export async function GET(request: NextRequest) {
     const advertiserId = searchParams.get('advertiser_id');
     const campaignId = searchParams.get('campaign_id');
     
-    // Build query based on filters
-    let query: any = {};
+    // Build campaign query based on filters
+    let campaignQuery: any = {};
     
     if (campaignId) {
-      query.campaign_id = parseInt(campaignId);
+      campaignQuery.id = parseInt(campaignId);
     }
     
     if (advertiserId) {
-      // Get campaigns for this advertiser first
-      const campaigns = await Campaign.find({ advertiser_id: parseInt(advertiserId) }).lean();
-      const campaignIds = campaigns.map(c => c.id);
-      if (campaignIds.length > 0) {
-        query.campaign_id = { $in: campaignIds };
-      } else {
-        // No campaigns for this advertiser, return empty result
-        return NextResponse.json({
-          success: true,
-          placements: [],
-        });
-      }
+      campaignQuery.advertiser_id = parseInt(advertiserId);
     }
     
-    if (networkId) {
-      // Get zones for this network first
-      const zones = await Zone.find({ network_id: parseInt(networkId) }).lean();
-      const zoneIds = zones.map(z => z.id);
-      if (zoneIds.length > 0) {
-        query.zone_id = { $in: zoneIds };
-      } else {
-        // No zones for this network, return empty result
-        return NextResponse.json({
-          success: true,
-          placements: [],
-        });
-      }
+    // Get campaigns that match the filters
+    const campaigns = await Campaign.find(campaignQuery).lean();
+    
+    if (campaigns.length === 0) {
+      return NextResponse.json({
+        success: true,
+        placements: [],
+      });
     }
     
-    const placements = await Placement.find(query).sort({ createdAt: -1 }).lean();
+    // Collect all placements from matching campaigns
+    const allPlacements: any[] = [];
+    
+    for (const campaign of campaigns) {
+      if (campaign.placements && campaign.placements.length > 0) {
+        for (const placement of campaign.placements) {
+          // Apply network filter if specified
+          if (networkId) {
+            const zone = await Zone.findOne({ id: placement.zone_id }).lean();
+            if (!zone || zone.network_id !== parseInt(networkId)) {
+              continue; // Skip this placement if it doesn't match network filter
+            }
+          }
+          
+          allPlacements.push({
+            ...placement,
+            campaign_id: campaign.id,
+          });
+        }
+      }
+    }
     
     // Enrich placements with related data
     const enrichedPlacements = await Promise.all(
-      placements.map(async (placement) => {
+      allPlacements.map(async (placement) => {
         // Get related data
         const [advertisement, campaign, zone] = await Promise.all([
           Advertisement.findOne({ id: placement.advertisement_id }).lean(),

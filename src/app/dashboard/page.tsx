@@ -51,6 +51,12 @@ function StatsCard({ title, count, href, description }: StatsCardProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         );
+      case 'placements':
+        return (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
       default:
         return null;
     }
@@ -135,6 +141,12 @@ async function DashboardStats() {
     Campaign.countDocuments(),
   ]);
 
+  // Count placements from campaigns
+  const campaigns = await Campaign.find({}).lean();
+  const placementCount = campaigns.reduce((total, campaign) => {
+    return total + (campaign.placements ? campaign.placements.length : 0);
+  }, 0);
+
   const stats = [
     {
       title: 'Networks',
@@ -165,6 +177,12 @@ async function DashboardStats() {
       count: campaignCount,
       href: '/campaigns',
       description: 'Active advertising campaigns',
+    },
+    {
+      title: 'Placements',
+      count: placementCount,
+      href: '/placements',
+      description: 'Ad placements in campaigns',
     },
   ];
 
