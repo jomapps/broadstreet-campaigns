@@ -21,14 +21,101 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 - **Responsive**: Works on all screen sizes
 - **Accessibility**: Proper ARIA labels and keyboard navigation
 
-## Modal UI Design
+## Modal UI Design Pattern
+
+### Core Principles
+- **Minimal required fields**: Only essential fields (like name) are required, everything else is optional
 - **Required fields at the top**: Move all required fields to the top of the modal for immediate visibility
 - **Empty optional fields**: Optional fields should be empty by default, no pre-filled values
 - **Collapsible sections**: Group optional fields into collapsible sections to reduce visual overwhelm
 - **Clean payload**: Only send fields that have actual values - exclude empty optional fields from API requests
 - **Auto-adjusting height**: Modal should resize based on content and available space
 - **Dual submit buttons**: Submit buttons at both top and bottom for quick submission without opening optional sections
-- **Minimal required fields**: Only essential fields (like name) are required, everything else is optional
+
+### Implementation Guidelines
+
+#### 1. Form Structure
+```typescript
+// Required fields at the top
+<div className="mb-6">
+  <Label htmlFor="name">Entity Name *</Label>
+  <Input id="name" required />
+</div>
+
+// Collapsible sections for optional fields
+<CollapsibleSection title="Basic Settings" sectionKey="basicSettings">
+  {/* Optional fields */}
+</CollapsibleSection>
+```
+
+#### 2. Collapsible Section Component
+```typescript
+const CollapsibleSection = ({ title, sectionKey, children, description }) => {
+  const isExpanded = expandedSections[sectionKey];
+  
+  return (
+    <div className="border border-gray-200 rounded-lg">
+      <button type="button" onClick={() => toggleSection(sectionKey)}>
+        <h3>{title}</h3>
+        {description && <p>{description}</p>}
+        {isExpanded ? <ChevronDown /> : <ChevronRight />}
+      </button>
+      {isExpanded && <div>{children}</div>}
+    </div>
+  );
+};
+```
+
+#### 3. Payload Construction
+```typescript
+// Start with required fields only
+const payload = {
+  name: formData.name.trim(),
+  // other required fields
+};
+
+// Only add optional fields if they have values
+if (formData.optional_field && formData.optional_field.trim()) {
+  payload.optional_field = formData.optional_field.trim();
+}
+```
+
+#### 4. Modal Layout
+```typescript
+// Flexbox layout for auto-adjusting height
+<form className="flex flex-col h-full">
+  {/* Top submit button */}
+  <div className="flex justify-end space-x-3 mb-6">
+    <Button type="submit">Create</Button>
+  </div>
+  
+  {/* Required fields */}
+  <div className="mb-6">{/* required fields */}</div>
+  
+  {/* Collapsible sections */}
+  <div className="flex-1 space-y-4 overflow-y-auto">
+    {/* collapsible sections */}
+  </div>
+  
+  {/* Bottom submit button */}
+  <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
+    <Button type="submit">Create</Button>
+  </div>
+</form>
+```
+
+#### 5. Section Organization
+- **Basic Settings**: Core optional fields (counts, labels, basic toggles)
+- **Display/Behavior**: How the entity behaves (display types, intervals, etc.)
+- **Sizing/Dimensions**: Physical dimensions (width, height, etc.)
+- **Advanced Settings**: Advanced options (aliases, custom CSS, special flags)
+
+#### 6. Visual Design
+- **Section Headers**: Clear titles with helpful descriptions
+- **Chevron Icons**: Right arrow (collapsed) / Down arrow (expanded)
+- **Hover Effects**: Subtle background changes on section headers
+- **Consistent Spacing**: 4-unit spacing between sections and fields
+- **Error States**: Red borders and error messages below fields
 
 ## Entity-Specific Creation Forms
 
@@ -37,10 +124,9 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 - Name (string, required)
 - Network (pre-selected from sidebar filter)
 
-**Optional Fields:**
-- Website URL (string, URL validation)
-- Notes (text area)
-- Admin contacts (name, email pairs)
+**Collapsible Sections:**
+- **Basic Settings**: Website URL, Notes
+- **Advanced Settings**: Admin contacts (name, email pairs)
 
 **Validation Rules:**
 - Name must be unique within the network
@@ -51,15 +137,11 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 **Required Fields:**
 - Name (string, required)
 - Advertiser (pre-selected from sidebar filter)
-- Start date (date, required)
-- Weight (number, default: 1)
 
-**Optional Fields:**
-- End date (date, must be after start date)
-- Max impression count (number)
-- Display type (dropdown: no_repeat, allow_repeat_campaign, allow_repeat_advertisement, force_repeat_campaign)
-- Pacing type (dropdown: asap, even)
-- Notes (text area)
+**Collapsible Sections:**
+- **Basic Settings**: Start date, End date, Weight, Max impression count
+- **Display Settings**: Display type, Pacing type
+- **Advanced Settings**: Notes
 
 **Validation Rules:**
 - Name must be unique within the advertiser
@@ -70,11 +152,10 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 **Required Fields:**
 - Name (string, required)
 - Type (dropdown: image, text, video, native)
-- Preview URL (string, URL validation)
 
-**Optional Fields:**
-- Target URL (string, URL validation)
-- Notes (text area)
+**Collapsible Sections:**
+- **Basic Settings**: Preview URL, Target URL
+- **Advanced Settings**: Notes
 
 **Validation Rules:**
 - Name must be unique
@@ -115,6 +196,18 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 - Alias must be unique within network if provided
 - Rotation interval required if display type is "rotation"
 - Numeric fields must be positive integers
+
+### Network Creation
+**Required Fields:**
+- Name (string, required)
+
+**Collapsible Sections:**
+- **Basic Settings**: Description, Website URL
+- **Advanced Settings**: Admin contacts, Custom settings
+
+**Validation Rules:**
+- Name must be unique
+- Website URL must be valid format
 
 ## Data Entry Process
 1. **Button Click**: User clicks the creation button
@@ -231,10 +324,38 @@ Each local collection includes:
 - **Database**: MongoDB with proper indexing and constraints
 
 ### 🔄 Other Entity Types - PENDING
-- [ ] Advertiser Creation (basic form exists, needs enhancement)
-- [ ] Campaign Creation (basic form exists, needs enhancement)
-- [ ] Advertisement Creation (basic form exists, needs enhancement)
-- [ ] Network Creation (basic form exists, needs enhancement)
+- [ ] Advertiser Creation (basic form exists, needs enhancement with new UI pattern)
+- [ ] Campaign Creation (basic form exists, needs enhancement with new UI pattern)
+- [ ] Advertisement Creation (basic form exists, needs enhancement with new UI pattern)
+- [ ] Network Creation (basic form exists, needs enhancement with new UI pattern)
+
+### 📋 Implementation Pattern for Other Forms
+To apply the enhanced UI pattern to other entity creation forms:
+
+1. **Update Form Structure**:
+   - Move only essential fields to required section (typically just name)
+   - Group optional fields into logical collapsible sections
+   - Implement dual submit buttons (top and bottom)
+
+2. **Add Collapsible Sections**:
+   - Copy the `CollapsibleSection` component from `ZoneCreationForm`
+   - Add `expandedSections` state management
+   - Organize fields into: Basic Settings, Display/Behavior, Advanced Settings
+
+3. **Update Payload Construction**:
+   - Start with required fields only
+   - Add optional fields only if they have values
+   - Remove empty/undefined fields from API payload
+
+4. **Update Modal Layout**:
+   - Use flexbox layout for auto-adjusting height
+   - Add proper overflow handling for scrollable content
+   - Ensure consistent spacing and visual hierarchy
+
+5. **Update Database Models**:
+   - Remove default values for optional fields
+   - Ensure all optional fields are truly optional in schema
+   - Add proper validation rules
 
 ### 📋 Next Steps
 - [ ] Test zone creation functionality in browser
