@@ -22,7 +22,7 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0,
+    network_id: selectedNetwork?.id || 0, // Will be validated in form submission
     
     // Optional fields - empty by default
     advertisement_count: '',

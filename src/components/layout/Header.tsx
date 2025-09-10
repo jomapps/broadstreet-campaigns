@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Zones', href: '/zones' },
   { name: 'Campaigns', href: '/campaigns' },
   { name: 'Placements', href: '/placements' },
+  { name: 'Local Only', href: '/local-only' },
 ];
 
 export default function Header() {
@@ -22,7 +23,7 @@ export default function Header() {
               <span className="text-primary-foreground font-bold text-sm">BS</span>
             </div>
             <h1 className="text-xl font-semibold">
-              {process.env.NEXT_PUBLIC_APP_NAME || 'Broadstreet Publishing Dashboard'}
+              {process.env.NEXT_PUBLIC_APP_NAME || 'Dashboard'}
             </h1>
           </div>
         </div>

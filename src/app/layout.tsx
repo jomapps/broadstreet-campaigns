@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME || "Broadstreet Publishing Dashboard",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "Dashboard",
   description: "Manage your Broadstreet advertising campaigns with ease",
 };
 

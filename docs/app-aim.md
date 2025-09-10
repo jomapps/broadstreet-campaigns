@@ -49,7 +49,7 @@ api specs are in the api-specs.json file in this folder for reference
 BROADSTREET_API_TOKEN=a75908ff9ebcb98f0ecfc243b6af837923fb59f1c853af1f3b9a5f9823b124b5
 BROADSTREET_API_BASE_URL=https://api.broadstreetads.com/api/1
 MONGODB_URI=mongodb://localhost:27017/broadstreet-campaigns
-NEXT_PUBLIC_APP_NAME=Broadstreet Publishing Dashboard
+NEXT_PUBLIC_APP_NAME=Dashboard
 CORS_ALLOWED_ORIGINS=http://localhost:3005
 
 ## Technical Stack

@@ -59,6 +59,22 @@ class BroadstreetAPI {
     return response.network;
   }
 
+  async createNetwork(network: {
+    name: string;
+    group_id?: number;
+    web_home_url?: string;
+    logo?: { url: string };
+    valet_active?: boolean;
+    path?: string;
+    notes?: string;
+  }): Promise<Network> {
+    const response = await this.request<{ network: Network }>('/networks', {
+      method: 'POST',
+      body: JSON.stringify(network),
+    });
+    return response.network;
+  }
+
   // Advertisers
   async getAdvertisers(networkId: number): Promise<Advertiser[]> {
     const response = await this.request<AdvertisersResponse>(`/advertisers?network_id=${networkId}`);
@@ -70,6 +86,21 @@ class BroadstreetAPI {
     return response.advertiser;
   }
 
+  async createAdvertiser(advertiser: {
+    name: string;
+    network_id: number;
+    logo?: { url: string };
+    web_home_url?: string;
+    notes?: string;
+    admins?: Array<{ name: string; email: string }>;
+  }): Promise<Advertiser> {
+    const response = await this.request<{ advertiser: Advertiser }>('/advertisers', {
+      method: 'POST',
+      body: JSON.stringify(advertiser),
+    });
+    return response.advertiser;
+  }
+
   // Zones
   async getZones(networkId: number): Promise<Zone[]> {
     const response = await this.request<ZonesResponse>(`/zones?network_id=${networkId}`);
@@ -78,6 +109,31 @@ class BroadstreetAPI {
 
   async getZone(id: number): Promise<Zone> {
     const response = await this.request<{ zone: Zone }>(`/zones/${id}`);
+    return response.zone;
+  }
+
+  async createZone(zone: {
+    name: string;
+    network_id: number;
+    alias?: string;
+    self_serve?: boolean;
+    advertisement_count?: number;
+    allow_duplicate_ads?: boolean;
+    concurrent_campaigns?: number;
+    advertisement_label?: string;
+    archived?: boolean;
+    display_type?: string;
+    rotation_interval?: number;
+    animation_type?: string;
+    width?: number;
+    height?: number;
+    rss_shuffle?: boolean;
+    style?: string;
+  }): Promise<Zone> {
+    const response = await this.request<{ zone: Zone }>('/zones', {
+      method: 'POST',
+      body: JSON.stringify(zone),
+    });
     return response.zone;
   }
 
@@ -97,6 +153,29 @@ class BroadstreetAPI {
     return response.campaign;
   }
 
+  async createCampaign(campaign: {
+    name: string;
+    advertiser_id: number;
+    start_date?: string;
+    end_date?: string;
+    max_impression_count?: number;
+    display_type?: string;
+    active?: boolean;
+    weight?: number;
+    path?: string;
+    archived?: boolean;
+    pacing_type?: string;
+    impression_max_type?: string;
+    paused?: boolean;
+    notes?: string;
+  }): Promise<Campaign> {
+    const response = await this.request<{ campaign: Campaign }>('/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(campaign),
+    });
+    return response.campaign;
+  }
+
   // Advertisements
   async getAdvertisements(params: {
     networkId: number;
@@ -109,6 +188,24 @@ class BroadstreetAPI {
     
     const response = await this.request<AdvertisementsResponse>(`/advertisements?${query}`);
     return response.advertisements;
+  }
+
+  async createAdvertisement(advertisement: {
+    name: string;
+    network_id: number;
+    type: string;
+    advertiser?: string;
+    advertiser_id?: number;
+    active?: { url?: string | null };
+    active_placement?: boolean;
+    preview_url?: string;
+    notes?: string;
+  }): Promise<Advertisement> {
+    const response = await this.request<{ advertisement: Advertisement }>('/advertisements', {
+      method: 'POST',
+      body: JSON.stringify(advertisement),
+    });
+    return response.advertisement;
   }
 
   // Placements

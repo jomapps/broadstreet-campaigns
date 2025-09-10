@@ -117,6 +117,46 @@ if (formData.optional_field && formData.optional_field.trim()) {
 - **Consistent Spacing**: 4-unit spacing between sections and fields
 - **Error States**: Red borders and error messages below fields
 
+#### 7. Post-Creation Behavior
+- **Auto-Refresh**: Always use `router.refresh()` after successful creation to immediately show new entities
+- **Success Feedback**: Show success message before refreshing
+- **Modal Closure**: Close creation modal after successful creation and refresh
+
+#### 8. Local vs API Entity Styling
+- **Local Entities**: Entities created locally (not yet synced to Broadstreet API) should have distinctive styling:
+  - **Orange gradient background** (`bg-gradient-to-br from-orange-50 to-orange-100`)
+  - **Thick orange border** (`border-2 border-orange-400`)
+  - **Orange shadow** (`shadow-orange-200`)
+  - **"🏠 Local" badge** with white text on orange background
+  - **Hover effects** with scale and enhanced shadows
+  - **Orange accent colors** in info sections (e.g., size info background)
+- **API Entities**: Standard white background with gray borders
+- **Visual Distinction**: Local entities must be immediately recognizable as different from synced entities
+
+#### 9. Local Only Dashboard
+- **Purpose**: Centralized view of all locally created entities that haven't been synced to Broadstreet API
+- **Page Location**: `/local-only` - accessible from main navigation
+- **Layout**: Distinct sections for each entity type (Zones, Advertisers, Campaigns, Networks, Advertisements)
+- **Card Features**:
+  - **Delete Button**: Cross (×) button on each card to delete local entity
+  - **Confirmation**: Simple confirmation dialog before deletion
+  - **Entity Details**: Show all relevant information for each local entity
+- **Sync Functionality**:
+  - **Sync All Button**: Single button to sync all local entities to Broadstreet API
+  - **Progress Indicator**: Show sync progress and results
+  - **Status Updates**: Update entity status from "local" to "synced" after successful sync
+- **Visual Design**:
+  - **Section Headers**: Clear entity type labels with counts
+  - **Empty States**: Helpful messages when no local entities exist
+  - **Consistent Styling**: Follow local entity styling guidelines from Section 8
+
+#### 10. No Mock or Fallback Data Policy
+- **Real API Only**: All operations must use real Broadstreet API calls
+- **No Mock Data**: No hardcoded IDs, test data, or fallback values
+- **Environment Configuration**: All API credentials must be properly configured
+- **Validation**: All required fields must be validated before API calls
+- **Error Handling**: Proper error handling for API failures without fallbacks
+
 ## Entity-Specific Creation Forms
 
 ### Advertiser Creation
