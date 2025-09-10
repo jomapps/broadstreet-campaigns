@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get('campaign_id');
     
     // Build campaign query based on filters
-    let campaignQuery: any = {};
+    const campaignQuery: Record<string, unknown> = {};
     
     if (campaignId) {
       campaignQuery.id = parseInt(campaignId);
@@ -37,7 +37,12 @@ export async function GET(request: NextRequest) {
     }
     
     // Collect all placements from matching campaigns
-    const allPlacements: any[] = [];
+    const allPlacements: Array<{
+      advertisement_id: number;
+      zone_id: number;
+      restrictions?: string[];
+      campaign_id: number;
+    }> = [];
     
     for (const campaign of campaigns) {
       if (campaign.placements && campaign.placements.length > 0) {
@@ -45,7 +50,7 @@ export async function GET(request: NextRequest) {
           // Apply network filter if specified
           if (networkId) {
             const zone = await Zone.findOne({ id: placement.zone_id }).lean();
-            if (!zone || zone.network_id !== parseInt(networkId)) {
+            if (!zone || (zone as any).network_id !== parseInt(networkId)) {
               continue; // Skip this placement if it doesn't match network filter
             }
           }
@@ -73,42 +78,42 @@ export async function GET(request: NextRequest) {
         let network = null;
         
         if (campaign) {
-          advertiser = await Advertiser.findOne({ id: campaign.advertiser_id }).lean();
+          advertiser = await Advertiser.findOne({ id: (campaign as any).advertiser_id }).lean();
         }
         
         if (zone) {
-          network = await Network.findOne({ id: zone.network_id }).lean();
+          network = await Network.findOne({ id: (zone as any).network_id }).lean();
         }
         
         return {
           ...placement,
           advertisement: advertisement ? {
-            id: advertisement.id,
-            name: advertisement.name,
-            type: advertisement.type,
-            preview_url: advertisement.preview_url,
+            id: (advertisement as any).id,
+            name: (advertisement as any).name,
+            type: (advertisement as any).type,
+            preview_url: (advertisement as any).preview_url,
           } : null,
           campaign: campaign ? {
-            id: campaign.id,
-            name: campaign.name,
-            start_date: campaign.start_date,
-            end_date: campaign.end_date,
-            active: campaign.active,
+            id: (campaign as any).id,
+            name: (campaign as any).name,
+            start_date: (campaign as any).start_date,
+            end_date: (campaign as any).end_date,
+            active: (campaign as any).active,
           } : null,
           zone: zone ? {
-            id: zone.id,
-            name: zone.name,
-            alias: zone.alias,
-            size_type: zone.size_type,
-            size_number: zone.size_number,
+            id: (zone as any).id,
+            name: (zone as any).name,
+            alias: (zone as any).alias,
+            size_type: (zone as any).size_type,
+            size_number: (zone as any).size_number,
           } : null,
           advertiser: advertiser ? {
-            id: advertiser.id,
-            name: advertiser.name,
+            id: (advertiser as any).id,
+            name: (advertiser as any).name,
           } : null,
           network: network ? {
-            id: network.id,
-            name: network.name,
+            id: (network as any).id,
+            name: (network as any).name,
           } : null,
         };
       })

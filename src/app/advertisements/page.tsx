@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
 import AdvertisementActions from '@/components/advertisements/AdvertisementActions';
+import CreationButton from '@/components/creation/CreationButton';
 import AdvertisementsList from './AdvertisementsList';
 
 // Type for lean query result (plain object without Mongoose methods)
@@ -120,6 +121,8 @@ export default function AdvertisementsPage() {
       <Suspense fallback={<LoadingSkeleton />}>
         <AdvertisementsData />
       </Suspense>
+
+      <CreationButton />
     </div>
   );
 }

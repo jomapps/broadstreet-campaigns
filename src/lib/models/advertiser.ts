@@ -12,6 +12,12 @@ export interface IAdvertiser extends Document {
     name: string;
     email: string;
   }>;
+  // Creation and sync tracking
+  created_locally?: boolean;
+  synced_with_api?: boolean;
+  created_at?: Date;
+  synced_at?: Date;
+  network_id?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +52,24 @@ const AdvertiserSchema = new Schema<IAdvertiser>({
       required: true,
     },
   }],
+  // Creation and sync tracking
+  created_locally: {
+    type: Boolean,
+    default: false,
+  },
+  synced_with_api: {
+    type: Boolean,
+    default: true, // Assume existing data is synced
+  },
+  created_at: {
+    type: Date,
+  },
+  synced_at: {
+    type: Date,
+  },
+  network_id: {
+    type: Number,
+  },
 }, {
   timestamps: true,
 });

@@ -3,6 +3,7 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import CampaignActions from '@/components/campaigns/CampaignActions';
+import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
@@ -264,6 +265,8 @@ export default function CampaignsPage() {
       <Suspense fallback={<LoadingSkeleton />}>
         <CampaignsList />
       </Suspense>
+
+      <CreationButton />
     </div>
   );
 }

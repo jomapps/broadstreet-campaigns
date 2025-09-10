@@ -3,6 +3,7 @@
 import { Suspense } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import NetworkActions from '@/components/networks/NetworkActions';
+import CreationButton from '@/components/creation/CreationButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -168,6 +169,8 @@ export default function NetworksPage() {
           <NetworksList />
         </Suspense>
       </div>
+
+      <CreationButton />
     </div>
   );
 }

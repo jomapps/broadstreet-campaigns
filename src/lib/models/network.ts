@@ -12,6 +12,12 @@ export interface INetwork extends Document {
   path: string;
   advertiser_count?: number;
   zone_count?: number;
+  notes?: string;
+  // Creation and sync tracking
+  created_locally?: boolean;
+  synced_with_api?: boolean;
+  created_at?: Date;
+  synced_at?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,6 +57,24 @@ const NetworkSchema = new Schema<INetwork>({
   zone_count: {
     type: Number,
     default: 0,
+  },
+  notes: {
+    type: String,
+  },
+  // Creation and sync tracking
+  created_locally: {
+    type: Boolean,
+    default: false,
+  },
+  synced_with_api: {
+    type: Boolean,
+    default: true, // Assume existing data is synced
+  },
+  created_at: {
+    type: Date,
+  },
+  synced_at: {
+    type: Date,
   },
 }, {
   timestamps: true,

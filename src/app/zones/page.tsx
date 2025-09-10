@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Zone from '@/lib/models/zone';
 import Network from '@/lib/models/network';
 import ZoneActions from '@/components/zones/ZoneActions';
+import CreationButton from '@/components/creation/CreationButton';
 import ZonesList from './ZonesList';
 
 // Type for lean query result (plain object without Mongoose methods)
@@ -57,34 +58,43 @@ function LoadingSkeleton() {
 
 
 async function ZonesData() {
-  await connectDB();
-  
-  const zones = await Zone.find({}).sort({ name: 1 }).lean() as ZoneLean[];
-  
-  // Get network names
-  const networkIds = [...new Set(zones.map(z => z.network_id))];
-  const networks = await Network.find({ id: { $in: networkIds } }).lean();
-  const networkMap = new Map(networks.map(n => [n.id, n.name]));
+  try {
+    await connectDB();
+    
+    const zones = await Zone.find({}).sort({ name: 1 }).lean() as ZoneLean[];
+    
+    // Get network names
+    const networkIds = [...new Set(zones.map(z => z.network_id))];
+    const networks = await Network.find({ id: { $in: networkIds } }).lean();
+    const networkMap = new Map(networks.map(n => [n.id, n.name]));
 
-  // Serialize the data to plain objects
-  const serializedZones = zones.map(zone => ({
-    _id: zone._id.toString(),
-    __v: zone.__v,
-    id: zone.id,
-    name: zone.name,
-    network_id: zone.network_id,
-    alias: zone.alias,
-    self_serve: zone.self_serve,
-    size_type: zone.size_type,
-    size_number: zone.size_number,
-    category: zone.category,
-    block: zone.block,
-    is_home: zone.is_home,
-    createdAt: zone.createdAt.toISOString(),
-    updatedAt: zone.updatedAt.toISOString(),
-  }));
+    // Serialize the data to plain objects
+    const serializedZones = zones.map(zone => ({
+      _id: zone._id.toString(),
+      __v: zone.__v,
+      id: zone.id,
+      name: zone.name,
+      network_id: zone.network_id,
+      alias: zone.alias,
+      self_serve: zone.self_serve,
+      size_type: zone.size_type,
+      size_number: zone.size_number,
+      category: zone.category,
+      block: zone.block,
+      is_home: zone.is_home,
+      createdAt: zone.createdAt.toISOString(),
+      updatedAt: zone.updatedAt.toISOString(),
+    }));
 
-  return <ZonesList zones={serializedZones} networkMap={networkMap} />;
+    return <ZonesList zones={serializedZones} networkMap={networkMap} />;
+  } catch (error) {
+    console.error('Error loading zones data:', error);
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">Error loading zones. Please try again.</p>
+      </div>
+    );
+  }
 }
 
 export default function ZonesPage() {
@@ -124,6 +134,8 @@ export default function ZonesPage() {
       <Suspense fallback={<LoadingSkeleton />}>
         <ZonesData />
       </Suspense>
+
+      <CreationButton />
     </div>
   );
 }

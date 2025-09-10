@@ -27,6 +27,12 @@ export interface ICampaign extends Document {
   start_date_raw?: string;
   end_date_raw?: string;
   raw?: Record<string, unknown>;
+  // Creation and sync tracking
+  created_locally?: boolean;
+  synced_with_api?: boolean;
+  created_at?: Date;
+  synced_at?: Date;
+  network_id?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -116,6 +122,24 @@ const CampaignSchema = new Schema<ICampaign>({
   },
   raw: {
     type: Schema.Types.Mixed,
+  },
+  // Creation and sync tracking
+  created_locally: {
+    type: Boolean,
+    default: false,
+  },
+  synced_with_api: {
+    type: Boolean,
+    default: true, // Assume existing data is synced
+  },
+  created_at: {
+    type: Date,
+  },
+  synced_at: {
+    type: Date,
+  },
+  network_id: {
+    type: Number,
   },
 }, {
   timestamps: true,

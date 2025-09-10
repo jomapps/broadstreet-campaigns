@@ -3,6 +3,7 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
+import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
@@ -228,6 +229,8 @@ export default function AdvertisersPage() {
       <Suspense fallback={<LoadingSkeleton />}>
         <AdvertisersList />
       </Suspense>
+
+      <CreationButton />
     </div>
   );
 }

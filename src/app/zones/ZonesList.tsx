@@ -103,6 +103,10 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredZones = useMemo(() => {
+    if (!zones || !Array.isArray(zones)) {
+      return [];
+    }
+    
     if (!searchTerm.trim()) {
       return zones;
     }
@@ -135,7 +139,7 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
     );
   }
 
-  if (zones.length === 0) {
+  if (!zones || zones.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500">No zones found for the selected network. Try syncing data first.</p>
