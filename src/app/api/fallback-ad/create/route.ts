@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Zone from '@/lib/models/zone';
+import Placement from '@/lib/models/placement';
 import broadstreetAPI from '@/lib/broadstreet-api';
 import { ZoneSize } from '@/lib/types/broadstreet';
 
@@ -56,6 +57,14 @@ export async function POST(request: Request) {
             campaign_id: campaignId,
             advertisement_id: advertisementId,
             zone_id: zone.id,
+          });
+          
+          // Save placement to local database
+          await Placement.create({
+            advertisement_id: advertisementId,
+            zone_id: zone.id,
+            campaign_id: campaignId,
+            restrictions: placement.restrictions || [],
           });
           
           createdPlacements.push(placement);

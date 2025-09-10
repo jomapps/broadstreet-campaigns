@@ -25,6 +25,7 @@ const SYNC_STEPS: Omit<SyncStep, 'status' | 'progress' | 'count' | 'error'>[] = 
   { name: 'Zones' },
   { name: 'Campaigns' },
   { name: 'Advertisements' },
+  { name: 'Placements' },
 ];
 
 export default function SyncProgress({ onComplete, onClose }: SyncProgressProps) {

@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Advertisements', href: '/advertisements' },
   { name: 'Zones', href: '/zones' },
   { name: 'Campaigns', href: '/campaigns' },
+  { name: 'Placements', href: '/placements' },
 ];
 
 export default function Header() {
