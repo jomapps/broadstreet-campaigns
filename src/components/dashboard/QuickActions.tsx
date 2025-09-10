@@ -2,26 +2,29 @@
 
 import { useState } from 'react';
 import FallbackAdWizard from '@/components/fallback-ad/FallbackAdWizard';
+import SyncProgress from '@/components/dashboard/SyncProgress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function QuickActions() {
   const [showFallbackAdWizard, setShowFallbackAdWizard] = useState(false);
+  const [showSyncProgress, setShowSyncProgress] = useState(false);
 
-  const handleSyncAll = async () => {
-    try {
-      const response = await fetch('/api/sync/all', { method: 'POST' });
-      const result = await response.json();
-      if (result.success) {
-        alert('Sync completed successfully!');
+  const handleSyncAll = () => {
+    setShowSyncProgress(true);
+  };
+
+  const handleSyncComplete = (success: boolean) => {
+    if (success) {
+      // Reload the page to show updated data
+      setTimeout(() => {
         window.location.reload();
-      } else {
-        alert('Sync failed. Check console for details.');
-      }
-    } catch (error) {
-      alert('Sync failed. Check console for details.');
-      console.error('Sync error:', error);
+      }, 2000);
     }
+  };
+
+  const handleCloseSyncProgress = () => {
+    setShowSyncProgress(false);
   };
 
   return (
@@ -62,6 +65,15 @@ export default function QuickActions() {
 
       {showFallbackAdWizard && (
         <FallbackAdWizard onClose={() => setShowFallbackAdWizard(false)} />
+      )}
+
+      {showSyncProgress && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <SyncProgress 
+            onComplete={handleSyncComplete}
+            onClose={handleCloseSyncProgress}
+          />
+        </div>
       )}
     </>
   );
