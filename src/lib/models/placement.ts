@@ -4,7 +4,7 @@ export interface IPlacement extends Document {
   advertisement_id: number;
   zone_id: number;
   campaign_id: number;
-  restrictions?: string[];
+  restrictions?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,9 +22,9 @@ const PlacementSchema = new Schema<IPlacement>({
     type: Number,
     required: true,
   },
-  restrictions: [{
+  restrictions: {
     type: String,
-  }],
+  },
 }, {
   timestamps: true,
 });

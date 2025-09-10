@@ -64,7 +64,7 @@ export async function POST(request: Request) {
             advertisement_id: advertisementId,
             zone_id: zone.id,
             campaign_id: campaignId,
-            restrictions: placement.restrictions || [],
+            restrictions: placement.restrictions || undefined,
           });
           
           createdPlacements.push(placement);

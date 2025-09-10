@@ -70,8 +70,8 @@ export interface Advertisement {
 export interface Placement {
   advertisement_id: number;
   zone_id: number;
-  campaign_id: number;
-  restrictions?: string[];
+  campaign_id: number; // Added by us when storing locally, not in API response
+  restrictions?: string; // API returns string, not array
 }
 
 // API Response Types

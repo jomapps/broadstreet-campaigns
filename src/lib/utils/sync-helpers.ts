@@ -408,7 +408,7 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
               advertisement_id: placement.advertisement_id,
               zone_id: placement.zone_id,
               campaign_id: placement.campaign_id,
-              restrictions: placement.restrictions || [],
+              restrictions: placement.restrictions || undefined,
             });
           }
         });
