@@ -1,23 +1,20 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { SearchInput } from '@/components/ui/search-input';
 
-// Type for lean query result (plain object without Mongoose methods)
+// Type for advertiser data from filter context
 type AdvertiserLean = {
-  _id: string;
-  __v: number;
   id: number;
   name: string;
   logo?: { url: string };
   web_home_url?: string;
   notes?: string | null;
   admins?: Array<{ name: string; email: string }>;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 interface AdvertiserCardProps {
@@ -127,17 +124,49 @@ function LoadingSkeleton() {
 
 function AdvertisersList() {
   const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers } = useFilters();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredAdvertisers = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return advertisers;
+    }
+    
+    return advertisers.filter(advertiser =>
+      advertiser.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (advertiser.web_home_url && advertiser.web_home_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (advertiser.notes && advertiser.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (advertiser.admins && advertiser.admins.some(admin => 
+        admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        admin.email.toLowerCase().includes(searchTerm.toLowerCase())
+      ))
+    );
+  }, [advertisers, searchTerm]);
 
   if (isLoadingAdvertisers) {
     return <LoadingSkeleton />;
   }
 
+  // Check if network is selected
+  if (!selectedNetwork) {
+    return (
+      <div className="text-center py-12">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
+          <p className="text-yellow-700 mb-4">
+            Please select a network from the sidebar filters to view advertisers.
+          </p>
+          <p className="text-sm text-yellow-600">
+            Advertisers are specific to each network, so you need to choose which network&apos;s advertisers you want to see.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (advertisers.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">
-          {!selectedNetwork ? 'Select a network to view advertisers' : 'No advertisers found. Try syncing data first.'}
-        </p>
+        <p className="text-gray-500">No advertisers found for the selected network. Try syncing data first.</p>
       </div>
     );
   }
@@ -151,15 +180,31 @@ function AdvertisersList() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {advertisers.map((advertiser) => (
-        <AdvertiserCard 
-          key={advertiser.id} 
-          advertiser={advertiser}
-          isSelected={selectedAdvertiser?.id === advertiser.id}
-          onSelect={handleAdvertiserSelect}
+    <div className="space-y-6">
+      <div className="max-w-md">
+        <SearchInput
+          placeholder="Search advertisers..."
+          value={searchTerm}
+          onChange={setSearchTerm}
         />
-      ))}
+      </div>
+      
+      {filteredAdvertisers.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No advertisers match your search.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAdvertisers.map((advertiser) => (
+            <AdvertiserCard 
+              key={advertiser.id} 
+              advertiser={advertiser}
+              isSelected={selectedAdvertiser?.id === advertiser.id}
+              onSelect={handleAdvertiserSelect}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -205,7 +205,7 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
           const raw = campaign;
 
           // Normalize weight: Broadstreet may return strings like "default" or "remnant"
-          const weightRaw = (campaign as any).weight as unknown as string | number | undefined;
+          const weightRaw = (campaign as unknown as Record<string, unknown>).weight as string | number | undefined;
           let weight: number | undefined;
           if (typeof weightRaw === 'number') {
             weight = weightRaw;
@@ -221,13 +221,13 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
           }
 
           // Dates: keep raw and normalized (optional)
-          const startDateRaw = (campaign as any).start_date as string | undefined;
-          const endDateRaw = (campaign as any).end_date as string | undefined;
+          const startDateRaw = (campaign as unknown as Record<string, unknown>).start_date as string | undefined;
+          const endDateRaw = (campaign as unknown as Record<string, unknown>).end_date as string | undefined;
 
           // display_type: keep raw and normalized (optional)
-          const displayTypeRaw = (campaign as any).display_type as string | undefined;
+          const displayTypeRaw = (campaign as unknown as Record<string, unknown>).display_type as string | undefined;
           const allowedDisplay = ['no_repeat', 'allow_repeat_campaign', 'allow_repeat_advertisement', 'force_repeat_campaign'] as const;
-          const displayType = allowedDisplay.includes(displayTypeRaw as any) ? displayTypeRaw : undefined;
+          const displayType = allowedDisplay.includes(displayTypeRaw as typeof allowedDisplay[number]) ? displayTypeRaw : undefined;
 
           return {
             id: campaign.id,

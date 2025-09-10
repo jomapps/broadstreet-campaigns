@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
           // We need to get the campaign to find the advertiser_id
           // This is a simplified approach - in a real app you'd want to optimize this query
           const campaign = await import('@/lib/models/campaign').then(m => m.default);
-          const campaignDoc = await campaign.findOne({ id: placement.campaign_id }).lean();
+          const campaignDoc = await campaign.findOne({ id: placement.campaign_id }).lean() as { advertiser_id: number } | null;
           if (campaignDoc) {
             filteredAdvertiserIds.add(campaignDoc.advertiser_id);
           }

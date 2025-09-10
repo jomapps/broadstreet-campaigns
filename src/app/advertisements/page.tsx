@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
 import AdvertisementActions from '@/components/advertisements/AdvertisementActions';
+import AdvertisementsList from './AdvertisementsList';
 
 // Type for lean query result (plain object without Mongoose methods)
 type AdvertisementLean = {
@@ -21,73 +22,6 @@ type AdvertisementLean = {
   updatedAt: Date;
 };
 
-interface AdvertisementCardProps {
-  advertisement: AdvertisementLean;
-}
-
-function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
-  const updatedDate = new Date(advertisement.updated_at);
-  
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{advertisement.name}</h3>
-          <p className="text-sm text-gray-600 mt-1">Advertiser: {advertisement.advertiser}</p>
-        </div>
-        
-        <div className="flex flex-col items-end space-y-2">
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            advertisement.active_placement 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {advertisement.active_placement ? 'Active' : 'Inactive'}
-          </span>
-          <span className="text-xs text-gray-500">ID: {advertisement.id}</span>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="text-sm text-gray-600">Type</p>
-          <p className="text-sm font-medium text-gray-900">{advertisement.type}</p>
-        </div>
-        <div>
-          <p className="text-sm text-gray-600">Last Updated</p>
-          <p className="text-sm font-medium text-gray-900">
-            {updatedDate.toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-      
-      {advertisement.active.url && (
-        <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-2">Active Image</p>
-          <img
-            src={advertisement.active.url}
-            alt={advertisement.name}
-            className="w-full h-32 object-cover rounded border"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
-      
-      <div className="flex space-x-2">
-        <a
-          href={advertisement.preview_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded text-sm font-medium transition-colors duration-200"
-        >
-          Preview
-        </a>
-      </div>
-    </div>
-  );
-}
 
 function LoadingSkeleton() {
   return (
@@ -121,25 +55,28 @@ function LoadingSkeleton() {
   );
 }
 
-async function AdvertisementsList() {
+
+async function AdvertisementsData() {
   await connectDB();
-  const advertisements = await Advertisement.find({}).sort({ updated_at: -1 }).lean() as AdvertisementLean[];
-
-  if (advertisements.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No advertisements found. Try syncing data first.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {advertisements.map((advertisement) => (
-        <AdvertisementCard key={advertisement.id} advertisement={advertisement} />
-      ))}
-    </div>
-  );
+  const advertisements = await Advertisement.find({}).sort({ name: 1 }).lean() as AdvertisementLean[];
+  
+  // Serialize the data to plain objects
+  const serializedAdvertisements = advertisements.map(advertisement => ({
+    _id: advertisement._id.toString(),
+    __v: advertisement.__v,
+    id: advertisement.id,
+    name: advertisement.name,
+    updated_at: advertisement.updated_at,
+    type: advertisement.type,
+    advertiser: advertisement.advertiser,
+    active: advertisement.active,
+    active_placement: advertisement.active_placement,
+    preview_url: advertisement.preview_url,
+    createdAt: advertisement.createdAt.toISOString(),
+    updatedAt: advertisement.updatedAt.toISOString(),
+  }));
+  
+  return <AdvertisementsList advertisements={serializedAdvertisements} />;
 }
 
 export default function AdvertisementsPage() {
@@ -181,7 +118,7 @@ export default function AdvertisementsPage() {
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <AdvertisementsList />
+        <AdvertisementsData />
       </Suspense>
     </div>
   );

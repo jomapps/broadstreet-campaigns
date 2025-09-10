@@ -1,15 +1,14 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import CampaignActions from '@/components/campaigns/CampaignActions';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { SearchInput } from '@/components/ui/search-input';
 
-// Type for lean query result (plain object without Mongoose methods)
+// Type for campaign data from filter context
 type CampaignLean = {
-  _id: string;
-  __v: number;
   id: number;
   name: string;
   advertiser_id: number;
@@ -19,8 +18,8 @@ type CampaignLean = {
   weight: number;
   max_impression_count?: number;
   notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  display_type: 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign';
+  path: string;
 };
 
 interface CampaignCardProps {
@@ -146,18 +145,63 @@ function LoadingSkeleton() {
 }
 
 function CampaignsList() {
-  const { selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
+  const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredCampaigns = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return campaigns;
+    }
+    
+    return campaigns.filter(campaign =>
+      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (campaign.notes && campaign.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      campaign.id.toString().includes(searchTerm)
+    );
+  }, [campaigns, searchTerm]);
 
   if (isLoadingCampaigns) {
     return <LoadingSkeleton />;
   }
 
+  // Check if network is selected
+  if (!selectedNetwork) {
+    return (
+      <div className="text-center py-12">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
+          <p className="text-yellow-700 mb-4">
+            Please select a network from the sidebar filters to view campaigns.
+          </p>
+          <p className="text-sm text-yellow-600">
+            Campaigns are specific to each network, so you need to choose which network&apos;s campaigns you want to see.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if advertiser is selected
+  if (!selectedAdvertiser) {
+    return (
+      <div className="text-center py-12">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-blue-800 mb-2">Advertiser Required</h3>
+          <p className="text-blue-700 mb-4">
+            Please select an advertiser from the sidebar filters to view campaigns.
+          </p>
+          <p className="text-sm text-blue-600">
+            Campaigns belong to specific advertisers, so you need to choose which advertiser&apos;s campaigns you want to see.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">
-          {!selectedAdvertiser ? 'Select an advertiser to view campaigns' : 'No campaigns found. Try syncing data first.'}
-        </p>
+        <p className="text-gray-500">No campaigns found for the selected advertiser. Try syncing data first.</p>
       </div>
     );
   }
@@ -171,16 +215,32 @@ function CampaignsList() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {campaigns.map((campaign) => (
-        <CampaignCard 
-          key={campaign.id} 
-          campaign={campaign}
-          advertiserName={selectedAdvertiser?.name}
-          isSelected={selectedCampaign?.id === campaign.id}
-          onSelect={handleCampaignSelect}
+    <div className="space-y-6">
+      <div className="max-w-md">
+        <SearchInput
+          placeholder="Search campaigns..."
+          value={searchTerm}
+          onChange={setSearchTerm}
         />
-      ))}
+      </div>
+      
+      {filteredCampaigns.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500">No campaigns match your search.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCampaigns.map((campaign) => (
+            <CampaignCard 
+              key={campaign.id} 
+              campaign={campaign}
+              advertiserName={selectedAdvertiser?.name}
+              isSelected={selectedCampaign?.id === campaign.id}
+              onSelect={handleCampaignSelect}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

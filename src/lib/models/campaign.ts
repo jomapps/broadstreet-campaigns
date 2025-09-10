@@ -21,7 +21,7 @@ export interface ICampaign extends Document {
   display_type_raw?: string;
   start_date_raw?: string;
   end_date_raw?: string;
-  raw?: any;
+  raw?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }

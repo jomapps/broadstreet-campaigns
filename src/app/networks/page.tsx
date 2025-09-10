@@ -6,19 +6,17 @@ import NetworkActions from '@/components/networks/NetworkActions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-// Type for lean query result (plain object without Mongoose methods)
+// Type for network data from filter context
 type NetworkLean = {
-  _id: string;
-  __v: number;
   id: number;
   name: string;
+  group_id?: number | null;
   web_home_url?: string;
   logo?: { url: string };
   valet_active: boolean;
+  path: string;
   advertiser_count?: number;
   zone_count?: number;
-  createdAt: Date;
-  updatedAt: Date;
 };
 
 interface NetworkCardProps {
