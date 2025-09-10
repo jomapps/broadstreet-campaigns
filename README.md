@@ -1,24 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Broadstreet Campaigns Dashboard
 
-## Getting Started
+A comprehensive Next.js dashboard for managing Broadstreet advertising campaigns with real-time data synchronization, local entity management, and advanced campaign tools.
+
+## 🚀 Features
+
+- **Real-time Data Sync**: Synchronize data with Broadstreet API with proper validation
+- **Local Entity Management**: Create and manage entities locally before syncing
+- **Fallback Ad Creation**: Automated fallback ad placement system
+- **Advanced Filtering**: Filter content by network, advertiser, and campaign
+- **Entity Lifecycle Management**: Proper handling of local vs synced entities
+- **Responsive Design**: Works on desktop and mobile devices
+
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Styling**: Tailwind CSS, Radix UI components
+- **Database**: MongoDB with Mongoose ODM
+- **API Integration**: Broadstreet API v1
+- **State Management**: React Context API
+
+## 🚀 Getting Started
 
 First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3005](http://localhost:3005) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📚 Documentation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- [App Overview](docs/app-docs/app-overview.md)
+- [Sync Operations](docs/app-docs/sync-operations.md)
+- [Implementation Plan](docs/implementation-plan.md)
+- [Creation Features](features/creation.md)
 
 ## Learn More
 

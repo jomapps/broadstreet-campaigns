@@ -13,11 +13,14 @@ The Broadstreet Campaigns application is a comprehensive dashboard for managing 
 - **Campaigns**: Campaign creation and monitoring
 - **Zones**: Ad placement zone management
 - **Advertisements**: Ad creative management
+- **Local Only**: Centralized management of unsynced local entities
 
 ### Key Features
-- **Real-time Data Sync**: Synchronize data with Broadstreet API
+- **Real-time Data Sync**: Synchronize data with Broadstreet API with proper validation
+- **Local Entity Management**: Create and manage entities locally before syncing
 - **Advanced Filtering**: Filter content by network, advertiser, and campaign
 - **Fallback Ad Creation**: Automated fallback ad placement system
+- **Entity Lifecycle Management**: Proper handling of local vs synced entities
 - **Responsive Design**: Works on desktop and mobile devices
 - **Persistent State**: Filter selections saved across sessions
 
@@ -27,6 +30,8 @@ The Broadstreet Campaigns application is a comprehensive dashboard for managing 
 Broadstreet API → Sync Operations → MongoDB → UI Components
                      ↓
               Filter System → Filtered Views
+                     ↓
+         Local Entities → Local Only Dashboard → Sync to API
 ```
 
 ## 🎨 User Interface
@@ -61,6 +66,13 @@ Broadstreet API → Sync Operations → MongoDB → UI Components
 - **Zones**: Ad placement locations
 - **Advertisements**: Ad creatives
 - **Placements**: Campaign-zone-advertisement relationships
+
+### Local Entity Collections
+- **Local Networks**: Locally created networks awaiting sync
+- **Local Advertisers**: Locally created advertisers awaiting sync
+- **Local Campaigns**: Locally created campaigns awaiting sync
+- **Local Zones**: Locally created zones awaiting sync
+- **Local Advertisements**: Locally created advertisements awaiting sync
 
 ### Relationships
 - Networks contain multiple Zones

@@ -56,7 +56,7 @@ const LocalZoneSchema = new Schema<ILocalZone>({
   // Additional Broadstreet dashboard fields (all optional)
   advertisement_count: {
     type: Number,
-    min: 1,
+    min: 0, // Allow 0 since zones don't need advertisements to be created
   },
   allow_duplicate_ads: {
     type: Boolean,
@@ -75,6 +75,7 @@ const LocalZoneSchema = new Schema<ILocalZone>({
   display_type: {
     type: String,
     enum: ['standard', 'rotation'],
+    default: 'standard',
   },
   rotation_interval: {
     type: Number,

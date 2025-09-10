@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     if (archived !== undefined) {
       zoneData.archived = archived;
     }
-    if (display_type !== undefined && display_type !== 'standard') {
+    if (display_type !== undefined && (display_type === 'standard' || display_type === 'rotation')) {
       zoneData.display_type = display_type;
     }
     if (rotation_interval !== undefined && display_type === 'rotation') {
