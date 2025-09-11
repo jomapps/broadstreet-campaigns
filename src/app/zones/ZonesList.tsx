@@ -47,19 +47,32 @@ type ZoneLean = {
 interface ZoneCardProps {
   zone: ZoneLean;
   networkName?: string;
+  isSelected?: boolean;
+  onToggleSelection?: (zoneId: string) => void;
 }
 
-function ZoneCard({ zone, networkName }: ZoneCardProps) {
+function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: ZoneCardProps) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
   const isLocalZone = zone.source === 'local' || zone.created_locally;
   const isConflictZone = hasMultipleSizeTypes(zone.name);
+
+  const handleCardClick = () => {
+    if (onToggleSelection) {
+      onToggleSelection(zone._id);
+    }
+  };
   
   return (
-    <div className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md ${
-      isLocalZone 
-        ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
-        : 'border-gray-200 bg-white hover:shadow-gray-300'
-    }`}>
+    <div 
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${
+        isSelected
+          ? 'border-blue-400 bg-blue-50 shadow-blue-200 hover:shadow-blue-300'
+          : isLocalZone 
+            ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
+            : 'border-gray-200 bg-white hover:shadow-gray-300'
+      }`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2">
@@ -79,6 +92,11 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
         </div>
         
         <div className="flex flex-col items-end space-y-2">
+          {isSelected && (
+            <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
+              ✓ Selected
+            </span>
+          )}
           {isConflictZone && (
             <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
               CS
@@ -150,65 +168,27 @@ interface ZonesListProps {
   networkMap: Map<number, string>;
   selectedSizes?: ('SQ' | 'PT' | 'LS' | 'CS')[];
   onSizeFilterChange?: (sizes: ('SQ' | 'PT' | 'LS' | 'CS')[]) => void;
+  selectedZones?: string[];
+  showOnlySelected?: boolean;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
+  filteredZones?: ZoneLean[];
 }
 
-export default function ZonesList({ zones, networkMap, selectedSizes = [] }: ZonesListProps) {
-  const { selectedNetwork } = useFilters();
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredZones = useMemo(() => {
-    if (!zones || !Array.isArray(zones)) {
-      return [];
-    }
-    
-    let filtered = zones;
-    
-    // Apply size filters first
-    if (selectedSizes.length > 0) {
-      filtered = filtered.filter(zone => {
-        // Handle CS (Conflict Size) filter
-        if (selectedSizes.includes('CS')) {
-          if (hasMultipleSizeTypes(zone.name)) {
-            return true;
-          }
-        }
-        
-        // Handle regular size type filters
-        const regularSizes = selectedSizes.filter(size => size !== 'CS');
-        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type)) {
-          return true;
-        }
-        
-        // If CS is selected but no regular sizes, only show conflict zones
-        if (selectedSizes.includes('CS') && regularSizes.length === 0) {
-          return hasMultipleSizeTypes(zone.name);
-        }
-        
-        // If only regular sizes are selected, filter by them
-        if (regularSizes.length > 0 && !selectedSizes.includes('CS')) {
-          return zone.size_type && regularSizes.includes(zone.size_type);
-        }
-        
-        return false;
-      });
-    }
-    
-    // Apply search filter
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(zone =>
-        zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (zone.alias && zone.alias.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.category && zone.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.id && zone.id.toString().includes(searchTerm)) ||
-        zone._id.includes(searchTerm)
-      );
-    }
-    
-    return filtered;
-  }, [zones, searchTerm, selectedSizes, networkMap]);
+export default function ZonesList({ 
+  zones, 
+  networkMap, 
+  selectedSizes = [], 
+  selectedZones = [], 
+  showOnlySelected = false,
+  searchTerm = '',
+  onSearchChange,
+  filteredZones
+}: ZonesListProps) {
+  const { selectedNetwork, toggleZoneSelection } = useFilters();
+  
+  // Use filtered zones if provided, otherwise fall back to local filtering
+  const displayZones = filteredZones || zones;
 
   // Check if network is selected
   if (!selectedNetwork) {
@@ -241,21 +221,23 @@ export default function ZonesList({ zones, networkMap, selectedSizes = [] }: Zon
         <SearchInput
           placeholder="Search zones..."
           value={searchTerm}
-          onChange={setSearchTerm}
+          onChange={onSearchChange || (() => {})}
         />
       </div>
       
-      {filteredZones.length === 0 ? (
+      {displayZones.length === 0 ? (
         <div className="text-center py-12">
           <p className="card-text text-gray-500">No zones match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredZones.map((zone) => (
+          {displayZones.map((zone) => (
             <ZoneCard 
               key={zone._id} 
               zone={zone} 
               networkName={networkMap.get(zone.network_id)}
+              isSelected={selectedZones.includes(zone._id)}
+              onToggleSelection={toggleZoneSelection}
             />
           ))}
         </div>

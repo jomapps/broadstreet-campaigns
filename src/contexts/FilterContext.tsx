@@ -9,10 +9,16 @@ interface FilterContextType {
   selectedAdvertiser: Advertiser | null;
   selectedCampaign: Campaign | null;
   
+  // Zone selection
+  selectedZones: string[]; // Array of zone IDs
+  showOnlySelected: boolean;
+  
   // Setters
   setSelectedNetwork: (network: Network | null) => void;
   setSelectedAdvertiser: (advertiser: Advertiser | null) => void;
   setSelectedCampaign: (campaign: Campaign | null) => void;
+  setSelectedZones: (zones: string[]) => void;
+  setShowOnlySelected: (show: boolean) => void;
   
   // Data
   networks: Network[];
@@ -38,6 +44,12 @@ interface FilterContextType {
   clearAllFilters: () => void;
   clearAdvertiserFilter: () => void;
   clearCampaignFilter: () => void;
+  clearZoneSelection: () => void;
+  
+  // Zone selection actions
+  selectZones: (zoneIds: string[]) => void;
+  deselectZones: (zoneIds: string[]) => void;
+  toggleZoneSelection: (zoneId: string) => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -46,12 +58,16 @@ const STORAGE_KEYS = {
   NETWORK: 'broadstreet_selected_network',
   ADVERTISER: 'broadstreet_selected_advertiser',
   CAMPAIGN: 'broadstreet_selected_campaign',
+  SELECTED_ZONES: 'broadstreet_selected_zones',
+  SHOW_ONLY_SELECTED: 'broadstreet_show_only_selected',
 };
 
 export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [selectedAdvertiser, setSelectedAdvertiser] = useState<Advertiser | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedZones, setSelectedZones] = useState<string[]>([]);
+  const [showOnlySelected, setShowOnlySelected] = useState<boolean>(false);
   
   const [networks, setNetworks] = useState<Network[]>([]);
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
@@ -68,6 +84,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         const storedNetwork = localStorage.getItem(STORAGE_KEYS.NETWORK);
         const storedAdvertiser = localStorage.getItem(STORAGE_KEYS.ADVERTISER);
         const storedCampaign = localStorage.getItem(STORAGE_KEYS.CAMPAIGN);
+        const storedSelectedZones = localStorage.getItem(STORAGE_KEYS.SELECTED_ZONES);
+        const storedShowOnlySelected = localStorage.getItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
         
         if (storedNetwork) {
           setSelectedNetwork(JSON.parse(storedNetwork));
@@ -77,6 +95,12 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         }
         if (storedCampaign) {
           setSelectedCampaign(JSON.parse(storedCampaign));
+        }
+        if (storedSelectedZones) {
+          setSelectedZones(JSON.parse(storedSelectedZones));
+        }
+        if (storedShowOnlySelected) {
+          setShowOnlySelected(JSON.parse(storedShowOnlySelected));
         }
       } catch (error) {
         console.error('Error loading filters from localStorage:', error);
@@ -186,14 +210,26 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedCampaign]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_ZONES, JSON.stringify(selectedZones));
+  }, [selectedZones]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_ONLY_SELECTED, JSON.stringify(showOnlySelected));
+  }, [showOnlySelected]);
+
   // Clear functions
   const clearAllFilters = () => {
     setSelectedNetwork(null);
     setSelectedAdvertiser(null);
     setSelectedCampaign(null);
+    setSelectedZones([]);
+    setShowOnlySelected(false);
     localStorage.removeItem(STORAGE_KEYS.NETWORK);
     localStorage.removeItem(STORAGE_KEYS.ADVERTISER);
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
+    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
   };
 
   const clearAdvertiserFilter = () => {
@@ -208,15 +244,46 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
   };
 
+  const clearZoneSelection = () => {
+    setSelectedZones([]);
+    setShowOnlySelected(false);
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
+    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+  };
+
+  // Zone selection actions
+  const selectZones = (zoneIds: string[]) => {
+    setSelectedZones(prev => {
+      const newSelection = [...new Set([...prev, ...zoneIds])];
+      return newSelection;
+    });
+  };
+
+  const deselectZones = (zoneIds: string[]) => {
+    setSelectedZones(prev => prev.filter(id => !zoneIds.includes(id)));
+  };
+
+  const toggleZoneSelection = (zoneId: string) => {
+    setSelectedZones(prev => 
+      prev.includes(zoneId) 
+        ? prev.filter(id => id !== zoneId)
+        : [...prev, zoneId]
+    );
+  };
+
   return (
     <FilterContext.Provider
       value={{
         selectedNetwork,
         selectedAdvertiser,
         selectedCampaign,
+        selectedZones,
+        showOnlySelected,
         setSelectedNetwork,
         setSelectedAdvertiser,
         setSelectedCampaign,
+        setSelectedZones,
+        setShowOnlySelected,
         networks,
         advertisers,
         campaigns,
@@ -232,6 +299,10 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         clearAllFilters,
         clearAdvertiserFilter,
         clearCampaignFilter,
+        clearZoneSelection,
+        selectZones,
+        deselectZones,
+        toggleZoneSelection,
       }}
     >
       {children}

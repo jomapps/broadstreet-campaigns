@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { syncAll } from '@/lib/utils/sync-helpers';
+import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 
 export async function POST() {
   try {
+    // Clear zone selections before syncing
+    clearAllZoneSelections();
+    
     const result = await syncAll();
     
     if (result.success) {

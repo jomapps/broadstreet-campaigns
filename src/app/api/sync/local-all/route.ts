@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import syncService from '@/lib/sync-service';
+import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,6 +12,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Clear zone selections before syncing
+    clearAllZoneSelections();
 
     // Perform dry run first
     const dryRun = await syncService.dryRunSync(networkId);
