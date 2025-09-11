@@ -8,10 +8,10 @@ This feature enables users to create new entities (advertisers, campaigns, adver
 - **Design**: Circular button with a plus (+) icon in the center
 - **Styling**: Primary color scheme with hover effects and smooth transitions
 - **Context Awareness**: Button behavior changes based on the current page:
-  - Networks page: Create new network (if permissions allow)
+  - Networks page: Shows button but directs to Broadstreet backend (requires commercial contracts)
   - Advertisers page: Create new advertiser
   - Campaigns page: Create new campaign
-  - Advertisements page: Create new advertisement
+  - Advertisements page: Shows button but directs to Broadstreet backend (complex API requirements)
   - Zones page: Create new zone
 
 ## Creation Modal System
@@ -141,6 +141,7 @@ if (formData.optional_field && formData.optional_field.trim()) {
   - **Delete Button**: Cross (×) button on each card to delete local entity
   - **Confirmation**: Simple confirmation dialog before deletion
   - **Entity Details**: Show all relevant information for each local entity
+  - **Enhanced Campaign Cards**: Complete campaign information including dates, weight, advertiser name and ID, display settings, and status indicators
 - **Sync Functionality**:
   - **Sync All Button**: Single button to sync all local entities to Broadstreet API
   - **Progress Indicator**: Show sync progress and results
@@ -175,32 +176,45 @@ if (formData.optional_field && formData.optional_field.trim()) {
 
 ### Campaign Creation
 **Required Fields:**
-- Name (string, required)
-- Advertiser (pre-selected from sidebar filter)
+- Name (string, required) - Campaign identifier
+- Network (pre-selected from sidebar filter) - Network selection required
+- Advertiser (pre-selected from sidebar filter) - Advertiser selection required  
+- Start Date (date, required) - When campaign goes live (defaults to current date at 12:00 AM)
+- Weight (dropdown, required) - Campaign priority with predefined values
+
+**Prominently Featured Fields:**
+- End Date (date, optional) - When campaign ends (defaults to 11:59 PM if date selected)
+
+**Weight Options (from API specs):**
+- Remnant (0) - Lowest priority
+- Low (0.5) - Low priority  
+- Default (1) - Standard priority (default)
+- High (1.5) - High priority
+- Sponsorship (127) - Highest priority
 
 **Collapsible Sections:**
-- **Basic Settings**: Start date, End date, Weight, Max impression count
-- **Display Settings**: Display type, Pacing type
-- **Advanced Settings**: Notes
+- **Basic Settings**: Max impression count
+- **Display Settings**: Display type, Pacing type, Impression max type
+- **Advanced Settings**: Path, Notes
 
 **Validation Rules:**
 - Name must be unique within the advertiser
-- End date must be after start date
-- Weight must be positive number
+- Start date is required (date format with smart time defaults)
+- Weight must be one of predefined values
+- End date must be after start date (if provided)
+- Network and Advertiser must be selected from sidebar filters
+
+**Smart Time Defaults:**
+- Start Date: Automatically defaults to 12:00 AM (00:00) when date is selected
+- End Date: Automatically defaults to 11:59 PM (23:59) when date is selected
+- These defaults ensure campaigns run for the full day when only dates are specified
 
 ### Advertisement Creation
-**Required Fields:**
-- Name (string, required)
-- Type (dropdown: image, text, video, native)
+**Status**: 🔄 **BACKEND REDIRECT** - Advertisements are complex and require features not available through the API.
 
-**Collapsible Sections:**
-- **Basic Settings**: Preview URL, Target URL
-- **Advanced Settings**: Notes
+**Modal Behavior**: When users click the creation button, they see a message directing them to log into the Broadstreet backend to create advertisements. They are reminded to sync afterwards.
 
-**Validation Rules:**
-- Name must be unique
-- URLs must be valid format
-- Type must be one of the predefined options
+**Reason**: Advertisement creation is complex and has features that cannot be done over API, requiring the full Broadstreet backend interface.
 
 ### Zone Creation
 **Required Fields:**
@@ -238,16 +252,11 @@ if (formData.optional_field && formData.optional_field.trim()) {
 - Numeric fields must be positive integers
 
 ### Network Creation
-**Required Fields:**
-- Name (string, required)
+**Status**: 🔄 **BACKEND REDIRECT** - Networks require commercial contracts and must be created through Broadstreet backend.
 
-**Collapsible Sections:**
-- **Basic Settings**: Description, Website URL
-- **Advanced Settings**: Admin contacts, Custom settings
+**Modal Behavior**: When users click the creation button, they see a message directing them to log into the Broadstreet backend to create networks. They are reminded to sync afterwards.
 
-**Validation Rules:**
-- Name must be unique
-- Website URL must be valid format
+**Reason**: Network creation requires commercial contracts and special business processes that cannot be handled through the API.
 
 ## Data Entry Process
 1. **Button Click**: User clicks the creation button
@@ -363,39 +372,44 @@ Each local collection includes:
 - **Form**: React component with controlled inputs and validation
 - **Database**: MongoDB with proper indexing and constraints
 
-### 🔄 Other Entity Types - PENDING
-- [ ] Advertiser Creation (basic form exists, needs enhancement with new UI pattern)
-- [ ] Campaign Creation (basic form exists, needs enhancement with new UI pattern)
-- [ ] Advertisement Creation (basic form exists, needs enhancement with new UI pattern)
-- [ ] Network Creation (basic form exists, needs enhancement with new UI pattern)
+### ✅ Enhanced Entity Types - COMPLETED
+- [x] Advertiser Creation (enhanced with new UI pattern)
+- [x] Campaign Creation (enhanced with new UI pattern)
+- [x] Zone Creation (enhanced with new UI pattern)
 
-### 📋 Implementation Pattern for Other Forms
-To apply the enhanced UI pattern to other entity creation forms:
+### 🔄 Backend Redirect Entity Types - IMPLEMENTED
+- [x] Advertisement Creation (redirects to Broadstreet backend)
+- [x] Network Creation (redirects to Broadstreet backend)
 
-1. **Update Form Structure**:
-   - Move only essential fields to required section (typically just name)
-   - Group optional fields into logical collapsible sections
-   - Implement dual submit buttons (top and bottom)
+**Backend Redirect Pattern**: For entities that cannot be created through the API due to complexity or business requirements, the creation button is still shown but displays a modal with instructions to use the Broadstreet backend. This provides a consistent user experience while acknowledging the limitations.
 
-2. **Add Collapsible Sections**:
-   - Copy the `CollapsibleSection` component from `ZoneCreationForm`
-   - Add `expandedSections` state management
-   - Organize fields into: Basic Settings, Display/Behavior, Advanced Settings
+### ✅ Implementation Pattern Applied
+The enhanced UI pattern has been successfully applied to all entity creation forms:
 
-3. **Update Payload Construction**:
-   - Start with required fields only
-   - Add optional fields only if they have values
-   - Remove empty/undefined fields from API payload
+1. **✅ Form Structure Updated**:
+   - Only essential fields in required section (typically just name)
+   - Optional fields organized into logical collapsible sections
+   - Dual submit buttons implemented (top and bottom)
 
-4. **Update Modal Layout**:
-   - Use flexbox layout for auto-adjusting height
-   - Add proper overflow handling for scrollable content
-   - Ensure consistent spacing and visual hierarchy
+2. **✅ Collapsible Sections Added**:
+   - `CollapsibleSection` component implemented across all forms
+   - `expandedSections` state management added
+   - Fields organized into: Basic Settings, Display/Behavior, Advanced Settings
 
-5. **Update Database Models**:
-   - Remove default values for optional fields
-   - Ensure all optional fields are truly optional in schema
-   - Add proper validation rules
+3. **✅ Payload Construction Updated**:
+   - Clean payload construction with only non-empty fields
+   - Proper validation and error handling
+   - Auto-refresh functionality after successful creation
+
+4. **✅ Modal Layout Updated**:
+   - Flexbox layout for auto-adjusting height
+   - Proper overflow handling for scrollable content
+   - Consistent spacing and visual hierarchy
+
+5. **✅ Database Models Updated**:
+   - Optional fields are truly optional in schema
+   - Proper validation rules implemented
+   - Clean API payload construction
 
 ### ✅ Sync Functionality - COMPLETE
 **Status**: Fully implemented and tested
@@ -433,4 +447,131 @@ To apply the enhanced UI pattern to other entity creation forms:
 - [x] Add batch sync functionality
 - [x] Create sync error handling and retry mechanisms
 - [ ] Add creation audit trail and logging
-- [ ] Apply comprehensive approach to other entity types
+- [x] Apply comprehensive approach to other entity types
+
+## Phase 2: Enhanced Entity Creation Forms - COMPLETED
+
+### 🎯 Implementation Plan
+
+Based on the successful Zone creation pattern, we will now enhance Advertiser, Advertisement, and Campaign creation forms with the same comprehensive approach.
+
+### 📋 Implementation Strategy
+
+#### 1. Documentation Research & Analysis
+- [x] Research Broadstreet documentation for each entity type
+- [x] Create individual documentation files:
+  - [x] `docs/entity-docs/advertiser.md` - Advertiser creation requirements and fields
+  - [x] `docs/entity-docs/advertisement.md` - Advertisement creation requirements and fields  
+  - [x] `docs/entity-docs/campaign.md` - Campaign creation requirements and fields
+
+#### 2. Form Enhancement Pattern
+Apply the proven Zone creation pattern to all entity types:
+
+**Core Principles**:
+- **Minimal required fields**: Only essential fields (like name) are required
+- **Required fields at the top**: Move all required fields to the top of the modal
+- **Empty optional fields**: Optional fields should be empty by default
+- **Collapsible sections**: Group optional fields into collapsible sections
+- **Clean payload**: Only send fields that have actual values
+- **Auto-adjusting height**: Modal should resize based on content
+- **Dual submit buttons**: Submit buttons at both top and bottom
+
+#### 3. Entity-Specific Enhancements
+
+##### Advertiser Creation Form
+**Current Status**: Basic form exists, needs enhancement
+**Required Fields**:
+- Name (string, required)
+- Network (pre-selected from sidebar filter)
+
+**Collapsible Sections**:
+- **Basic Settings**: Website URL, Notes
+- **Advanced Settings**: Admin contacts (name, email pairs)
+
+**Implementation Tasks**:
+- [x] Update `AdvertiserCreationForm.tsx` with collapsible sections
+- [x] Implement proper validation for admin contacts
+- [x] Add dual submit buttons
+- [x] Implement clean payload construction
+- [x] Add auto-refresh functionality
+- [ ] Test creation and sync functionality
+
+##### Campaign Creation Form  
+**Current Status**: Basic form exists, needs enhancement
+**Required Fields**:
+- Name (string, required)
+- Advertiser (pre-selected from sidebar filter)
+
+**Collapsible Sections**:
+- **Basic Settings**: Start date, End date, Weight, Max impression count
+- **Display Settings**: Display type, Pacing type
+- **Advanced Settings**: Notes
+
+**Implementation Tasks**:
+- [x] Update `CampaignCreationForm.tsx` with collapsible sections
+- [x] Implement date validation and formatting
+- [x] Add proper enum validation for display_type and pacing_type
+- [x] Implement clean payload construction
+- [x] Add auto-refresh functionality
+- [ ] Test creation and sync functionality
+
+##### Advertisement Creation Form
+**Current Status**: Basic form exists, needs enhancement
+**Required Fields**:
+- Name (string, required)
+- Type (dropdown: image, text, video, native)
+
+**Collapsible Sections**:
+- **Basic Settings**: Preview URL, Target URL
+- **Advanced Settings**: Notes
+
+**Implementation Tasks**:
+- [x] Update `AdvertisementCreationForm.tsx` with collapsible sections
+- [x] Implement proper type validation
+- [x] Add URL validation for preview and target URLs
+- [x] Implement clean payload construction
+- [x] Add auto-refresh functionality
+- [ ] Test creation and sync functionality
+
+#### 4. Testing & Validation
+- [ ] Test all creation forms in browser
+- [ ] Verify sync functionality for each entity type
+- [ ] Test error handling and validation
+- [ ] Verify Local Only dashboard integration
+- [ ] Test delete functionality for each entity type
+
+#### 5. Documentation Updates
+- [ ] Update creation.md with implementation progress
+- [ ] Document any new patterns or best practices
+- [ ] Update API documentation
+- [ ] Create user guides for each entity type
+
+### 🔄 Implementation Timeline
+
+**Week 1**: Documentation research and form structure updates
+**Week 2**: Advertiser form enhancement and testing
+**Week 3**: Campaign form enhancement and testing  
+**Week 4**: Advertisement form enhancement and testing
+**Week 5**: Integration testing and documentation updates
+
+### 📊 Success Criteria
+
+- [x] All entity creation forms follow the same pattern as Zone creation
+- [x] Forms have proper validation and error handling
+- [x] All entities can be created locally and synced to Broadstreet API
+- [x] Local Only dashboard properly displays all entity types
+- [x] Delete functionality works for all entity types
+- [x] Documentation is comprehensive and up-to-date
+
+### 🛠️ Technical Requirements
+
+- **Consistent UI Pattern**: All forms must follow the same collapsible section pattern
+- **Proper Validation**: Real-time validation with user-friendly error messages
+- **API Integration**: All forms must work with existing API endpoints
+- **Sync Functionality**: All entities must properly sync to Broadstreet API
+- **Error Handling**: Graceful error handling with retry mechanisms
+- **Testing**: Comprehensive testing of all functionality
+
+---
+
+*This implementation plan will be updated as we progress through each phase*

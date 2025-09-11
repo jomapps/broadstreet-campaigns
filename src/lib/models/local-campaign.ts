@@ -49,9 +49,11 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
   },
   advertiser_id: {
     type: Number,
+    required: true,
   },
   start_date: {
     type: String,
+    required: true,
   },
   end_date: {
     type: String,
@@ -70,6 +72,7 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
   },
   weight: {
     type: Number,
+    required: true,
     min: 0,
   },
   path: {

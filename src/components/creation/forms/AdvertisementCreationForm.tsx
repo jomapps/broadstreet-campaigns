@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useFilters } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface AdvertisementCreationFormProps {
   onClose: () => void;
@@ -13,15 +16,27 @@ interface AdvertisementCreationFormProps {
 }
 
 export default function AdvertisementCreationForm({ onClose, setIsLoading }: AdvertisementCreationFormProps) {
+  const { selectedNetwork, selectedAdvertiser } = useFilters();
+  const router = useRouter();
   const [formData, setFormData] = useState({
+    // Required fields
     name: '',
-    type: 'image' as const,
+    network_id: selectedNetwork?.id || 0,
+    type: 'image' as 'image' | 'text' | 'video' | 'native',
+    
+    // Optional fields - empty by default
+    advertiser_id: selectedAdvertiser?.id || '',
     preview_url: '',
     target_url: '',
     notes: '',
+    active_placement: true,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    basicSettings: false,
+    advancedSettings: false,
+  });
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -30,9 +45,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       newErrors.name = 'Name is required';
     }
 
-    if (!formData.preview_url.trim()) {
-      newErrors.preview_url = 'Preview URL is required';
-    } else if (!isValidUrl(formData.preview_url)) {
+    if (formData.preview_url && !isValidUrl(formData.preview_url)) {
       newErrors.preview_url = 'Please enter a valid URL';
     }
 
@@ -53,12 +66,62 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const CollapsibleSection = ({ 
+    title, 
+    sectionKey, 
+    children, 
+    description 
+  }: { 
+    title: string; 
+    sectionKey: keyof typeof expandedSections; 
+    children: React.ReactNode;
+    description?: string;
+  }) => {
+    const isExpanded = expandedSections[sectionKey];
+    
+    return (
+      <div className="border border-gray-200 rounded-lg">
+        <button
+          type="button"
+          onClick={() => toggleSection(sectionKey)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+        >
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">{title}</h3>
+            {description && (
+              <p className="text-xs text-gray-500 mt-1">{description}</p>
+            )}
+          </div>
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-gray-400" />
+          )}
+        </button>
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t border-gray-100">
+            <div className="pt-4 space-y-4">
+              {children}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,14 +131,42 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       return;
     }
 
+    if (!selectedNetwork) {
+      setErrors({ network: 'Please select a network first' });
+      return;
+    }
+
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
-      const payload = {
-        ...formData,
-        target_url: formData.target_url || undefined,
+      // Build payload with only non-empty optional fields
+      const payload: any = {
+        name: formData.name.trim(),
+        network_id: selectedNetwork.id,
+        type: formData.type,
       };
+
+      // Only add optional fields if they have values
+      if (formData.advertiser_id && formData.advertiser_id !== '') {
+        payload.advertiser_id = parseInt(formData.advertiser_id);
+      }
+      
+      if (formData.preview_url && formData.preview_url.trim()) {
+        payload.preview_url = formData.preview_url.trim();
+      }
+      
+      if (formData.target_url && formData.target_url.trim()) {
+        payload.target_url = formData.target_url.trim();
+      }
+      
+      if (formData.notes && formData.notes.trim()) {
+        payload.notes = formData.notes.trim();
+      }
+      
+      if (!formData.active_placement) {
+        payload.active_placement = formData.active_placement;
+      }
 
       const response = await fetch('/api/create/advertisement', {
         method: 'POST',
@@ -95,6 +186,9 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       // Show success message
       alert(`Advertisement "${result.advertisement.name}" created successfully!`);
       
+      // Refresh the page to show the new advertisement
+      router.refresh();
+      
       onClose();
     } catch (error) {
       console.error('Error creating advertisement:', error);
@@ -105,18 +199,65 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
     }
   };
 
+  if (!selectedNetwork) {
+    return (
+      <div className="text-center py-8">
+        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
+        <p className="text-gray-600 mb-4">
+          Please select a network from the sidebar filters before creating an advertisement.
+        </p>
+        <Button onClick={onClose} variant="outline">
+          Close
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Information */}
-      <div className="space-y-4">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+      {/* Network Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <p className="text-sm text-blue-800">
+          <strong>Network:</strong> {selectedNetwork.name}
+        </p>
+        {selectedAdvertiser && (
+          <p className="text-sm text-blue-800">
+            <strong>Advertiser:</strong> {selectedAdvertiser.name}
+          </p>
+        )}
+      </div>
+
+      {/* Top Submit Button */}
+      <div className="flex justify-end space-x-3 mb-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting || !formData.name}
+          className="min-w-[120px]"
+        >
+          {isSubmitting ? 'Creating...' : 'Create Advertisement'}
+        </Button>
+      </div>
+
+      {/* Required Fields */}
+      <div className="mb-6 space-y-4">
         <div>
           <Label htmlFor="name">Advertisement Name *</Label>
           <Input
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Enter advertisement name"
+            placeholder="e.g., Summer Sale Banner"
             className={errors.name ? 'border-red-500' : ''}
+            required
           />
           {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
         </div>
@@ -134,55 +275,82 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
               <SelectItem value="native">Native</SelectItem>
             </SelectContent>
           </Select>
+          <p className="text-sm text-gray-500 mt-1">
+            Type of advertisement content
+          </p>
         </div>
+      </div>
 
-        <div>
-          <Label htmlFor="preview_url">Preview URL *</Label>
-          <Input
-            id="preview_url"
-            type="url"
-            value={formData.preview_url}
-            onChange={(e) => handleInputChange('preview_url', e.target.value)}
-            placeholder="https://example.com/preview.jpg"
-            className={errors.preview_url ? 'border-red-500' : ''}
-          />
-          {errors.preview_url && <p className="text-sm text-red-500 mt-1">{errors.preview_url}</p>}
-        </div>
+      {/* Collapsible Sections */}
+      <div className="flex-1 space-y-4 overflow-y-auto">
+        <CollapsibleSection
+          title="Basic Settings"
+          sectionKey="basicSettings"
+          description="Preview URL and target URL"
+        >
+          <div>
+            <Label htmlFor="preview_url">Preview URL</Label>
+            <Input
+              id="preview_url"
+              type="url"
+              value={formData.preview_url}
+              onChange={(e) => handleInputChange('preview_url', e.target.value)}
+              placeholder="https://example.com/preview.jpg"
+              className={errors.preview_url ? 'border-red-500' : ''}
+            />
+            {errors.preview_url && <p className="text-sm text-red-500 mt-1">{errors.preview_url}</p>}
+            <p className="text-sm text-gray-500 mt-1">
+              URL to preview the advertisement (optional)
+            </p>
+          </div>
 
-        <div>
-          <Label htmlFor="target_url">Target URL</Label>
-          <Input
-            id="target_url"
-            type="url"
-            value={formData.target_url}
-            onChange={(e) => handleInputChange('target_url', e.target.value)}
-            placeholder="https://example.com/landing-page"
-            className={errors.target_url ? 'border-red-500' : ''}
-          />
-          {errors.target_url && <p className="text-sm text-red-500 mt-1">{errors.target_url}</p>}
-        </div>
+          <div>
+            <Label htmlFor="target_url">Target URL</Label>
+            <Input
+              id="target_url"
+              type="url"
+              value={formData.target_url}
+              onChange={(e) => handleInputChange('target_url', e.target.value)}
+              placeholder="https://example.com/landing-page"
+              className={errors.target_url ? 'border-red-500' : ''}
+            />
+            {errors.target_url && <p className="text-sm text-red-500 mt-1">{errors.target_url}</p>}
+            <p className="text-sm text-gray-500 mt-1">
+              URL where users will be directed when clicking the ad (optional)
+            </p>
+          </div>
+        </CollapsibleSection>
 
-        <div>
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
-            placeholder="Additional notes about this advertisement"
-            rows={3}
-          />
-        </div>
+        <CollapsibleSection
+          title="Advanced Settings"
+          sectionKey="advancedSettings"
+          description="Notes and additional information"
+        >
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Additional notes about this advertisement"
+              rows={3}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Internal notes about this advertisement
+            </p>
+          </div>
+        </CollapsibleSection>
       </div>
 
       {/* Submit Error */}
       {errors.submit && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
           <p className="text-sm text-red-600">{errors.submit}</p>
         </div>
       )}
 
-      {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      {/* Bottom Submit Button */}
+      <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
         <Button
           type="button"
           variant="outline"
@@ -193,7 +361,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !formData.name}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertisement'}

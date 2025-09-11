@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Campaign from '@/lib/models/campaign';
+import LocalCampaign from '@/lib/models/local-campaign';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !network_id || !advertiser_id || !start_date || !weight) {
+    if (!name || network_id === undefined || network_id === null || 
+        advertiser_id === undefined || advertiser_id === null || 
+        !start_date || weight === undefined || weight === null) {
       return NextResponse.json(
         { message: 'Name, network_id, advertiser_id, start_date, and weight are required' },
         { status: 400 }
@@ -29,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if campaign with same name already exists for this advertiser
-    const existingCampaign = await Campaign.findOne({
+    const existingCampaign = await LocalCampaign.findOne({
       name: name.trim(),
       advertiser_id: advertiser_id
     });
@@ -41,18 +43,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique ID
-    const maxId = await Campaign.findOne({}, { id: 1 }).sort({ id: -1 });
-    const newId = maxId ? maxId.id + 1 : 1;
-
-    // Create new campaign
-    const newCampaign = new Campaign({
-      id: newId,
+    // Create new local campaign
+    const newCampaign = new LocalCampaign({
       name: name.trim(),
       network_id,
       advertiser_id,
-      start_date: new Date(start_date),
-      end_date: end_date ? new Date(end_date) : undefined,
+      start_date: start_date, // Keep as string for LocalCampaign model
+      end_date: end_date || undefined,
       weight,
       max_impression_count: max_impression_count || undefined,
       display_type: display_type || 'no_repeat',
@@ -61,7 +58,6 @@ export async function POST(request: NextRequest) {
       active: true,
       paused: false,
       archived: false,
-      path: `campaign-${newId}`,
       placements: [], // Start with empty placements
       created_locally: true,
       synced_with_api: false,
@@ -74,7 +70,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Campaign created successfully',
       campaign: {
-        id: newCampaign.id,
+        _id: newCampaign._id,
         name: newCampaign.name,
         network_id: newCampaign.network_id,
         advertiser_id: newCampaign.advertiser_id,

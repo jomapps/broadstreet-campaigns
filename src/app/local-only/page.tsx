@@ -6,6 +6,7 @@ import LocalCampaign from '@/lib/models/local-campaign';
 import LocalNetwork from '@/lib/models/local-network';
 import LocalAdvertisement from '@/lib/models/local-advertisement';
 import Network from '@/lib/models/network';
+import Advertiser from '@/lib/models/advertiser';
 import LocalOnlyDashboard from './LocalOnlyDashboard';
 
 // Type for local entity data
@@ -81,6 +82,24 @@ async function LocalOnlyData() {
     const networks = await Network.find({ id: { $in: networkIds } }).lean();
     const networkMap = new Map(networks.map(n => [n.id, n.name]));
 
+    // Get advertiser names for display (both local and synced advertisers)
+    const advertiserIds = [...new Set([
+      ...localCampaigns.map(c => c.advertiser_id),
+      ...localAdvertisers.map(a => a.id), // Local advertisers have their own IDs
+    ])].filter(id => id !== undefined && id !== null);
+    
+    // Fetch both local and synced advertisers
+    const [localAdvertisersForNames, syncedAdvertisers] = await Promise.all([
+      LocalAdvertiser.find({ synced_with_api: false }).lean(),
+      Advertiser.find({ id: { $in: advertiserIds } }).lean(),
+    ]);
+    
+    // Create advertiser map (local advertisers use their local ID, synced use Broadstreet ID)
+    const advertiserMap = new Map([
+      ...localAdvertisersForNames.map(a => [a.id, a.name]),
+      ...syncedAdvertisers.map(a => [a.id, a.name]),
+    ]);
+
     // Serialize the data
     const serializedData = {
       zones: localZones.map(zone => ({
@@ -115,7 +134,7 @@ async function LocalOnlyData() {
       })),
     };
 
-    return <LocalOnlyDashboard data={serializedData} networkMap={networkMap} />;
+    return <LocalOnlyDashboard data={serializedData} networkMap={networkMap} advertiserMap={advertiserMap} />;
   } catch (error) {
     console.error('Error loading local entities data:', error);
     return (

@@ -29,15 +29,17 @@ type LocalOnlyData = {
 interface LocalOnlyDashboardProps {
   data: LocalOnlyData;
   networkMap: Map<number, string>;
+  advertiserMap: Map<number, string>;
 }
 
 interface EntityCardProps {
   entity: LocalEntity;
   networkName?: string;
+  advertiserName?: string;
   onDelete: (id: string, type: string) => void;
 }
 
-function EntityCard({ entity, networkName, onDelete }: EntityCardProps) {
+function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCardProps) {
   const getEntityIcon = (type: string) => {
     switch (type) {
       case 'zone': return <Target className="h-4 w-4" />;
@@ -143,24 +145,99 @@ function EntityCard({ entity, networkName, onDelete }: EntityCardProps) {
 
         {entity.type === 'campaign' && (
           <>
+            {/* Campaign Dates */}
             {entity.start_date && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Start:</span>
-                <span className="font-medium">{entity.start_date}</span>
+                <span className="text-gray-600">Start Date:</span>
+                <span className="font-medium text-sm">{formatDate(entity.start_date)}</span>
               </div>
             )}
             {entity.end_date && (
               <div className="flex justify-between">
-                <span className="text-gray-600">End:</span>
-                <span className="font-medium">{entity.end_date}</span>
+                <span className="text-gray-600">End Date:</span>
+                <span className="font-medium text-sm">{formatDate(entity.end_date)}</span>
               </div>
             )}
+            
+            {/* Campaign Settings */}
+            {entity.weight !== undefined && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Weight:</span>
+                <span className="font-medium text-sm">
+                  {entity.weight === 0 ? 'Remnant (0)' :
+                   entity.weight === 0.5 ? 'Low (0.5)' :
+                   entity.weight === 1 ? 'Default (1)' :
+                   entity.weight === 1.5 ? 'High (1.5)' :
+                   entity.weight === 127 ? 'Sponsorship (127)' :
+                   entity.weight}
+                </span>
+              </div>
+            )}
+            
+            {/* Advertiser */}
+            {entity.advertiser_id && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Advertiser:</span>
+                <div className="text-right">
+                  <div className="font-medium text-sm">{advertiserName || `ID: ${entity.advertiser_id}`}</div>
+                  {advertiserName && (
+                    <div className="text-xs text-gray-500">ID: {entity.advertiser_id}</div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Campaign Limits */}
             {entity.max_impression_count && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Max Impressions:</span>
-                <span className="font-medium">{entity.max_impression_count.toLocaleString()}</span>
+                <span className="font-medium text-sm">{entity.max_impression_count.toLocaleString()}</span>
               </div>
             )}
+            
+            {/* Display Settings */}
+            {(entity.display_type || entity.pacing_type) && (
+              <div className="border-t border-orange-200 pt-2 mt-2">
+                <div className="text-xs text-gray-500 mb-1">Display Settings:</div>
+                {entity.display_type && entity.display_type !== 'no_repeat' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">Display:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {entity.display_type.replace(/_/g, ' ')}
+                    </Badge>
+                  </div>
+                )}
+                {entity.pacing_type && entity.pacing_type !== 'asap' && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 text-xs">Pacing:</span>
+                    <Badge variant="outline" className="text-xs">
+                      {entity.pacing_type}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Status Indicators */}
+            <div className="border-t border-orange-200 pt-2 mt-2">
+              <div className="flex flex-wrap gap-1">
+                {entity.active && (
+                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                    Active
+                  </Badge>
+                )}
+                {entity.paused && (
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
+                    Paused
+                  </Badge>
+                )}
+                {entity.archived && (
+                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-800">
+                    Archived
+                  </Badge>
+                )}
+              </div>
+            </div>
           </>
         )}
 
@@ -211,10 +288,11 @@ interface EntitySectionProps {
   title: string;
   entities: LocalEntity[];
   networkMap: Map<number, string>;
+  advertiserMap: Map<number, string>;
   onDelete: (id: string, type: string) => void;
 }
 
-function EntitySection({ title, entities, networkMap, onDelete }: EntitySectionProps) {
+function EntitySection({ title, entities, networkMap, advertiserMap, onDelete }: EntitySectionProps) {
   if (entities.length === 0) {
     return null;
   }
@@ -233,6 +311,7 @@ function EntitySection({ title, entities, networkMap, onDelete }: EntitySectionP
             key={entity._id}
             entity={entity}
             networkName={networkMap.get(entity.network_id)}
+            advertiserName={entity.type === 'campaign' ? advertiserMap.get(entity.advertiser_id) : undefined}
             onDelete={onDelete}
           />
         ))}
@@ -241,7 +320,7 @@ function EntitySection({ title, entities, networkMap, onDelete }: EntitySectionP
   );
 }
 
-export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashboardProps) {
+export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -347,6 +426,7 @@ export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashbo
         title="Zones"
         entities={data.zones}
         networkMap={networkMap}
+        advertiserMap={advertiserMap}
         onDelete={handleDelete}
       />
 
@@ -354,6 +434,7 @@ export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashbo
         title="Advertisers"
         entities={data.advertisers}
         networkMap={networkMap}
+        advertiserMap={advertiserMap}
         onDelete={handleDelete}
       />
 
@@ -361,6 +442,7 @@ export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashbo
         title="Campaigns"
         entities={data.campaigns}
         networkMap={networkMap}
+        advertiserMap={advertiserMap}
         onDelete={handleDelete}
       />
 
@@ -368,6 +450,7 @@ export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashbo
         title="Networks"
         entities={data.networks}
         networkMap={networkMap}
+        advertiserMap={advertiserMap}
         onDelete={handleDelete}
       />
 
@@ -375,6 +458,7 @@ export default function LocalOnlyDashboard({ data, networkMap }: LocalOnlyDashbo
         title="Advertisements"
         entities={data.advertisements}
         networkMap={networkMap}
+        advertiserMap={advertiserMap}
         onDelete={handleDelete}
       />
     </div>

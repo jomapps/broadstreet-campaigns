@@ -35,6 +35,10 @@ Open [http://localhost:3005](http://localhost:3005) with your browser to see the
 - [Sync Operations](docs/app-docs/sync-operations.md)
 - [Implementation Plan](docs/implementation-plan.md)
 - [Creation Features](features/creation.md)
+- [Entity Documentation](docs/entity-docs/README.md)
+  - [Advertiser](docs/entity-docs/advertiser.md)
+  - [Campaign](docs/entity-docs/campaign.md)
+  - [Advertisement](docs/entity-docs/advertisement.md)
 
 ## Learn More
 

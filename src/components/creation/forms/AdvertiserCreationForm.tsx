@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
-import { Plus, X, AlertCircle } from 'lucide-react';
+import { Plus, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface AdvertiserCreationFormProps {
   onClose: () => void;
@@ -21,14 +22,23 @@ interface AdminContact {
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
   const { selectedNetwork } = useFilters();
+  const router = useRouter();
   const [formData, setFormData] = useState({
+    // Required fields
     name: '',
+    network_id: selectedNetwork?.id || 0,
+    
+    // Optional fields - empty by default
     web_home_url: '',
     notes: '',
   });
   const [adminContacts, setAdminContacts] = useState<AdminContact[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    basicSettings: false,
+    advancedSettings: false,
+  });
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -96,6 +106,56 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     }
   };
 
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+  const CollapsibleSection = ({ 
+    title, 
+    sectionKey, 
+    children, 
+    description 
+  }: { 
+    title: string; 
+    sectionKey: keyof typeof expandedSections; 
+    children: React.ReactNode;
+    description?: string;
+  }) => {
+    const isExpanded = expandedSections[sectionKey];
+    
+    return (
+      <div className="border border-gray-200 rounded-lg">
+        <button
+          type="button"
+          onClick={() => toggleSection(sectionKey)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+        >
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">{title}</h3>
+            {description && (
+              <p className="text-xs text-gray-500 mt-1">{description}</p>
+            )}
+          </div>
+          {isExpanded ? (
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-gray-400" />
+          )}
+        </button>
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t border-gray-100">
+            <div className="pt-4 space-y-4">
+              {children}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -112,11 +172,24 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     setIsLoading(true);
 
     try {
-      const payload = {
-        ...formData,
+      // Build payload with only non-empty optional fields
+      const payload: any = {
+        name: formData.name.trim(),
         network_id: selectedNetwork.id,
-        admins: adminContacts.filter(contact => contact.name && contact.email),
       };
+
+      // Only add optional fields if they have values
+      if (formData.web_home_url && formData.web_home_url.trim()) {
+        payload.web_home_url = formData.web_home_url.trim();
+      }
+      
+      if (formData.notes && formData.notes.trim()) {
+        payload.notes = formData.notes.trim();
+      }
+      
+      if (adminContacts.length > 0) {
+        payload.admins = adminContacts.filter(contact => contact.name && contact.email);
+      }
 
       const response = await fetch('/api/create/advertiser', {
         method: 'POST',
@@ -133,8 +206,11 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
 
       const result = await response.json();
       
-      // Show success message (you could use a toast here)
+      // Show success message
       alert(`Advertiser "${result.advertiser.name}" created successfully!`);
+      
+      // Refresh the page to show the new advertiser
+      router.refresh();
       
       onClose();
     } catch (error) {
@@ -162,126 +238,16 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
           <strong>Network:</strong> {selectedNetwork.name}
         </p>
       </div>
 
-      {/* Basic Information */}
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="name">Name *</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
-            placeholder="Enter advertiser name"
-            className={errors.name ? 'border-red-500' : ''}
-          />
-          {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
-        </div>
-
-        <div>
-          <Label htmlFor="web_home_url">Website URL</Label>
-          <Input
-            id="web_home_url"
-            type="url"
-            value={formData.web_home_url}
-            onChange={(e) => handleInputChange('web_home_url', e.target.value)}
-            placeholder="https://example.com"
-            className={errors.web_home_url ? 'border-red-500' : ''}
-          />
-          {errors.web_home_url && <p className="text-sm text-red-500 mt-1">{errors.web_home_url}</p>}
-        </div>
-
-        <div>
-          <Label htmlFor="notes">Notes</Label>
-          <Textarea
-            id="notes"
-            value={formData.notes}
-            onChange={(e) => handleInputChange('notes', e.target.value)}
-            placeholder="Additional notes about this advertiser"
-            rows={3}
-          />
-        </div>
-      </div>
-
-      {/* Admin Contacts */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <Label>Admin Contacts</Label>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addAdminContact}
-            className="flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Add Contact</span>
-          </Button>
-        </div>
-
-        {adminContacts.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">No admin contacts added</p>
-        ) : (
-          <div className="space-y-3">
-            {adminContacts.map((contact, index) => (
-              <Card key={index} className="p-4">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <Label htmlFor={`admin_${index}_name`}>Name</Label>
-                      <Input
-                        id={`admin_${index}_name`}
-                        value={contact.name}
-                        onChange={(e) => updateAdminContact(index, 'name', e.target.value)}
-                        placeholder="Contact name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`admin_${index}_email`}>Email</Label>
-                      <Input
-                        id={`admin_${index}_email`}
-                        type="email"
-                        value={contact.email}
-                        onChange={(e) => updateAdminContact(index, 'email', e.target.value)}
-                        placeholder="contact@example.com"
-                        className={errors[`admin_${index}_email`] ? 'border-red-500' : ''}
-                      />
-                      {errors[`admin_${index}_email`] && (
-                        <p className="text-sm text-red-500 mt-1">{errors[`admin_${index}_email`]}</p>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeAdminContact(index)}
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Submit Error */}
-      {errors.submit && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">{errors.submit}</p>
-        </div>
-      )}
-
-      {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4 border-t">
+      {/* Top Submit Button */}
+      <div className="flex justify-end space-x-3 mb-6">
         <Button
           type="button"
           variant="outline"
@@ -292,7 +258,155 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         </Button>
         <Button
           type="submit"
+          disabled={isSubmitting || !formData.name}
+          className="min-w-[120px]"
+        >
+          {isSubmitting ? 'Creating...' : 'Create Advertiser'}
+        </Button>
+      </div>
+
+      {/* Required Field */}
+      <div className="mb-6">
+        <Label htmlFor="name">Advertiser Name *</Label>
+        <Input
+          id="name"
+          value={formData.name}
+          onChange={(e) => handleInputChange('name', e.target.value)}
+          placeholder="e.g., Acme Corporation"
+          className={errors.name ? 'border-red-500' : ''}
+          required
+        />
+        {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+      </div>
+
+      {/* Collapsible Sections */}
+      <div className="flex-1 space-y-4 overflow-y-auto">
+        <CollapsibleSection
+          title="Basic Settings"
+          sectionKey="basicSettings"
+          description="Website URL and notes"
+        >
+          <div>
+            <Label htmlFor="web_home_url">Website URL</Label>
+            <Input
+              id="web_home_url"
+              type="url"
+              value={formData.web_home_url}
+              onChange={(e) => handleInputChange('web_home_url', e.target.value)}
+              placeholder="https://example.com"
+              className={errors.web_home_url ? 'border-red-500' : ''}
+            />
+            {errors.web_home_url && <p className="text-sm text-red-500 mt-1">{errors.web_home_url}</p>}
+            <p className="text-sm text-gray-500 mt-1">
+              The advertiser's main website URL
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              placeholder="Additional notes about this advertiser"
+              rows={3}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Internal notes about this advertiser
+            </p>
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Advanced Settings"
+          sectionKey="advancedSettings"
+          description="Admin contacts and additional information"
+        >
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <Label>Admin Contacts</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addAdminContact}
+                className="flex items-center space-x-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Contact</span>
+              </Button>
+            </div>
+
+            {adminContacts.length === 0 ? (
+              <p className="text-sm text-gray-500 italic">No admin contacts added</p>
+            ) : (
+              <div className="space-y-3">
+                {adminContacts.map((contact, index) => (
+                  <Card key={index} className="p-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <Label htmlFor={`admin_${index}_name`}>Name</Label>
+                          <Input
+                            id={`admin_${index}_name`}
+                            value={contact.name}
+                            onChange={(e) => updateAdminContact(index, 'name', e.target.value)}
+                            placeholder="Contact name"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`admin_${index}_email`}>Email</Label>
+                          <Input
+                            id={`admin_${index}_email`}
+                            type="email"
+                            value={contact.email}
+                            onChange={(e) => updateAdminContact(index, 'email', e.target.value)}
+                            placeholder="contact@example.com"
+                            className={errors[`admin_${index}_email`] ? 'border-red-500' : ''}
+                          />
+                          {errors[`admin_${index}_email`] && (
+                            <p className="text-sm text-red-500 mt-1">{errors[`admin_${index}_email`]}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAdminContact(index)}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
+      </div>
+
+      {/* Submit Error */}
+      {errors.submit && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+          <p className="text-sm text-red-600">{errors.submit}</p>
+        </div>
+      )}
+
+      {/* Bottom Submit Button */}
+      <div className="flex justify-end space-x-3 pt-4 border-t mt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
           disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={isSubmitting || !formData.name}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
