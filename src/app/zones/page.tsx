@@ -5,7 +5,7 @@ import LocalZone from '@/lib/models/local-zone';
 import Network from '@/lib/models/network';
 import ZoneActions from '@/components/zones/ZoneActions';
 import CreationButton from '@/components/creation/CreationButton';
-import ZonesList from './ZonesList';
+import ZoneFiltersWrapper from './ZoneFiltersWrapper';
 
 // Type for lean query result (plain object without Mongoose methods)
 type ZoneLean = {
@@ -138,7 +138,7 @@ async function ZonesData() {
       updatedAt: zone.updatedAt.toISOString(),
     }));
 
-    return <ZonesList zones={serializedZones} networkMap={networkMap} />;
+    return <ZoneFiltersWrapper zones={serializedZones} networkMap={networkMap} />;
   } catch (error) {
     console.error('Error loading zones data:', error);
     return (
@@ -163,24 +163,6 @@ export default function ZonesPage() {
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
           <ZoneActions />
         </Suspense>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h2 className="card-title text-gray-900 mb-2">Zone Size Guide</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 card-text">
-          <div className="flex items-center space-x-2">
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">SQ</span>
-            <span>Square ads (300x250px)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">PT</span>
-            <span>Portrait banners (300x600px)</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">LS</span>
-            <span>Horizontal banners (728x90px)</span>
-          </div>
-        </div>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>

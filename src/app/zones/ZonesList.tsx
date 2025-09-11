@@ -133,9 +133,11 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
 interface ZonesListProps {
   zones: ZoneLean[];
   networkMap: Map<number, string>;
+  selectedSizes?: ('SQ' | 'PT' | 'LS')[];
+  onSizeFilterChange?: (sizes: ('SQ' | 'PT' | 'LS')[]) => void;
 }
 
-export default function ZonesList({ zones, networkMap }: ZonesListProps) {
+export default function ZonesList({ zones, networkMap, selectedSizes = [] }: ZonesListProps) {
   const { selectedNetwork } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -144,21 +146,31 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
       return [];
     }
     
-    if (!searchTerm.trim()) {
-      return zones;
+    let filtered = zones;
+    
+    // Apply size filters first
+    if (selectedSizes.length > 0) {
+      filtered = filtered.filter(zone => 
+        zone.size_type && selectedSizes.includes(zone.size_type)
+      );
     }
     
-    return zones.filter(zone =>
-      zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (zone.alias && zone.alias.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (zone.category && zone.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (zone.id && zone.id.toString().includes(searchTerm)) ||
-      zone._id.includes(searchTerm)
-    );
-  }, [zones, searchTerm, networkMap]);
+    // Apply search filter
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(zone =>
+        zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (zone.alias && zone.alias.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (zone.category && zone.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (zone.id && zone.id.toString().includes(searchTerm)) ||
+        zone._id.includes(searchTerm)
+      );
+    }
+    
+    return filtered;
+  }, [zones, searchTerm, selectedSizes, networkMap]);
 
   // Check if network is selected
   if (!selectedNetwork) {
