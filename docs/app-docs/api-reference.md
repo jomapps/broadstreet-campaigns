@@ -10,8 +10,8 @@ This document provides technical details about the API endpoints, data models, a
 All API endpoints are relative to the application base URL with `/api` prefix.
 
 ### Authentication
-- **Method**: API Key authentication
-- **Header**: `Authorization: Bearer <api_key>`
+- **Method**: API Key authentication via query parameter
+- **Parameter**: `access_token` in query string
 - **Storage**: Environment variables
 
 ## 📊 Data Endpoints
@@ -208,6 +208,57 @@ All API endpoints are relative to the application base URL with `/api` prefix.
 - `500`: Sync failed
 - `503`: Broadstreet API unavailable
 
+### Local Entity Sync
+
+#### POST `/api/sync/local-all`
+**Purpose**: Sync all local entities to Broadstreet API with dependency resolution
+
+**Request Body**:
+```json
+{
+  "networkId": 123
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "report": {
+    "advertisers": {
+      "synced": 5,
+      "failed": 0
+    },
+    "zones": {
+      "synced": 8,
+      "failed": 0
+    },
+    "campaigns": {
+      "synced": 3,
+      "failed": 0
+    }
+  }
+}
+```
+
+#### GET `/api/sync/local-all`
+**Purpose**: Perform dry run validation for local entity sync
+
+**Query Parameters**:
+- `networkId` (required): Network ID for validation
+
+**Response**:
+```json
+{
+  "success": true,
+  "dryRun": {
+    "valid": true,
+    "conflicts": [],
+    "resolvedNames": {}
+  }
+}
+```
+
 ### Advertiser Sync
 
 #### POST `/api/sync/advertisers`
@@ -345,6 +396,148 @@ All API endpoints are relative to the application base URL with `/api` prefix.
 - `400`: Invalid request parameters
 - `404`: Network, advertiser, or campaign not found
 - `500`: Creation failed
+
+## 🏗️ Creation Endpoints
+
+### Advertiser Creation
+
+#### POST `/api/create/advertiser`
+**Purpose**: Create a new advertiser locally
+
+**Request Body**:
+```json
+{
+  "name": "New Advertiser",
+  "network_id": 123,
+  "web_home_url": "https://example.com",
+  "notes": "Advertiser notes",
+  "admins": [
+    {
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  ]
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Advertiser created successfully",
+  "advertiser": {
+    "_id": "...",
+    "name": "New Advertiser",
+    "network_id": 123,
+    "created_locally": true,
+    "synced_with_api": false
+  }
+}
+```
+
+### Campaign Creation
+
+#### POST `/api/create/campaign`
+**Purpose**: Create a new campaign locally
+
+**Request Body**:
+```json
+{
+  "name": "New Campaign",
+  "advertiser_id": 789,
+  "start_date": "2024-01-01T00:00:00Z",
+  "end_date": "2024-12-31T23:59:59Z",
+  "weight": 1,
+  "display_type": "no_repeat"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Campaign created successfully",
+  "campaign": {
+    "_id": "...",
+    "name": "New Campaign",
+    "advertiser_id": 789,
+    "created_locally": true,
+    "synced_with_api": false
+  }
+}
+```
+
+### Zone Creation
+
+#### POST `/api/create/zone`
+**Purpose**: Create a new zone locally
+
+**Request Body**:
+```json
+{
+  "name": "New Zone",
+  "network_id": 123,
+  "alias": "new-zone",
+  "advertisement_count": 1,
+  "allow_duplicate_ads": false
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Zone created successfully",
+  "zone": {
+    "_id": "...",
+    "name": "New Zone",
+    "network_id": 123,
+    "created_locally": true,
+    "synced_with_api": false
+  }
+}
+```
+
+## 📊 Local Entity Management
+
+### Local Entities
+
+#### GET `/api/local-entities`
+**Purpose**: Get all local entities that haven't been synced
+
+**Response**:
+```json
+{
+  "success": true,
+  "entities": {
+    "zones": [...],
+    "advertisers": [...],
+    "campaigns": [...],
+    "networks": [...],
+    "advertisements": [...]
+  }
+}
+```
+
+### Delete Local Entities
+
+#### DELETE `/api/delete/local-all`
+**Purpose**: Delete all local entities
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "All local entities deleted successfully",
+  "deleted": {
+    "zones": 5,
+    "advertisers": 3,
+    "campaigns": 2,
+    "networks": 0,
+    "advertisements": 0
+  }
+}
+```
 
 ## 📊 Data Models
 
@@ -507,8 +700,8 @@ interface Placement {
 ## 🔗 Integration
 
 ### Broadstreet API
-- **Base URL**: `https://api.broadstreet.com`
-- **Authentication**: API key authentication
+- **Base URL**: `https://api.broadstreetads.com/api/1`
+- **Authentication**: API key authentication via query parameter
 - **Rate Limits**: Respect Broadstreet rate limits
 - **Error Handling**: Graceful handling of API errors
 
@@ -534,10 +727,10 @@ NEXT_PUBLIC_APP_NAME=Broadstreet Campaigns
 NODE_ENV=production
 ```
 
-### Health Checks
-- **Endpoint**: `/api/health`
-- **Response**: System status and dependencies
-- **Monitoring**: Automated health monitoring
+### System Status
+- **Monitoring**: System status available through sync endpoints
+- **Dependencies**: MongoDB and Broadstreet API connectivity
+- **Error Handling**: Comprehensive error responses for all endpoints
 
 ---
 
