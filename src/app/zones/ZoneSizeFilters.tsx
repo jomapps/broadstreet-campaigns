@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-type ZoneSize = 'SQ' | 'PT' | 'LS';
+type ZoneSize = 'SQ' | 'PT' | 'LS' | 'CS';
 
 interface ZoneSizeFiltersProps {
   selectedSizes?: ZoneSize[];
@@ -13,6 +13,7 @@ const SIZE_DEFINITIONS = {
   SQ: { label: 'SQ', description: 'Square ads (300x250px)', color: 'bg-blue-100 text-blue-800' },
   PT: { label: 'PT', description: 'Portrait banners (300x600px)', color: 'bg-green-100 text-green-800' },
   LS: { label: 'LS', description: 'Horizontal banners (728x90px)', color: 'bg-purple-100 text-purple-800' },
+  CS: { label: 'CS', description: 'Conflict size (multiple sizes in name)', color: 'bg-red-100 text-red-800' },
 };
 
 export default function ZoneSizeFilters({ selectedSizes = [], onSizeFilterChange }: ZoneSizeFiltersProps) {
@@ -48,7 +49,7 @@ export default function ZoneSizeFilters({ selectedSizes = [], onSizeFilterChange
         )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 card-text">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 card-text">
         {Object.entries(SIZE_DEFINITIONS).map(([size, config]) => {
           const isSelected = localSelectedSizes.includes(size as ZoneSize);
           const isActive = hasActiveFilters && !isSelected;

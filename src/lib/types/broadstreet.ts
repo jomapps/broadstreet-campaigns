@@ -100,7 +100,7 @@ export interface PlacementsResponse {
 }
 
 // Zone Size Types
-export type ZoneSize = 'SQ' | 'PT' | 'LS';
+export type ZoneSize = 'SQ' | 'PT' | 'LS' | 'CS';
 
 export interface ZoneSizeInfo {
   type: ZoneSize;

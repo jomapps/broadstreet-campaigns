@@ -12,7 +12,7 @@ type ZoneLean = {
   network_id: number;
   alias?: string | null;
   self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | null;
+  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
   size_number?: number | null;
   category?: string | null;
   block?: string | null;
@@ -48,7 +48,7 @@ interface ZoneFiltersWrapperProps {
 }
 
 export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWrapperProps) {
-  const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS')[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS' | 'CS')[]>([]);
 
   return (
     <div className="space-y-6">

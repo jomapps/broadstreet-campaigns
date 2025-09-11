@@ -16,7 +16,7 @@ type ZoneLean = {
   network_id: number;
   alias?: string | null;
   self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | null;
+  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
   size_number?: number | null;
   category?: string | null;
   block?: string | null;

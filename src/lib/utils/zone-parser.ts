@@ -140,3 +140,19 @@ export function sortZonesByPosition(zones: Zone[]): Zone[] {
     return a.name.localeCompare(b.name);
   });
 }
+
+/**
+ * Check if a zone name contains multiple size types (conflict detection)
+ */
+export function hasMultipleSizeTypes(zoneName: string): boolean {
+  const upperName = zoneName.toUpperCase();
+  const sizeMatches = upperName.match(/\b(SQ|PT|LS)\d*\b/g);
+  return sizeMatches ? sizeMatches.length > 1 : false;
+}
+
+/**
+ * Get zones that have multiple size types in their names (conflict zones)
+ */
+export function getConflictZones(zones: Zone[]): Zone[] {
+  return zones.filter(zone => hasMultipleSizeTypes(zone.name));
+}

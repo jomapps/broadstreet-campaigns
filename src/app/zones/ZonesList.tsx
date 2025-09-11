@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { SearchInput } from '@/components/ui/search-input';
-import { getSizeInfo } from '@/lib/utils/zone-parser';
+import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 
 // Type for serialized zone data (plain object without Mongoose methods)
 type ZoneLean = {
@@ -14,7 +14,7 @@ type ZoneLean = {
   network_id: number;
   alias?: string | null;
   self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | null;
+  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
   size_number?: number | null;
   category?: string | null;
   block?: string | null;
@@ -52,6 +52,7 @@ interface ZoneCardProps {
 function ZoneCard({ zone, networkName }: ZoneCardProps) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
   const isLocalZone = zone.source === 'local' || zone.created_locally;
+  const isConflictZone = hasMultipleSizeTypes(zone.name);
   
   return (
     <div className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md ${
@@ -78,7 +79,12 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
         </div>
         
         <div className="flex flex-col items-end space-y-2">
-          {zone.size_type && (
+          {isConflictZone && (
+            <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
+              CS
+            </span>
+          )}
+          {zone.size_type && !isConflictZone && (
             <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
               {zone.size_type}
               {zone.size_number && zone.size_number}
@@ -90,7 +96,16 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
         </div>
       </div>
       
-      {sizeInfo && (
+      {isConflictZone && (
+        <div className={`mb-4 p-3 rounded-lg ${
+          isLocalZone ? 'bg-red-200' : 'bg-red-50'
+        }`}>
+          <p className="card-text font-medium text-red-900">⚠️ Conflict Size</p>
+          <p className="card-text text-red-700">Multiple size types detected in zone name</p>
+        </div>
+      )}
+      
+      {sizeInfo && !isConflictZone && (
         <div className={`mb-4 p-3 rounded-lg ${
           isLocalZone ? 'bg-orange-200' : 'bg-gray-50'
         }`}>
@@ -133,8 +148,8 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
 interface ZonesListProps {
   zones: ZoneLean[];
   networkMap: Map<number, string>;
-  selectedSizes?: ('SQ' | 'PT' | 'LS')[];
-  onSizeFilterChange?: (sizes: ('SQ' | 'PT' | 'LS')[]) => void;
+  selectedSizes?: ('SQ' | 'PT' | 'LS' | 'CS')[];
+  onSizeFilterChange?: (sizes: ('SQ' | 'PT' | 'LS' | 'CS')[]) => void;
 }
 
 export default function ZonesList({ zones, networkMap, selectedSizes = [] }: ZonesListProps) {
@@ -150,9 +165,32 @@ export default function ZonesList({ zones, networkMap, selectedSizes = [] }: Zon
     
     // Apply size filters first
     if (selectedSizes.length > 0) {
-      filtered = filtered.filter(zone => 
-        zone.size_type && selectedSizes.includes(zone.size_type)
-      );
+      filtered = filtered.filter(zone => {
+        // Handle CS (Conflict Size) filter
+        if (selectedSizes.includes('CS')) {
+          if (hasMultipleSizeTypes(zone.name)) {
+            return true;
+          }
+        }
+        
+        // Handle regular size type filters
+        const regularSizes = selectedSizes.filter(size => size !== 'CS');
+        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type)) {
+          return true;
+        }
+        
+        // If CS is selected but no regular sizes, only show conflict zones
+        if (selectedSizes.includes('CS') && regularSizes.length === 0) {
+          return hasMultipleSizeTypes(zone.name);
+        }
+        
+        // If only regular sizes are selected, filter by them
+        if (regularSizes.length > 0 && !selectedSizes.includes('CS')) {
+          return zone.size_type && regularSizes.includes(zone.size_type);
+        }
+        
+        return false;
+      });
     }
     
     // Apply search filter
