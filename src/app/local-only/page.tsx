@@ -85,7 +85,7 @@ async function LocalOnlyData() {
     // Get advertiser names for display (both local and synced advertisers)
     const advertiserIds = [...new Set([
       ...localCampaigns.map(c => c.advertiser_id),
-      ...localAdvertisers.map(a => a.id), // Local advertisers have their own IDs
+      ...localAdvertisers.map(a => a._id), // Local advertisers use _id
     ])].filter(id => id !== undefined && id !== null);
     
     // Fetch both local and synced advertisers
@@ -94,9 +94,9 @@ async function LocalOnlyData() {
       Advertiser.find({ id: { $in: advertiserIds } }).lean(),
     ]);
     
-    // Create advertiser map (local advertisers use their local ID, synced use Broadstreet ID)
+    // Create advertiser map (local advertisers use their _id, synced use Broadstreet ID)
     const advertiserMap = new Map([
-      ...localAdvertisersForNames.map(a => [a.id, a.name]),
+      ...localAdvertisersForNames.map(a => [a._id, a.name]),
       ...syncedAdvertisers.map(a => [a.id, a.name]),
     ]);
 

@@ -38,32 +38,240 @@ export async function POST(request: NextRequest) {
     let syncedCount = 0;
     const errors: string[] = [];
     
-    // Sync zones
+    // Create maps to track local ID -> synced ID for dependency resolution
+    const advertiserIdMap = new Map<number, number>();
+    const networkIdMap = new Map<number, number>();
+    
+    console.log(`Starting sync of ${totalEntities} entities with hierarchical dependency order...`);
+    
+    // DRY RUN VALIDATION - Check for name conflicts before syncing
+    console.log('🔍 Performing dry run validation...');
+    const nameConflicts: string[] = [];
+    const resolvedNames = new Map<string, string>(); // original name -> resolved name
+    
+    // Helper function to generate unique names
+    const generateUniqueName = async (originalName: string, entityType: 'advertiser' | 'campaign' | 'zone' | 'advertisement', networkId: number, advertiserId?: number): Promise<string> => {
+      let baseName = originalName;
+      let counter = 1;
+      
+      while (true) {
+        let exists = false;
+        
+        switch (entityType) {
+          case 'advertiser':
+            exists = await broadstreetAPI.checkExistingAdvertiser(baseName, networkId);
+            break;
+          case 'campaign':
+            if (!advertiserId) throw new Error('Advertiser ID required for campaign name check');
+            exists = await broadstreetAPI.checkExistingCampaign(baseName, advertiserId);
+            break;
+          case 'zone':
+            exists = await broadstreetAPI.checkExistingZone(baseName, networkId);
+            break;
+          case 'advertisement':
+            exists = await broadstreetAPI.checkExistingAdvertisement(baseName, networkId);
+            break;
+        }
+        
+        if (!exists) {
+          return baseName;
+        }
+        
+        baseName = `${originalName} (${counter})`;
+        counter++;
+        
+        // Prevent infinite loops
+        if (counter > 100) {
+          throw new Error(`Could not generate unique name for ${originalName} after 100 attempts`);
+        }
+      }
+    };
+    
+    // Check advertisers for name conflicts
+    for (const advertiser of localAdvertisers) {
+      const syncedNetworkId = networkIdMap.get(advertiser.network_id) || advertiser.network_id;
+      const uniqueName = await generateUniqueName(advertiser.name, 'advertiser', syncedNetworkId);
+      if (uniqueName !== advertiser.name) {
+        nameConflicts.push(`Advertiser "${advertiser.name}" → "${uniqueName}"`);
+        resolvedNames.set(advertiser.name, uniqueName);
+      }
+    }
+    
+    // Check zones for name conflicts
     for (const zone of localZones) {
+      const syncedNetworkId = networkIdMap.get(zone.network_id) || zone.network_id;
+      const uniqueName = await generateUniqueName(zone.name, 'zone', syncedNetworkId);
+      if (uniqueName !== zone.name) {
+        nameConflicts.push(`Zone "${zone.name}" → "${uniqueName}"`);
+        resolvedNames.set(zone.name, uniqueName);
+      }
+    }
+    
+    // Check campaigns for name conflicts (after advertisers are processed)
+    for (const campaign of localCampaigns) {
+      const syncedAdvertiserId = advertiserIdMap.get(campaign.advertiser_id) || campaign.advertiser_id;
+      const uniqueName = await generateUniqueName(campaign.name, 'campaign', 0, syncedAdvertiserId);
+      if (uniqueName !== campaign.name) {
+        nameConflicts.push(`Campaign "${campaign.name}" → "${uniqueName}"`);
+        resolvedNames.set(campaign.name, uniqueName);
+      }
+    }
+    
+    // Check advertisements for name conflicts
+    for (const advertisement of localAdvertisements) {
+      const syncedNetworkId = networkIdMap.get(advertisement.network_id) || advertisement.network_id;
+      const uniqueName = await generateUniqueName(advertisement.name, 'advertisement', syncedNetworkId);
+      if (uniqueName !== advertisement.name) {
+        nameConflicts.push(`Advertisement "${advertisement.name}" → "${uniqueName}"`);
+        resolvedNames.set(advertisement.name, uniqueName);
+      }
+    }
+    
+    if (nameConflicts.length > 0) {
+      console.log('⚠️ Name conflicts detected and resolved:');
+      nameConflicts.forEach(conflict => console.log(`  - ${conflict}`));
+    } else {
+      console.log('✅ No name conflicts detected');
+    }
+    
+    console.log('✅ Dry run validation complete');
+    
+    // HIERARCHICAL SYNC ORDER:
+    // 1. Networks (no dependencies)
+    // 2. Advertisers (depend on networks)
+    // 3. Zones (depend on networks)
+    // 4. Advertisements (depend on networks, advertisers)
+    // 5. Campaigns (depend on advertisers)
+    
+    // Step 1: Sync Networks (no dependencies)
+    console.log(`Step 1: Syncing ${localNetworks.length} networks...`);
+    for (const network of localNetworks) {
       try {
-        // Call Broadstreet API to create zone
-        const broadstreetZone = await broadstreetAPI.createZone({
-          name: zone.name,
-          network_id: zone.network_id,
-          alias: zone.alias,
-          self_serve: zone.self_serve,
-          advertisement_count: zone.advertisement_count,
-          allow_duplicate_ads: zone.allow_duplicate_ads,
-          concurrent_campaigns: zone.concurrent_campaigns,
-          advertisement_label: zone.advertisement_label,
-          archived: zone.archived,
-          display_type: zone.display_type,
-          rotation_interval: zone.rotation_interval,
-          animation_type: zone.animation_type,
-          width: zone.width,
-          height: zone.height,
-          rss_shuffle: zone.rss_shuffle,
-          style: zone.style,
+        const broadstreetNetwork = await broadstreetAPI.createNetwork({
+          name: network.name,
+          group_id: network.group_id,
+          web_home_url: network.web_home_url,
+          logo: network.logo,
+          valet_active: network.valet_active,
+          path: network.path,
+          notes: network.notes,
         });
         
-        // Only mark as synced if API call was successful
+        if (broadstreetNetwork && broadstreetNetwork.id) {
+          const mainNetwork = new Network({
+            id: broadstreetNetwork.id,
+            name: broadstreetNetwork.name,
+            group_id: broadstreetNetwork.group_id,
+            web_home_url: broadstreetNetwork.web_home_url,
+            logo: broadstreetNetwork.logo,
+            valet_active: broadstreetNetwork.valet_active,
+            path: broadstreetNetwork.path,
+            notes: broadstreetNetwork.notes,
+          });
+          
+          await mainNetwork.save();
+          networkIdMap.set(network.id, broadstreetNetwork.id);
+          await LocalNetwork.findByIdAndDelete(network._id);
+          syncedCount++;
+          console.log(`✓ Synced network: ${network.name}`);
+        } else {
+          throw new Error('API returned invalid response');
+        }
+      } catch (error) {
+        errors.push(`Failed to sync network "${network.name}": ${error}`);
+        console.log(`✗ Failed to sync network: ${network.name} - ${error}`);
+      }
+    }
+
+    // Step 2: Sync Advertisers (depend on networks)
+    console.log(`Step 2: Syncing ${localAdvertisers.length} advertisers...`);
+    for (const advertiser of localAdvertisers) {
+      try {
+        // Use mapped network ID if available
+        const syncedNetworkId = networkIdMap.get(advertiser.network_id) || advertiser.network_id;
+        
+        // Build clean payload with only defined values (following successful curl pattern)
+        const resolvedName = resolvedNames.get(advertiser.name) || advertiser.name;
+        const advertiserPayload = {
+          name: resolvedName,
+          network_id: syncedNetworkId,
+        };
+        
+        // Only add optional fields if they have actual values (not undefined/null)
+        if (advertiser.logo) advertiserPayload.logo = advertiser.logo;
+        if (advertiser.web_home_url) advertiserPayload.web_home_url = advertiser.web_home_url;
+        if (advertiser.notes) advertiserPayload.notes = advertiser.notes;
+        if (advertiser.admins && advertiser.admins.length > 0) advertiserPayload.admins = advertiser.admins;
+        
+        console.log(`Advertiser payload for "${advertiser.name}":`, advertiserPayload);
+        
+        const broadstreetAdvertiser = await broadstreetAPI.createAdvertiser(advertiserPayload);
+        
+        if (broadstreetAdvertiser && broadstreetAdvertiser.id) {
+          const mainAdvertiser = new Advertiser({
+            id: broadstreetAdvertiser.id,
+            name: broadstreetAdvertiser.name,
+            logo: broadstreetAdvertiser.logo,
+            web_home_url: broadstreetAdvertiser.web_home_url,
+            notes: broadstreetAdvertiser.notes,
+            admins: broadstreetAdvertiser.admins,
+          });
+          
+          await mainAdvertiser.save();
+          advertiserIdMap.set(advertiser.id, broadstreetAdvertiser.id);
+          await LocalAdvertiser.findByIdAndDelete(advertiser._id);
+          syncedCount++;
+          console.log(`✓ Synced advertiser: ${advertiser.name}`);
+        } else {
+          throw new Error('API returned invalid response');
+        }
+      } catch (error) {
+        errors.push(`Failed to sync advertiser "${advertiser.name}": ${error}`);
+        console.log(`✗ Failed to sync advertiser: ${advertiser.name} - ${error}`);
+      }
+    }
+
+    // Step 3: Sync Zones (depend on networks)
+    console.log(`Step 3: Syncing ${localZones.length} zones...`);
+    for (const zone of localZones) {
+      try {
+        // Use mapped network ID if available
+        const syncedNetworkId = networkIdMap.get(zone.network_id) || zone.network_id;
+        
+        // Build clean payload with only defined values (following successful curl pattern)
+        const resolvedName = resolvedNames.get(zone.name) || zone.name;
+        const zonePayload = {
+          name: resolvedName,
+          network_id: syncedNetworkId,
+        };
+        
+        // Only add optional fields if they have actual values (not undefined/null)
+        if (zone.alias) zonePayload.alias = zone.alias;
+        if (zone.self_serve !== undefined) zonePayload.self_serve = zone.self_serve;
+        if (zone.advertisement_count !== undefined && zone.advertisement_count !== null) {
+          zonePayload.advertisement_count = zone.advertisement_count;
+        }
+        if (zone.allow_duplicate_ads !== undefined) zonePayload.allow_duplicate_ads = zone.allow_duplicate_ads;
+        if (zone.concurrent_campaigns !== undefined && zone.concurrent_campaigns !== null) {
+          zonePayload.concurrent_campaigns = zone.concurrent_campaigns;
+        }
+        if (zone.advertisement_label) zonePayload.advertisement_label = zone.advertisement_label;
+        if (zone.archived !== undefined) zonePayload.archived = zone.archived;
+        if (zone.display_type) zonePayload.display_type = zone.display_type;
+        if (zone.rotation_interval !== undefined && zone.rotation_interval !== null) {
+          zonePayload.rotation_interval = zone.rotation_interval;
+        }
+        if (zone.animation_type) zonePayload.animation_type = zone.animation_type;
+        if (zone.width !== undefined && zone.width !== null) zonePayload.width = zone.width;
+        if (zone.height !== undefined && zone.height !== null) zonePayload.height = zone.height;
+        if (zone.rss_shuffle !== undefined) zonePayload.rss_shuffle = zone.rss_shuffle;
+        if (zone.style) zonePayload.style = zone.style;
+        
+        console.log(`Zone payload for "${zone.name}":`, zonePayload);
+        
+        const broadstreetZone = await broadstreetAPI.createZone(zonePayload);
+        
         if (broadstreetZone && broadstreetZone.id) {
-          // Create the zone in the main Zone collection
           const mainZone = new Zone({
             id: broadstreetZone.id,
             name: broadstreetZone.name,
@@ -78,86 +286,119 @@ export async function POST(request: NextRequest) {
           });
           
           await mainZone.save();
-          
-          // Remove from local collection
           await LocalZone.findByIdAndDelete(zone._id);
           syncedCount++;
+          console.log(`✓ Synced zone: ${zone.name}`);
         } else {
           throw new Error('API returned invalid response');
         }
       } catch (error) {
         errors.push(`Failed to sync zone "${zone.name}": ${error}`);
-        // Keep the zone in local-only state if sync failed
+        console.log(`✗ Failed to sync zone: ${zone.name} - ${error}`);
       }
     }
 
-    // Sync advertisers
-    for (const advertiser of localAdvertisers) {
+    // Step 4: Sync Advertisements (depend on networks, advertisers)
+    console.log(`Step 4: Syncing ${localAdvertisements.length} advertisements...`);
+    for (const advertisement of localAdvertisements) {
       try {
-        // Call Broadstreet API to create advertiser
-        const broadstreetAdvertiser = await broadstreetAPI.createAdvertiser({
-          name: advertiser.name,
-          network_id: advertiser.network_id,
-          logo: advertiser.logo,
-          web_home_url: advertiser.web_home_url,
-          notes: advertiser.notes,
-          admins: advertiser.admins,
-        });
+        // Use mapped network ID if available
+        const syncedNetworkId = networkIdMap.get(advertisement.network_id) || advertisement.network_id;
+        const syncedAdvertiserId = advertiserIdMap.get(advertisement.advertiser_id) || advertisement.advertiser_id;
         
-        // Only mark as synced if API call was successful
-        if (broadstreetAdvertiser && broadstreetAdvertiser.id) {
-          // Create the advertiser in the main Advertiser collection
-          const mainAdvertiser = new Advertiser({
-            id: broadstreetAdvertiser.id,
-            name: broadstreetAdvertiser.name,
-            logo: broadstreetAdvertiser.logo,
-            web_home_url: broadstreetAdvertiser.web_home_url,
-            notes: broadstreetAdvertiser.notes,
-            admins: broadstreetAdvertiser.admins,
+        // Build clean payload with only defined values (following successful curl pattern)
+        const resolvedName = resolvedNames.get(advertisement.name) || advertisement.name;
+        const advertisementPayload = {
+          name: resolvedName,
+          network_id: syncedNetworkId,
+          type: advertisement.type,
+          advertiser_id: syncedAdvertiserId,
+          active: advertisement.active,
+        };
+        
+        // Only add optional fields if they have actual values (not undefined/null)
+        if (advertisement.advertiser) advertisementPayload.advertiser = advertisement.advertiser;
+        if (advertisement.active_placement !== undefined) advertisementPayload.active_placement = advertisement.active_placement;
+        if (advertisement.preview_url) advertisementPayload.preview_url = advertisement.preview_url;
+        if (advertisement.notes) advertisementPayload.notes = advertisement.notes;
+        
+        console.log(`Advertisement payload for "${advertisement.name}":`, advertisementPayload);
+        
+        const broadstreetAdvertisement = await broadstreetAPI.createAdvertisement(advertisementPayload);
+        
+        if (broadstreetAdvertisement && broadstreetAdvertisement.id) {
+          const mainAdvertisement = new Advertisement({
+            id: broadstreetAdvertisement.id,
+            name: broadstreetAdvertisement.name,
+            network_id: broadstreetAdvertisement.network_id,
+            type: broadstreetAdvertisement.type,
+            advertiser: broadstreetAdvertisement.advertiser,
+            advertiser_id: broadstreetAdvertisement.advertiser_id,
+            active: broadstreetAdvertisement.active,
+            active_placement: broadstreetAdvertisement.active_placement,
+            preview_url: broadstreetAdvertisement.preview_url,
+            notes: broadstreetAdvertisement.notes,
           });
           
-          await mainAdvertiser.save();
-          
-          // Remove from local collection
-          await LocalAdvertiser.findByIdAndDelete(advertiser._id);
+          await mainAdvertisement.save();
+          await LocalAdvertisement.findByIdAndDelete(advertisement._id);
           syncedCount++;
+          console.log(`✓ Synced advertisement: ${advertisement.name}`);
         } else {
           throw new Error('API returned invalid response');
         }
       } catch (error) {
-        errors.push(`Failed to sync advertiser "${advertiser.name}": ${error}`);
-        // Keep the advertiser in local-only state if sync failed
+        errors.push(`Failed to sync advertisement "${advertisement.name}": ${error}`);
+        console.log(`✗ Failed to sync advertisement: ${advertisement.name} - ${error}`);
       }
     }
 
-    // Sync campaigns
+    // Step 5: Sync Campaigns (depend on advertisers)
+    console.log(`Step 5: Syncing ${localCampaigns.length} campaigns...`);
     for (const campaign of localCampaigns) {
       try {
-        // Call Broadstreet API to create campaign
         if (!campaign.advertiser_id) {
           throw new Error('Campaign must have an advertiser_id to sync to Broadstreet');
         }
         
-        const broadstreetCampaign = await broadstreetAPI.createCampaign({
-          name: campaign.name,
-          advertiser_id: campaign.advertiser_id,
+        // Use mapped advertiser ID if available
+        const syncedAdvertiserId = advertiserIdMap.get(campaign.advertiser_id) || campaign.advertiser_id;
+        
+        // Build clean payload with only defined values (following successful curl pattern)
+        const resolvedName = resolvedNames.get(campaign.name) || campaign.name;
+        const campaignPayload = {
+          name: resolvedName,
+          advertiser_id: syncedAdvertiserId,
           start_date: campaign.start_date,
-          end_date: campaign.end_date,
-          max_impression_count: campaign.max_impression_count,
-          display_type: campaign.display_type,
-          active: campaign.active,
           weight: campaign.weight,
-          path: campaign.path,
-          archived: campaign.archived,
-          pacing_type: campaign.pacing_type,
-          impression_max_type: campaign.impression_max_type,
-          paused: campaign.paused,
-          notes: campaign.notes,
+          active: campaign.active,
+        };
+        
+        // Only add optional fields if they have actual values (not undefined/null)
+        if (campaign.end_date) campaignPayload.end_date = campaign.end_date;
+        if (campaign.display_type) campaignPayload.display_type = campaign.display_type;
+        if (campaign.pacing_type) campaignPayload.pacing_type = campaign.pacing_type;
+        if (campaign.max_impression_count !== undefined && campaign.max_impression_count !== null) {
+          campaignPayload.max_impression_count = campaign.max_impression_count;
+        }
+        if (campaign.path) campaignPayload.path = campaign.path;
+        if (campaign.notes) campaignPayload.notes = campaign.notes;
+        if (campaign.impression_max_type) campaignPayload.impression_max_type = campaign.impression_max_type;
+        if (campaign.archived !== undefined) campaignPayload.archived = campaign.archived;
+        if (campaign.paused !== undefined) campaignPayload.paused = campaign.paused;
+        
+        console.log(`Campaign payload for "${campaign.name}":`, campaignPayload);
+        
+        const broadstreetCampaign = await broadstreetAPI.createCampaign(campaignPayload);
+        
+        console.log(`Broadstreet API response for campaign "${campaign.name}":`, {
+          id: broadstreetCampaign?.id,
+          weight: broadstreetCampaign?.weight,
+          weightType: typeof broadstreetCampaign?.weight,
+          fullResponse: broadstreetCampaign
         });
         
-        // Only mark as synced if API call was successful
         if (broadstreetCampaign && broadstreetCampaign.id) {
-          // Create the campaign in the main Campaign collection
           const mainCampaign = new Campaign({
             id: broadstreetCampaign.id,
             name: broadstreetCampaign.name,
@@ -177,104 +418,15 @@ export async function POST(request: NextRequest) {
           });
           
           await mainCampaign.save();
-          
-          // Remove from local collection
           await LocalCampaign.findByIdAndDelete(campaign._id);
           syncedCount++;
+          console.log(`✓ Synced campaign: ${campaign.name}`);
         } else {
           throw new Error('API returned invalid response');
         }
       } catch (error) {
         errors.push(`Failed to sync campaign "${campaign.name}": ${error}`);
-        // Keep the campaign in local-only state if sync failed
-      }
-    }
-
-    // Sync networks
-    for (const network of localNetworks) {
-      try {
-        // Call Broadstreet API to create network
-        const broadstreetNetwork = await broadstreetAPI.createNetwork({
-          name: network.name,
-          group_id: network.group_id,
-          web_home_url: network.web_home_url,
-          logo: network.logo,
-          valet_active: network.valet_active,
-          path: network.path,
-          notes: network.notes,
-        });
-        
-        // Only mark as synced if API call was successful
-        if (broadstreetNetwork && broadstreetNetwork.id) {
-          // Create the network in the main Network collection
-          const mainNetwork = new Network({
-            id: broadstreetNetwork.id,
-            name: broadstreetNetwork.name,
-            group_id: broadstreetNetwork.group_id,
-            web_home_url: broadstreetNetwork.web_home_url,
-            logo: broadstreetNetwork.logo,
-            valet_active: broadstreetNetwork.valet_active,
-            path: broadstreetNetwork.path,
-            notes: broadstreetNetwork.notes,
-          });
-          
-          await mainNetwork.save();
-          
-          // Remove from local collection
-          await LocalNetwork.findByIdAndDelete(network._id);
-          syncedCount++;
-        } else {
-          throw new Error('API returned invalid response');
-        }
-      } catch (error) {
-        errors.push(`Failed to sync network "${network.name}": ${error}`);
-        // Keep the network in local-only state if sync failed
-      }
-    }
-
-    // Sync advertisements
-    for (const advertisement of localAdvertisements) {
-      try {
-        // Call Broadstreet API to create advertisement
-        const broadstreetAdvertisement = await broadstreetAPI.createAdvertisement({
-          name: advertisement.name,
-          network_id: advertisement.network_id,
-          type: advertisement.type,
-          advertiser: advertisement.advertiser,
-          advertiser_id: advertisement.advertiser_id,
-          active: advertisement.active,
-          active_placement: advertisement.active_placement,
-          preview_url: advertisement.preview_url,
-          notes: advertisement.notes,
-        });
-        
-        // Only mark as synced if API call was successful
-        if (broadstreetAdvertisement && broadstreetAdvertisement.id) {
-          // Create the advertisement in the main Advertisement collection
-          const mainAdvertisement = new Advertisement({
-            id: broadstreetAdvertisement.id,
-            name: broadstreetAdvertisement.name,
-            network_id: broadstreetAdvertisement.network_id,
-            type: broadstreetAdvertisement.type,
-            advertiser: broadstreetAdvertisement.advertiser,
-            advertiser_id: broadstreetAdvertisement.advertiser_id,
-            active: broadstreetAdvertisement.active,
-            active_placement: broadstreetAdvertisement.active_placement,
-            preview_url: broadstreetAdvertisement.preview_url,
-            notes: broadstreetAdvertisement.notes,
-          });
-          
-          await mainAdvertisement.save();
-          
-          // Remove from local collection
-          await LocalAdvertisement.findByIdAndDelete(advertisement._id);
-          syncedCount++;
-        } else {
-          throw new Error('API returned invalid response');
-        }
-      } catch (error) {
-        errors.push(`Failed to sync advertisement "${advertisement.name}": ${error}`);
-        // Keep the advertisement in local-only state if sync failed
+        console.log(`✗ Failed to sync campaign: ${campaign.name} - ${error}`);
       }
     }
 
@@ -282,7 +434,13 @@ export async function POST(request: NextRequest) {
       message: `Sync completed. ${syncedCount} entities synced successfully.`,
       synced: syncedCount,
       total: totalEntities,
-      errors: errors
+      errors: errors.length > 0 ? errors : undefined,
+      nameConflicts: nameConflicts.length > 0 ? nameConflicts : undefined,
+      dryRunResults: {
+        totalChecked: totalEntities,
+        conflictsFound: nameConflicts.length,
+        conflictsResolved: nameConflicts.length,
+      },
     });
 
   } catch (error) {

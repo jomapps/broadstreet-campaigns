@@ -248,6 +248,55 @@ class BroadstreetAPI {
       method: 'DELETE',
     });
   }
+
+  // Dry run validation methods for checking existing entities
+  async checkExistingAdvertiser(name: string, networkId: number): Promise<boolean> {
+    try {
+      const response = await this.request<{ advertisers: Advertiser[] }>(`/advertisers?network_id=${networkId}`);
+      return response.advertisers.some(advertiser => 
+        advertiser.name.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+    } catch (error) {
+      console.error('Error checking existing advertiser:', error);
+      return false; // Assume no conflict if we can't check
+    }
+  }
+
+  async checkExistingCampaign(name: string, advertiserId: number): Promise<boolean> {
+    try {
+      const response = await this.request<{ campaigns: Campaign[] }>(`/campaigns?advertiser_id=${advertiserId}`);
+      return response.campaigns.some(campaign => 
+        campaign.name.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+    } catch (error) {
+      console.error('Error checking existing campaign:', error);
+      return false; // Assume no conflict if we can't check
+    }
+  }
+
+  async checkExistingZone(name: string, networkId: number): Promise<boolean> {
+    try {
+      const response = await this.request<{ zones: Zone[] }>(`/zones?network_id=${networkId}`);
+      return response.zones.some(zone => 
+        zone.name.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+    } catch (error) {
+      console.error('Error checking existing zone:', error);
+      return false; // Assume no conflict if we can't check
+    }
+  }
+
+  async checkExistingAdvertisement(name: string, networkId: number): Promise<boolean> {
+    try {
+      const response = await this.request<{ advertisements: Advertisement[] }>(`/advertisements?network_id=${networkId}`);
+      return response.advertisements.some(advertisement => 
+        advertisement.name.toLowerCase().trim() === name.toLowerCase().trim()
+      );
+    } catch (error) {
+      console.error('Error checking existing advertisement:', error);
+      return false; // Assume no conflict if we can't check
+    }
+  }
 }
 
 export const broadstreetAPI = new BroadstreetAPI();

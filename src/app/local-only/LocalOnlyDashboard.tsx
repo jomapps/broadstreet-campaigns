@@ -324,6 +324,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length;
 
@@ -380,6 +382,34 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!confirm(`Are you sure you want to delete ALL ${totalEntities} local entities? This action cannot be undone and will permanently remove all local creations.`)) {
+      return;
+    }
+
+    setIsDeletingAll(true);
+    try {
+      const response = await fetch('/api/delete/local-all', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete all entities');
+      }
+
+      const result = await response.json();
+      alert(`Successfully deleted all ${result.deleted} local entities.`);
+      
+      // Refresh the page to show updated data
+      router.refresh();
+    } catch (error) {
+      console.error('Delete all error:', error);
+      alert('Delete all failed. Please try again.');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   if (totalEntities === 0) {
     return (
       <div className="text-center py-12">
@@ -410,14 +440,25 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
               {totalEntities} local entities ready to sync to Broadstreet
             </p>
           </div>
-          <Button
-            onClick={handleSyncAll}
-            disabled={isSyncing}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {isSyncing ? 'Syncing...' : 'Sync All to Broadstreet'}
-          </Button>
+          <div className="flex space-x-3">
+            <Button
+              onClick={handleSyncAll}
+              disabled={isSyncing || isDeletingAll}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {isSyncing ? 'Syncing...' : 'Sync All to Broadstreet'}
+            </Button>
+            <Button
+              onClick={handleDeleteAll}
+              disabled={isSyncing || isDeletingAll || totalEntities === 0}
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {isDeletingAll ? 'Deleting...' : 'Delete All Local'}
+            </Button>
+          </div>
         </div>
       </div>
 

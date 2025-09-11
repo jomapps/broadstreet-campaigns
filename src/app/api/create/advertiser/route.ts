@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
-import Advertiser from '@/lib/models/advertiser';
+import LocalAdvertiser from '@/lib/models/local-advertiser';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if advertiser with same name already exists in this network
-    const existingAdvertiser = await Advertiser.findOne({
+    const existingAdvertiser = await LocalAdvertiser.findOne({
       name: name.trim(),
       network_id: network_id
     });
@@ -30,13 +30,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique ID (you might want to use a different strategy)
-    const maxId = await Advertiser.findOne({}, { id: 1 }).sort({ id: -1 });
-    const newId = maxId ? maxId.id + 1 : 1;
-
-    // Create new advertiser
-    const newAdvertiser = new Advertiser({
-      id: newId,
+    // Create new local advertiser
+    const newAdvertiser = new LocalAdvertiser({
       name: name.trim(),
       network_id,
       web_home_url: web_home_url || undefined,
@@ -45,7 +40,7 @@ export async function POST(request: NextRequest) {
       created_locally: true,
       synced_with_api: false,
       created_at: new Date(),
-      synced_at: null,
+      sync_errors: [],
     });
 
     await newAdvertiser.save();
@@ -53,7 +48,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Advertiser created successfully',
       advertiser: {
-        id: newAdvertiser.id,
+        _id: newAdvertiser._id,
         name: newAdvertiser.name,
         network_id: newAdvertiser.network_id,
         web_home_url: newAdvertiser.web_home_url,
@@ -61,6 +56,8 @@ export async function POST(request: NextRequest) {
         admins: newAdvertiser.admins,
         created_locally: newAdvertiser.created_locally,
         synced_with_api: newAdvertiser.synced_with_api,
+        created_at: newAdvertiser.created_at,
+        sync_errors: newAdvertiser.sync_errors,
       }
     }, { status: 201 });
 

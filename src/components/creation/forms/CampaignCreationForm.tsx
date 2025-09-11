@@ -209,7 +209,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         network_id: selectedNetwork.id,
         advertiser_id: selectedAdvertiser.id,
         start_date: formData.start_date,
-        weight: formData.weight,
+        weight: parseFloat(formData.weight.toString()), // Ensure weight is a number
       };
 
       // Only add optional fields if they have values

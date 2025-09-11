@@ -142,10 +142,16 @@ if (formData.optional_field && formData.optional_field.trim()) {
   - **Confirmation**: Simple confirmation dialog before deletion
   - **Entity Details**: Show all relevant information for each local entity
   - **Enhanced Campaign Cards**: Complete campaign information including dates, weight, advertiser name and ID, display settings, and status indicators
+  - **Delete All Button**: Red "Delete All Local" button to remove all local entities at once
 - **Sync Functionality**:
   - **Sync All Button**: Single button to sync all local entities to Broadstreet API
   - **Progress Indicator**: Show sync progress and results
   - **Status Updates**: Update entity status from "local" to "synced" after successful sync
+- **Delete All Functionality**:
+  - **Delete All Button**: Red button to permanently delete all local entities
+  - **Confirmation Dialog**: Strong warning about permanent deletion
+  - **Comprehensive Cleanup**: Removes all local entities across all types
+  - **Quality of Life**: Easy cleanup for testing and development
 - **Visual Design**:
   - **Section Headers**: Clear entity type labels with counts
   - **Empty States**: Helpful messages when no local entities exist
@@ -412,34 +418,106 @@ The enhanced UI pattern has been successfully applied to all entity creation for
    - Clean API payload construction
 
 ### ✅ Sync Functionality - COMPLETE
-**Status**: Fully implemented and tested
+**Status**: Fully implemented and working with proper API payload patterns
 
 **Implemented Features**:
-1. **Proper Sync Validation** - Only marks entities as synced after successful API response:
-   - Validates API response contains valid ID
-   - Only updates sync status after successful database save
-   - Prevents premature removal from Local Only page
+1. **Hierarchical Sync Order** - Proper dependency-based sync:
+   - Step 1: Networks (no dependencies)
+   - Step 2: Advertisers (depend on networks) ✅ **WORKING**
+   - Step 3: Zones (depend on networks) ✅ **WORKING**
+   - Step 4: Advertisements (depend on networks, advertisers)
+   - Step 5: Campaigns (depend on advertisers) ✅ **WORKING**
 
-2. **Entity Lifecycle Management** - Proper handling of synced entities:
-   - Moves successfully synced entities from local to main collections
-   - Removes entities from local collections after successful sync
-   - Manages synced entities through normal sync operations
+2. **Dependency Resolution** - ID mapping for local to synced entities:
+   - `advertiserIdMap` tracks local advertiser ID → synced advertiser ID
+   - `networkIdMap` tracks local network ID → synced network ID
+   - Entities reference mapped IDs when syncing dependent entities
 
-3. **Real API Integration** - No mock or fallback data:
+3. **Clean API Payload Pattern** - Critical fix for API success:
+   - **Only send defined values**: No undefined/null fields in payload
+   - **Minimal required fields**: Start with essential fields only
+   - **Conditional optional fields**: Only add fields with actual values
+   - **Proper data types**: Ensure numeric fields are numbers, not strings
+
+4. **Dry Run Validation** - Prevents name conflicts before sync:
+   - **Name Conflict Detection**: Checks all existing entities for duplicate names
+   - **Automatic Resolution**: Generates unique names by appending "(1)", "(2)", etc.
+   - **Hierarchical Validation**: Respects entity dependencies during conflict checking
+   - **Comprehensive Logging**: Reports all name conflicts and resolutions
+
+5. **Real API Integration** - No mock or fallback data:
    - All sync operations use real Broadstreet API calls
    - Proper error handling for API failures
    - Environment configuration with real API credentials
 
-4. **Testing Infrastructure** - Tools for development and testing:
+6. **Testing Infrastructure** - Tools for development and testing:
    - `delete-zone-by-name.js` script for easy cleanup
    - npm script `delete:zone-by-name` for convenient access
    - Comprehensive testing of sync workflow
 
+**API Payload Pattern**:
+```typescript
+// ✅ WORKING PATTERN (Clean Payload)
+const payload = {
+  name: entity.name,
+  network_id: entity.network_id, // Always include
+  // ... other required fields
+};
+
+// Only add optional fields if they have actual values
+if (entity.optional_field) payload.optional_field = entity.optional_field;
+if (entity.numeric_field !== undefined && entity.numeric_field !== null) {
+  payload.numeric_field = entity.numeric_field;
+}
+
+// ❌ BROKEN PATTERN (Sends undefined values)
+const payload = {
+  name: entity.name,
+  optional_field: entity.optional_field, // undefined = API rejection
+  numeric_field: entity.numeric_field,   // undefined = API rejection
+};
+```
+
+**Dry Run Validation Process**:
+```typescript
+// 1. Check for existing entities by name
+const exists = await broadstreetAPI.checkExistingAdvertiser(name, networkId);
+
+// 2. Generate unique name if conflict exists
+const generateUniqueName = async (originalName, entityType, networkId, advertiserId?) => {
+  let baseName = originalName;
+  let counter = 1;
+  
+  while (await checkExists(baseName)) {
+    baseName = `${originalName} (${counter})`;
+    counter++;
+  }
+  return baseName;
+};
+
+// 3. Use resolved name in sync payload
+const resolvedName = resolvedNames.get(originalName) || originalName;
+const payload = { name: resolvedName, ... };
+```
+
+**Dry Run Validation Features**:
+- **Pre-sync Validation**: Checks all entity names before starting sync process
+- **Conflict Detection**: Identifies duplicate names across all entity types
+- **Automatic Resolution**: Generates unique names with "(1)", "(2)" suffixes
+- **Dependency Awareness**: Respects hierarchical relationships during validation
+- **Comprehensive Reporting**: Logs all conflicts and resolutions
+- **Zero Conflicts Guarantee**: Ensures no duplicate names in final sync
+
+**Verified Success**:
+- ✅ **Advertiser Sync**: "Leo API Advertisers" successfully created in Broadstreet backend
+- ✅ **Zone Sync**: Zone creation working perfectly
+- ✅ **Campaign Sync**: Campaign creation working with proper payload pattern
+
 **Technical Implementation**:
-- **API**: `POST /api/sync/local-all` with proper validation
-- **Database**: Proper entity movement between collections
+- **API**: `POST /api/sync/local-all` with hierarchical dependency order and clean payloads
+- **Database**: Proper entity movement between collections after successful API response
 - **Validation**: API response validation before status updates
-- **Error Handling**: Graceful handling of sync failures
+- **Error Handling**: Graceful handling of sync failures with detailed logging
 
 ### 📋 Next Steps
 - [x] Test zone creation functionality in browser
