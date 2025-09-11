@@ -62,7 +62,7 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2">
-            <h3 className="text-lg font-semibold text-gray-900">{zone.name}</h3>
+            <h3 className="card-title text-gray-900">{zone.name}</h3>
             {isLocalZone && (
               <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white shadow-sm">
                 🏠 Local
@@ -70,10 +70,10 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
             )}
           </div>
           {networkName && (
-            <p className="text-sm text-gray-600 mt-1">Network: {networkName}</p>
+            <p className="card-text text-gray-600 mt-1">Network: {networkName}</p>
           )}
           {zone.alias && (
-            <p className="text-sm text-gray-500 mt-1">Alias: {zone.alias}</p>
+            <p className="card-text text-gray-500 mt-1">Alias: {zone.alias}</p>
           )}
         </div>
         
@@ -84,7 +84,7 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
               {zone.size_number && zone.size_number}
             </span>
           )}
-          <span className="text-xs text-gray-500">
+          <span className="card-meta text-gray-500">
             ID: {zone.id || zone._id.slice(-8)}
           </span>
         </div>
@@ -94,22 +94,22 @@ function ZoneCard({ zone, networkName }: ZoneCardProps) {
         <div className={`mb-4 p-3 rounded-lg ${
           isLocalZone ? 'bg-orange-200' : 'bg-gray-50'
         }`}>
-          <p className="text-sm font-medium text-gray-900">{sizeInfo.description}</p>
-          <p className="text-sm text-gray-600">Dimensions: {sizeInfo.dimensions}px</p>
+          <p className="card-text font-medium text-gray-900">{sizeInfo.description}</p>
+          <p className="card-text text-gray-600">Dimensions: {sizeInfo.dimensions}px</p>
         </div>
       )}
       
       <div className="grid grid-cols-2 gap-4">
         {zone.category && (
           <div>
-            <p className="text-sm text-gray-600">Category</p>
-            <p className="text-sm font-medium text-gray-900">{zone.category}</p>
+            <p className="card-text text-gray-600">Category</p>
+            <p className="card-text font-medium text-gray-900">{zone.category}</p>
           </div>
         )}
         {zone.block && (
           <div>
-            <p className="text-sm text-gray-600">Block</p>
-            <p className="text-sm font-medium text-gray-900">{zone.block}</p>
+            <p className="card-text text-gray-600">Block</p>
+            <p className="card-text font-medium text-gray-900">{zone.block}</p>
           </div>
         )}
       </div>
@@ -165,11 +165,11 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
-          <p className="text-yellow-700 mb-4">
+          <h3 className="card-title text-yellow-800 mb-2">Network Required</h3>
+          <p className="card-text text-yellow-700 mb-4">
             Please select a network from the sidebar filters to view zones.
           </p>
-          <p className="text-sm text-yellow-600">
+          <p className="card-text text-yellow-600">
             Zones are specific to each network, so you need to choose which network&apos;s zones you want to see.
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
   if (!zones || zones.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No zones found for the selected network. Try syncing data first.</p>
+        <p className="card-text text-gray-500">No zones found for the selected network. Try syncing data first.</p>
       </div>
     );
   }
@@ -197,7 +197,7 @@ export default function ZonesList({ zones, networkMap }: ZonesListProps) {
       
       {filteredZones.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No zones match your search.</p>
+          <p className="card-text text-gray-500">No zones match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

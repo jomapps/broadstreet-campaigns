@@ -72,19 +72,19 @@ function StatsCard({ title, count, href, description }: StatsCardProps) {
                 {getIcon(title)}
               </div>
               <div>
-                <CardTitle className="text-lg">{title}</CardTitle>
-                <CardDescription className="text-sm">{description}</CardDescription>
+                <CardTitle className="card-title">{title}</CardTitle>
+                <CardDescription className="card-text">{description}</CardDescription>
               </div>
             </div>
-            <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
+            <Badge variant="secondary" className="card-text font-bold px-2 py-1">
               {count.toLocaleString()}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
-          <Button variant="ghost" size="sm" className="w-full justify-between group-hover:bg-primary/5">
+          <Button variant="ghost" size="sm" className="w-full justify-between group-hover:bg-primary/5 card-text">
             <span>View details</span>
-            <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Button>
@@ -200,8 +200,8 @@ export default function DashboardPage() {
     <div className="space-y-8">
       {/* Header Section */}
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-xl text-muted-foreground">
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="card-text text-muted-foreground">
           Overview of your Broadstreet advertising system
         </p>
       </div>
@@ -209,8 +209,8 @@ export default function DashboardPage() {
       {/* Stats Grid */}
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">System Overview</h2>
-          <p className="text-muted-foreground">Current status of all your advertising entities</p>
+          <h2 className="card-title">System Overview</h2>
+          <p className="card-text text-muted-foreground">Current status of all your advertising entities</p>
         </div>
         
         <Suspense fallback={<LoadingSkeleton />}>
@@ -221,8 +221,8 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">Quick Actions</h2>
-          <p className="text-muted-foreground">Common tasks and utilities</p>
+          <h2 className="card-title">Quick Actions</h2>
+          <p className="card-text text-muted-foreground">Common tasks and utilities</p>
         </div>
         
         <Suspense fallback={

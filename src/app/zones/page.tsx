@@ -154,8 +154,8 @@ export default function ZonesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Zones</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-xl font-bold text-gray-900">Zones</h1>
+          <p className="card-text text-gray-600 mt-1">
             Possible ad placements across your networks
           </p>
         </div>
@@ -166,8 +166,8 @@ export default function ZonesPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Zone Size Guide</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <h2 className="card-title text-gray-900 mb-2">Zone Size Guide</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 card-text">
           <div className="flex items-center space-x-2">
             <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">SQ</span>
             <span>Square ads (300x250px)</span>

@@ -136,11 +136,11 @@ function PlacementsData() {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
-          <p className="text-yellow-700 mb-4">
+          <h3 className="card-title text-yellow-800 mb-2">Network Required</h3>
+          <p className="card-text text-yellow-700 mb-4">
             Please select a network from the sidebar filters to view placements.
           </p>
-          <p className="text-sm text-yellow-600">
+          <p className="card-text text-yellow-600">
             Placements are specific to each network, so you need to choose which network&apos;s placements you want to see.
           </p>
         </div>
@@ -157,7 +157,7 @@ export default function PlacementsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Placements</h1>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="card-text text-gray-600 mt-1">
             Active ad placements across campaigns, advertisements, and zones
           </p>
         </div>
@@ -168,8 +168,8 @@ export default function PlacementsPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Placement Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+        <h2 className="card-title text-gray-900 mb-3">Placement Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 card-text">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
             <span>Advertisement + Zone + Campaign</span>

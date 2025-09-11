@@ -42,12 +42,12 @@ function NetworkCard({ network }: NetworkCardProps) {
               </div>
             )}
             <div>
-              <CardTitle className="text-lg">{network.name}</CardTitle>
-              <CardDescription>ID: {network.id}</CardDescription>
+              <CardTitle className="card-title">{network.name}</CardTitle>
+              <CardDescription className="card-meta">ID: {network.id}</CardDescription>
             </div>
           </div>
           
-          <Badge variant={network.valet_active ? "default" : "secondary"}>
+          <Badge variant={network.valet_active ? "default" : "secondary"} className="text-xs px-2 py-1">
             {network.valet_active ? 'Valet Active' : 'Standard'}
           </Badge>
         </div>
@@ -59,7 +59,7 @@ function NetworkCard({ network }: NetworkCardProps) {
             href={network.web_home_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-primary hover:text-primary/80 inline-flex items-center space-x-1 transition-colors"
+            className="card-text text-primary hover:text-primary/80 inline-flex items-center space-x-1 transition-colors"
           >
             <span>{network.web_home_url}</span>
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -70,14 +70,14 @@ function NetworkCard({ network }: NetworkCardProps) {
         
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-muted/50 rounded-lg p-3">
-            <p className="text-sm text-muted-foreground mb-1">Advertisers</p>
-            <p className="text-xl font-bold">
+            <p className="card-text text-muted-foreground mb-1">Advertisers</p>
+            <p className="card-title font-bold">
               {network.advertiser_count || 0}
             </p>
           </div>
           <div className="bg-muted/50 rounded-lg p-3">
-            <p className="text-sm text-muted-foreground mb-1">Zones</p>
-            <p className="text-xl font-bold">
+            <p className="card-text text-muted-foreground mb-1">Zones</p>
+            <p className="card-title font-bold">
               {network.zone_count || 0}
             </p>
           </div>
@@ -146,8 +146,8 @@ export default function NetworksPage() {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight">Networks</h1>
-            <p className="text-xl text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight">Networks</h1>
+            <p className="card-text text-muted-foreground">
               Different websites where campaigns are run
             </p>
           </div>
@@ -161,8 +161,8 @@ export default function NetworksPage() {
       {/* Networks Grid */}
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight">Available Networks</h2>
-          <p className="text-muted-foreground">Manage and view all your advertising networks</p>
+          <h2 className="card-title">Available Networks</h2>
+          <p className="card-text text-muted-foreground">Manage and view all your advertising networks</p>
         </div>
         
         <Suspense fallback={<LoadingSkeleton />}>

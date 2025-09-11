@@ -85,8 +85,8 @@ export default function AdvertisementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Advertisements</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-xl font-bold text-gray-900">Advertisements</h1>
+          <p className="card-text text-gray-600 mt-1">
             Actual ads shown on your websites
           </p>
         </div>
@@ -97,8 +97,8 @@ export default function AdvertisementsPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">Advertisement Types</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <h2 className="card-title text-gray-900 mb-2">Advertisement Types</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 card-text">
           <div className="flex items-center space-x-2">
             <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
             <span>Image</span>

@@ -33,8 +33,8 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">{advertisement.name}</h3>
-          <p className="text-sm text-gray-600 mt-1">Advertiser: {advertisement.advertiser}</p>
+          <h3 className="card-title text-gray-900">{advertisement.name}</h3>
+          <p className="card-text text-gray-600 mt-1">Advertiser: {advertisement.advertiser}</p>
         </div>
         
         <div className="flex flex-col items-end space-y-2">
@@ -45,18 +45,18 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
           }`}>
             {advertisement.active_placement ? 'Active' : 'Inactive'}
           </span>
-          <span className="text-xs text-gray-500">ID: {advertisement.id}</span>
+          <span className="card-meta text-gray-500">ID: {advertisement.id}</span>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <p className="text-sm text-gray-600">Type</p>
-          <p className="text-sm font-medium text-gray-900">{advertisement.type}</p>
+          <p className="card-text text-gray-600">Type</p>
+          <p className="card-text font-medium text-gray-900">{advertisement.type}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">Last Updated</p>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="card-text text-gray-600">Last Updated</p>
+          <p className="card-text font-medium text-gray-900">
             {updatedDate.toLocaleDateString()}
           </p>
         </div>
@@ -64,7 +64,7 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
       
       {advertisement.active.url && (
         <div className="mb-4">
-          <p className="text-sm text-gray-600 mb-2">Active Image</p>
+          <p className="card-text text-gray-600 mb-2">Active Image</p>
           <img
             src={advertisement.active.url}
             alt={advertisement.name}
@@ -81,7 +81,7 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
           href={advertisement.preview_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded text-sm font-medium transition-colors duration-200"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded card-text font-medium transition-colors duration-200"
         >
           Preview
         </a>
@@ -115,11 +115,11 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
-          <p className="text-yellow-700 mb-4">
+          <h3 className="card-title text-yellow-800 mb-2">Network Required</h3>
+          <p className="card-text text-yellow-700 mb-4">
             Please select a network from the sidebar filters to view advertisements.
           </p>
-          <p className="text-sm text-yellow-600">
+          <p className="card-text text-yellow-600">
             Advertisements are specific to each network, so you need to choose which network&apos;s advertisements you want to see.
           </p>
         </div>
@@ -132,11 +132,11 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">Advertiser Required</h3>
-          <p className="text-blue-700 mb-4">
+          <h3 className="card-title text-blue-800 mb-2">Advertiser Required</h3>
+          <p className="card-text text-blue-700 mb-4">
             Please select an advertiser from the sidebar filters to view advertisements.
           </p>
-          <p className="text-sm text-blue-600">
+          <p className="card-text text-blue-600">
             Advertisements belong to specific advertisers, so you need to choose which advertiser&apos;s advertisements you want to see.
           </p>
         </div>
@@ -148,7 +148,7 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
   if (advertisements.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No advertisements found for the selected filters. Try syncing data first.</p>
+        <p className="card-text text-gray-500">No advertisements found for the selected filters. Try syncing data first.</p>
       </div>
     );
   }
@@ -165,7 +165,7 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
       
       {filteredAdvertisements.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No advertisements match your search.</p>
+          <p className="card-text text-gray-500">No advertisements match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

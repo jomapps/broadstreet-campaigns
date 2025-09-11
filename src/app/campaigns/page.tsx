@@ -52,9 +52,9 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
               className="mt-1"
             />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
+              <h3 className="card-title text-gray-900">{campaign.name}</h3>
               {advertiserName && (
-                <p className="text-sm text-gray-600 mt-1">Advertiser: {advertiserName}</p>
+                <p className="card-text text-gray-600 mt-1">Advertiser: {advertiserName}</p>
               )}
             </div>
           </div>
@@ -62,7 +62,7 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
         
         <div className="flex flex-col items-end space-y-2">
           {isSelected && (
-            <Badge variant="default" className="text-xs">
+            <Badge variant="default" className="text-xs px-2 py-1">
               Selected
             </Badge>
           )}
@@ -73,20 +73,20 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
           }`}>
             {isActive ? 'Active' : 'Inactive'}
           </span>
-          <span className="text-xs text-gray-500">ID: {campaign.id}</span>
+          <span className="card-meta text-gray-500">ID: {campaign.id}</span>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
-          <p className="text-sm text-gray-600">Start Date</p>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="card-text text-gray-600">Start Date</p>
+          <p className="card-text font-medium text-gray-900">
             {startDate.toLocaleDateString()}
           </p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">End Date</p>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="card-text text-gray-600">End Date</p>
+          <p className="card-text font-medium text-gray-900">
             {endDate ? endDate.toLocaleDateString() : 'No end date'}
           </p>
         </div>
@@ -94,12 +94,12 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
       
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-sm text-gray-600">Weight</p>
-          <p className="text-sm font-medium text-gray-900">{campaign.weight}</p>
+          <p className="card-text text-gray-600">Weight</p>
+          <p className="card-text font-medium text-gray-900">{campaign.weight}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-600">Max Impressions</p>
-          <p className="text-sm font-medium text-gray-900">
+          <p className="card-text text-gray-600">Max Impressions</p>
+          <p className="card-text font-medium text-gray-900">
             {campaign.max_impression_count?.toLocaleString() || 'Unlimited'}
           </p>
         </div>
@@ -107,8 +107,8 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
       
       {campaign.notes && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="text-sm text-gray-600">Notes</p>
-          <p className="text-sm text-gray-900 mt-1">{campaign.notes}</p>
+          <p className="card-text text-gray-600">Notes</p>
+          <p className="card-text text-gray-900 mt-1">{campaign.notes}</p>
         </div>
       )}
     </div>
@@ -170,11 +170,11 @@ function CampaignsList() {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
-          <p className="text-yellow-700 mb-4">
+          <h3 className="card-title text-yellow-800 mb-2">Network Required</h3>
+          <p className="card-text text-yellow-700 mb-4">
             Please select a network from the sidebar filters to view campaigns.
           </p>
-          <p className="text-sm text-yellow-600">
+          <p className="card-text text-yellow-600">
             Campaigns are specific to each network, so you need to choose which network&apos;s campaigns you want to see.
           </p>
         </div>
@@ -187,11 +187,11 @@ function CampaignsList() {
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-blue-800 mb-2">Advertiser Required</h3>
-          <p className="text-blue-700 mb-4">
+          <h3 className="card-title text-blue-800 mb-2">Advertiser Required</h3>
+          <p className="card-text text-blue-700 mb-4">
             Please select an advertiser from the sidebar filters to view campaigns.
           </p>
-          <p className="text-sm text-blue-600">
+          <p className="card-text text-blue-600">
             Campaigns belong to specific advertisers, so you need to choose which advertiser&apos;s campaigns you want to see.
           </p>
         </div>
@@ -202,7 +202,7 @@ function CampaignsList() {
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No campaigns found for the selected advertiser. Try syncing data first.</p>
+        <p className="card-text text-gray-500">No campaigns found for the selected advertiser. Try syncing data first.</p>
       </div>
     );
   }
@@ -227,7 +227,7 @@ function CampaignsList() {
       
       {filteredCampaigns.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No campaigns match your search.</p>
+          <p className="card-text text-gray-500">No campaigns match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -251,8 +251,8 @@ export default function CampaignsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-xl font-bold text-gray-900">Campaigns</h1>
+          <p className="card-text text-gray-600 mt-1">
             Active advertising campaigns and their details
           </p>
         </div>

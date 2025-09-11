@@ -63,10 +63,10 @@ function PlacementCard({ placement }: PlacementCardProps) {
       {/* Header with title and status */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-900 truncate">
+          <h3 className="card-title text-gray-900 truncate">
             {placement.advertisement?.name || `Ad #${placement.advertisement_id}`}
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="card-meta text-gray-500 mt-0.5">
             {placement.campaign?.name || `Campaign #${placement.campaign_id}`}
           </p>
         </div>
@@ -92,7 +92,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
       
       {/* Main content in compact layout */}
       <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between card-text">
           <span className="text-gray-500">Zone:</span>
           <span className="font-medium text-gray-900">
             {placement.zone?.name || `#${placement.zone_id}`}
@@ -102,7 +102,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
           </span>
         </div>
         
-        <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between card-text">
           <span className="text-gray-500">Advertiser:</span>
           <span className="font-medium text-gray-900">
             {placement.advertiser?.name || 'Unknown'}
@@ -110,7 +110,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
         </div>
         
         {placement.campaign && (
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between card-text">
             <span className="text-gray-500">Duration:</span>
             <span className="font-medium text-gray-900">
               {startDate ? startDate.toLocaleDateString() : 'N/A'}
@@ -120,7 +120,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
         )}
         
         {placement.advertisement?.type && (
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex items-center justify-between card-text">
             <span className="text-gray-500">Type:</span>
             <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
               {placement.advertisement.type}
@@ -132,7 +132,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
       {/* Restrictions */}
       {placement.restrictions && placement.restrictions.length > 0 && (
         <div className="mb-3 pt-2 border-t border-gray-100">
-          <p className="text-xs text-gray-500 mb-1">Restrictions:</p>
+          <p className="card-text text-gray-500 mb-1">Restrictions:</p>
           <div className="flex flex-wrap gap-1">
             {placement.restrictions.slice(0, 3).map((restriction, index) => (
               <span
@@ -152,7 +152,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
       )}
       
       {/* Footer with metadata */}
-      <div className="pt-2 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400">
+      <div className="pt-2 border-t border-gray-100 flex justify-between items-center card-meta text-gray-400">
         <span>Created: {new Date(placement.createdAt).toLocaleDateString()}</span>
         <span>ID: {placement._id.slice(-6)}</span>
       </div>
@@ -190,7 +190,7 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
   if (placements.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">No placements found for the selected filters. Try syncing data first.</p>
+        <p className="card-text text-gray-500">No placements found for the selected filters. Try syncing data first.</p>
       </div>
     );
   }
@@ -207,7 +207,7 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
       
       {filteredPlacements.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">No placements match your search.</p>
+          <p className="card-text text-gray-500">No placements match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

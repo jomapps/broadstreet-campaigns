@@ -1,36 +1,67 @@
 'use client';
 
 import { Suspense, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 // Type for advertiser data from filter context
 type AdvertiserLean = {
-  id: number;
+  id: number | string;
   name: string;
   logo?: { url: string };
   web_home_url?: string;
   notes?: string | null;
   admins?: Array<{ name: string; email: string }>;
+  created_locally?: boolean;
+  synced_with_api?: boolean;
 };
 
 interface AdvertiserCardProps {
   advertiser: AdvertiserLean;
   isSelected: boolean;
   onSelect: (advertiser: AdvertiserLean) => void;
+  onDelete?: (advertiser: AdvertiserLean) => void;
 }
 
-function AdvertiserCard({ advertiser, isSelected, onSelect }: AdvertiserCardProps) {
+function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: AdvertiserCardProps) {
+  const isLocal = advertiser.created_locally && !advertiser.synced_with_api;
+  
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    if (!confirm(`Are you sure you want to delete "${advertiser.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    onDelete(advertiser);
+  };
+  
   return (
-    <div className={`bg-white rounded-lg shadow-sm border p-6 transition-all duration-200 ${
-      isSelected 
-        ? 'border-primary shadow-md shadow-primary/10' 
-        : 'border-gray-200 hover:border-gray-300'
+    <div className={`relative rounded-lg shadow-sm border p-6 transition-all duration-200 ${
+      isLocal 
+        ? 'border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
+        : isSelected 
+          ? 'bg-white border-primary shadow-md shadow-primary/10' 
+          : 'bg-white border-gray-200 hover:border-gray-300'
     }`}>
+      {/* Delete Button for Local Entities */}
+      {isLocal && onDelete && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+          onClick={handleDelete}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-3">
@@ -46,7 +77,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect }: AdvertiserCardProp
                 className="w-8 h-8 rounded object-cover"
               />
             )}
-            <h3 className="text-lg font-semibold text-gray-900">{advertiser.name}</h3>
+            <h3 className="card-title text-gray-900">{advertiser.name}</h3>
           </div>
           
           {advertiser.web_home_url && (
@@ -54,7 +85,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect }: AdvertiserCardProp
               href={advertiser.web_home_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:text-blue-800 mt-2 inline-block"
+              className="card-text text-blue-600 hover:text-blue-800 mt-2 inline-block"
             >
               {advertiser.web_home_url}
             </a>
@@ -63,27 +94,34 @@ function AdvertiserCard({ advertiser, isSelected, onSelect }: AdvertiserCardProp
         
         <div className="flex flex-col items-end space-y-1">
           {isSelected && (
-            <Badge variant="default" className="text-xs">
+            <Badge variant="default" className="text-xs px-2 py-1">
               Selected
             </Badge>
           )}
-          <span className="text-xs text-gray-500">ID: {advertiser.id}</span>
+          {advertiser.created_locally && !advertiser.synced_with_api && (
+            <Badge variant="secondary" className="text-xs px-2 py-1 bg-orange-100 text-orange-800">
+              Local
+            </Badge>
+          )}
+          <span className="card-meta text-gray-500">
+            ID: {typeof advertiser.id === 'string' ? advertiser.id.slice(-8) : advertiser.id}
+          </span>
         </div>
       </div>
       
       {advertiser.notes && (
         <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600">Notes</p>
-          <p className="text-sm text-gray-900 mt-1">{advertiser.notes}</p>
+          <p className="card-text text-gray-600">Notes</p>
+          <p className="card-text text-gray-900 mt-1">{advertiser.notes}</p>
         </div>
       )}
       
       {advertiser.admins && advertiser.admins.length > 0 && (
         <div>
-          <p className="text-sm text-gray-600 mb-2">Admins</p>
+          <p className="card-text text-gray-600 mb-2">Admins</p>
           <div className="space-y-1">
             {advertiser.admins.map((admin, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
+              <div key={index} className="flex items-center justify-between card-text">
                 <span className="text-gray-900">{admin.name}</span>
                 <a
                   href={`mailto:${admin.email}`}
@@ -126,6 +164,8 @@ function LoadingSkeleton() {
 function AdvertisersList() {
   const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const router = useRouter();
 
   const filteredAdvertisers = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -152,11 +192,11 @@ function AdvertisersList() {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-2">Network Required</h3>
-          <p className="text-yellow-700 mb-4">
+          <h3 className="card-title text-yellow-800 mb-2">Network Required</h3>
+          <p className="card-text text-yellow-700 mb-4">
             Please select a network from the sidebar filters to view advertisers.
           </p>
-          <p className="text-sm text-yellow-600">
+          <p className="card-text text-yellow-600">
             Advertisers are specific to each network, so you need to choose which network&apos;s advertisers you want to see.
           </p>
         </div>
@@ -177,6 +217,27 @@ function AdvertisersList() {
       setSelectedAdvertiser(null);
     } else {
       setSelectedAdvertiser(advertiser);
+    }
+  };
+
+  const handleDelete = async (advertiser: AdvertiserLean) => {
+    setIsDeleting(advertiser.id.toString());
+    try {
+      const response = await fetch(`/api/delete/advertiser/${advertiser.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete advertiser');
+      }
+
+      // Refresh the page to show updated data
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting advertiser:', error);
+      alert('Failed to delete advertiser. Please try again.');
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -202,6 +263,7 @@ function AdvertisersList() {
               advertiser={advertiser}
               isSelected={selectedAdvertiser?.id === advertiser.id}
               onSelect={handleAdvertiserSelect}
+              onDelete={handleDelete}
             />
           ))}
         </div>
@@ -215,8 +277,8 @@ export default function AdvertisersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Advertisers</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-xl font-bold text-gray-900">Advertisers</h1>
+          <p className="card-text text-gray-600 mt-1">
             Companies running advertising campaigns
           </p>
         </div>

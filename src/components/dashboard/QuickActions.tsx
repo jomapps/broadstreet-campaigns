@@ -39,8 +39,8 @@ export default function QuickActions() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">Create Fallback Ad</h3>
-                <p className="text-sm text-muted-foreground group-hover:text-primary/80 transition-colors">Create fallback ad placements for campaigns</p>
+                <h3 className="font-semibold card-title group-hover:text-primary transition-colors">Create Fallback Ad</h3>
+                <p className="card-text text-muted-foreground group-hover:text-primary/80 transition-colors">Create fallback ad placements for campaigns</p>
               </div>
             </div>
           </CardContent>
@@ -55,8 +55,8 @@ export default function QuickActions() {
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg group-hover:text-green-700 transition-colors">Sync Data</h3>
-                <p className="text-sm text-muted-foreground group-hover:text-green-600 transition-colors">Sync all data from Broadstreet API</p>
+                <h3 className="font-semibold card-title group-hover:text-green-700 transition-colors">Sync Data</h3>
+                <p className="card-text text-muted-foreground group-hover:text-green-600 transition-colors">Sync all data from Broadstreet API</p>
               </div>
             </div>
           </CardContent>
