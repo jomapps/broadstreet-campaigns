@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image } from 'lucide-react';
 
 // Type for local entity data
@@ -73,13 +74,17 @@ function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCar
   };
 
   return (
-    <Card className="relative p-4 border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 transition-all duration-200 hover:scale-[1.02]">
+    <Card 
+      className="relative p-4 border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 transition-all duration-200 hover:scale-[1.02]"
+      data-testid="entity-card"
+    >
       {/* Delete Button */}
       <Button
         variant="ghost"
         size="sm"
         className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
         onClick={() => onDelete(entity._id, entity.type)}
+        data-testid="delete-button"
       >
         <X className="h-4 w-4" />
       </Button>
@@ -323,9 +328,25 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete }:
 export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  
+  // Enhanced sync progress management
+  const {
+    isOpen: isProgressModalOpen,
+    setIsOpen: setProgressModalOpen,
+    steps,
+    currentStep,
+    overallProgress,
+    isComplete,
+    hasErrors,
+    initializeSteps,
+    setStepInProgress,
+    setStepCompleted,
+    setStepFailed,
+    updateStepProgress,
+    completeSync
+  } = useSyncProgress();
 
   const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length;
 
@@ -359,8 +380,22 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       return;
     }
 
-    setIsSyncing(true);
+    // Initialize progress modal with entity counts
+    const entityCounts = {
+      networks: data.networks.length,
+      advertisers: data.advertisers.length,
+      zones: data.zones.length,
+      advertisements: data.advertisements.length,
+      campaigns: data.campaigns.length
+    };
+    
+    initializeSteps(entityCounts);
+    setProgressModalOpen(true);
+
     try {
+      // Start dry run validation
+      setStepInProgress('dry-run');
+      
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',
       });
@@ -370,16 +405,54 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       }
 
       const result = await response.json();
-      alert(`Sync completed! ${result.synced} entities synced successfully.`);
       
-      // Refresh the page to show updated data
-      router.refresh();
+      // Update dry run step
+      if (result.nameConflicts && result.nameConflicts.length > 0) {
+        setStepCompleted('dry-run', `Found and resolved ${result.nameConflicts.length} name conflicts`);
+      } else {
+        setStepCompleted('dry-run', 'No name conflicts found');
+      }
+
+      // Simulate step-by-step progress based on API response
+      const syncSteps = [
+        { id: 'networks', count: result.synced?.networks || 0 },
+        { id: 'advertisers', count: result.synced?.advertisers || 0 },
+        { id: 'zones', count: result.synced?.zones || 0 },
+        { id: 'advertisements', count: result.synced?.advertisements || 0 },
+        { id: 'campaigns', count: result.synced?.campaigns || 0 }
+      ];
+
+      // Simulate progress for each step
+      for (const step of syncSteps) {
+        setStepInProgress(step.id);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+        
+        if (step.count > 0) {
+          setStepCompleted(step.id, `Successfully synced ${step.count} ${step.id}`);
+        } else {
+          setStepCompleted(step.id, `No ${step.id} to sync`);
+        }
+      }
+
+      // Complete the sync
+      const hasErrors = result.errors && result.errors.length > 0;
+      completeSync(!hasErrors, result.errors);
+      
     } catch (error) {
       console.error('Error syncing entities:', error);
-      alert('Failed to sync entities. Please try again.');
-    } finally {
-      setIsSyncing(false);
+      setStepFailed('dry-run', error instanceof Error ? error.message : 'Unknown error occurred');
+      completeSync(false, [error instanceof Error ? error.message : 'Unknown error occurred']);
     }
+  };
+
+  const handleSyncComplete = () => {
+    setProgressModalOpen(false);
+    router.refresh();
+  };
+
+  const handleSyncRetry = () => {
+    setProgressModalOpen(false);
+    handleSyncAll();
   };
 
   const handleDeleteAll = async () => {
@@ -419,7 +492,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
           <p className="text-gray-600 mb-4">
-            You haven't created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+            You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
           </p>
           <Button onClick={() => router.push('/zones')} variant="outline">
             Create Your First Entity
@@ -443,17 +516,19 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
           <div className="flex space-x-3">
             <Button
               onClick={handleSyncAll}
-              disabled={isSyncing || isDeletingAll}
+              disabled={isProgressModalOpen || isDeletingAll}
               className="bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="sync-all-button"
             >
               <Upload className="h-4 w-4 mr-2" />
-              {isSyncing ? 'Syncing...' : 'Sync All to Broadstreet'}
+              Sync All to Broadstreet
             </Button>
             <Button
               onClick={handleDeleteAll}
-              disabled={isSyncing || isDeletingAll || totalEntities === 0}
+              disabled={isProgressModalOpen || isDeletingAll || totalEntities === 0}
               variant="destructive"
               className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="delete-all-button"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               {isDeletingAll ? 'Deleting...' : 'Delete All Local'}
@@ -501,6 +576,21 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+      />
+
+      {/* Progress Modal */}
+      <ProgressModal
+        isOpen={isProgressModalOpen}
+        onClose={() => setProgressModalOpen(false)}
+        title="Syncing to Broadstreet"
+        steps={steps}
+        currentStep={currentStep}
+        overallProgress={overallProgress}
+        isComplete={isComplete}
+        hasErrors={hasErrors}
+        onRetry={handleSyncRetry}
+        onConfirm={handleSyncComplete}
+        data-testid="progress-modal"
       />
     </div>
   );

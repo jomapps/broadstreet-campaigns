@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -p 3005",
     "lint": "eslint",
-    "delete:zone-by-name": "node delete-zone-by-name.js"
+    "delete:zone-by-name": "node delete-zone-by-name.js",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:local-page": "playwright test tests/local-page.spec.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.0.0",
@@ -33,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.40.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20",
     "@types/react": "^19",

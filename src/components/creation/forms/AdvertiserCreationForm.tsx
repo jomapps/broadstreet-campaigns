@@ -298,7 +298,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
             />
             {errors.web_home_url && <p className="text-sm text-red-500 mt-1">{errors.web_home_url}</p>}
             <p className="text-sm text-gray-500 mt-1">
-              The advertiser's main website URL
+              The advertiser&apos;s main website URL
             </p>
           </div>
 

@@ -9,7 +9,8 @@ import Network from '@/lib/models/network';
 import Advertiser from '@/lib/models/advertiser';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Target, Users, Calendar, Globe, Image, Trash2 } from 'lucide-react';
+import { Target, Users, Calendar, Globe, Image } from 'lucide-react';
+import LocalOnlyDashboard from './LocalOnlyDashboard';
 
 // Type for local entity data
 type LocalEntity = {
@@ -395,7 +396,7 @@ async function LocalOnlyData() {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
             <p className="text-gray-600 mb-4">
-              You haven't created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+              You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
             </p>
           </div>
         </div>
@@ -476,8 +477,123 @@ export default function LocalOnlyPage() {
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <LocalOnlyData />
+        <LocalOnlyDataWrapper />
       </Suspense>
     </div>
   );
+}
+
+// Wrapper component to pass data to the client-side dashboard
+async function LocalOnlyDataWrapper() {
+  try {
+    await connectDB();
+    
+    // Fetch all local entities that haven't been synced
+    const [localZones, localAdvertisers, localCampaigns, localNetworks, localAdvertisements] = await Promise.all([
+      LocalZone.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+      LocalAdvertiser.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+      LocalCampaign.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+      LocalNetwork.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+      LocalAdvertisement.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+    ]);
+    
+    // Also fetch locally created advertisers from the main Advertiser collection
+    const mainLocalAdvertisers = await Advertiser.find({ 
+      synced_with_api: false,
+      created_locally: true 
+    }).select('-id').sort({ created_at: -1 }).lean();
+    
+    // Convert main advertisers to LocalEntity format for display
+    const convertedMainAdvertisers = mainLocalAdvertisers.map(advertiser => ({
+      _id: advertiser._id.toString(),
+      name: advertiser.name,
+      network_id: advertiser.network_id,
+      web_home_url: advertiser.web_home_url,
+      notes: advertiser.notes,
+      admins: advertiser.admins,
+      created_locally: advertiser.created_locally,
+      synced_with_api: advertiser.synced_with_api,
+      created_at: advertiser.created_at || new Date(),
+      type: 'advertiser' as const,
+    }));
+    
+    // Combine local advertisers from both collections
+    const allLocalAdvertisers = [...localAdvertisers, ...convertedMainAdvertisers];
+    
+    // Get network names for display
+    const networkIds = [...new Set([
+      ...localZones.map(z => z.network_id),
+      ...allLocalAdvertisers.map(a => a.network_id),
+      ...localCampaigns.map(c => c.network_id),
+      ...localNetworks.map(n => n.id),
+      ...localAdvertisements.map(ad => ad.network_id),
+    ])];
+    
+    const networks = await Network.find({ id: { $in: networkIds } }).lean();
+    const networkMap = new Map(networks.map(n => [n.id, n.name]));
+
+    // Get advertiser names for display (only numeric Broadstreet IDs)
+    const advertiserIds = [...new Set(
+      localCampaigns
+        .map(c => c.advertiser_id)
+        .filter((id): id is number => typeof id === 'number')
+    )];
+    
+    // Fetch synced advertisers that match those numeric IDs
+    const syncedAdvertisers = await Advertiser.find({ id: { $in: advertiserIds } }).lean();
+    
+    // Map by numeric ID for campaign display lookups
+    const advertiserMap = new Map<number, string>(
+      syncedAdvertisers.map(a => [a.id, a.name])
+    );
+
+    // Serialize the data properly
+    const serializedData = {
+      zones: localZones.map(zone => ({
+        ...zone,
+        _id: zone._id.toString(),
+        created_at: zone.created_at.toISOString(),
+        type: 'zone' as const,
+      })),
+      advertisers: allLocalAdvertisers.map(advertiser => ({
+        ...advertiser,
+        _id: advertiser._id.toString(),
+        created_at: advertiser.created_at.toISOString(),
+        type: 'advertiser' as const,
+      })),
+      campaigns: localCampaigns.map(campaign => ({
+        ...campaign,
+        _id: campaign._id.toString(),
+        created_at: campaign.created_at.toISOString(),
+        type: 'campaign' as const,
+      })),
+      networks: localNetworks.map(network => ({
+        ...network,
+        _id: network._id.toString(),
+        created_at: network.created_at.toISOString(),
+        type: 'network' as const,
+      })),
+      advertisements: localAdvertisements.map(advertisement => ({
+        ...advertisement,
+        _id: advertisement._id.toString(),
+        created_at: advertisement.created_at.toISOString(),
+        type: 'advertisement' as const,
+      })),
+    };
+
+    return (
+      <LocalOnlyDashboard 
+        data={serializedData}
+        networkMap={networkMap}
+        advertiserMap={advertiserMap}
+      />
+    );
+  } catch (error) {
+    console.error('Error loading local entities data:', error);
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-500">Error loading local entities. Please try again.</p>
+      </div>
+    );
+  }
 }
