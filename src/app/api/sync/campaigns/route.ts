@@ -1,29 +1,39 @@
-import { NextResponse } from 'next/server';
-import { syncCampaigns } from '@/lib/utils/sync-helpers';
+import { NextRequest, NextResponse } from 'next/server';
+import syncService from '@/lib/sync-service';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const result = await syncCampaigns();
-    
-    if (result.success) {
-      return NextResponse.json({
-        success: true,
-        message: `Successfully synced ${result.count} campaigns`,
-        count: result.count,
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        message: 'Failed to sync campaigns',
-        error: result.error,
-      }, { status: 500 });
+    const { networkId } = await request.json();
+
+    if (!networkId) {
+      return NextResponse.json(
+        { error: 'Network ID is required' },
+        { status: 400 }
+      );
     }
-  } catch (error) {
-    console.error('Sync campaigns error:', error);
+
+    const results = await syncService.syncCampaigns(networkId);
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+
     return NextResponse.json({
-      success: false,
-      message: 'Failed to sync campaigns',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+      success: failed === 0,
+      results,
+      summary: {
+        total: results.length,
+        successful,
+        failed
+      }
+    });
+
+  } catch (error) {
+    console.error('Campaign sync error:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      { status: 500 }
+    );
   }
 }

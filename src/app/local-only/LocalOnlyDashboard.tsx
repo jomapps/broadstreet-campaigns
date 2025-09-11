@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
-import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image } from 'lucide-react';
+import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
 
 // Type for local entity data
 type LocalEntity = {
@@ -522,6 +522,15 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
             >
               <Upload className="h-4 w-4 mr-2" />
               Sync All to Broadstreet
+            </Button>
+            <Button
+              onClick={() => router.push('/audit')}
+              variant="outline"
+              className="border-green-600 text-green-600 hover:bg-green-50"
+              data-testid="audit-button"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View Audit Trail
             </Button>
             <Button
               onClick={handleDeleteAll}

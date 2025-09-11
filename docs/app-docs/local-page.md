@@ -176,8 +176,9 @@ The delete functionality is **fully implemented** with:
 
 ### Environment Variables
 ```env
-BROADSTREET_API_KEY=your_api_key_here
-MONGODB_URI=your_mongodb_connection_string
+BROADSTREET_API_TOKEN=<your_api_token_here>
+BROADSTREET_API_BASE_URL=https://api.broadstreetads.com/api/1
+MONGODB_URI=<your_mongodb_connection_string>
 ```
 
 ## Security Considerations
