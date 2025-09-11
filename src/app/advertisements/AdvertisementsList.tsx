@@ -24,13 +24,28 @@ type AdvertisementLean = {
 
 interface AdvertisementCardProps {
   advertisement: AdvertisementLean;
+  isSelected?: boolean;
+  onToggleSelection?: (advertisementId: string) => void;
 }
 
-function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
+function AdvertisementCard({ advertisement, isSelected = false, onToggleSelection }: AdvertisementCardProps) {
   const updatedDate = new Date(advertisement.updated_at);
+
+  const handleCardClick = () => {
+    if (onToggleSelection) {
+      onToggleSelection(advertisement._id);
+    }
+  };
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div 
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${
+        isSelected
+          ? 'border-blue-400 bg-blue-50 shadow-blue-200 hover:shadow-blue-300'
+          : 'border-gray-200 bg-white hover:shadow-gray-300'
+      }`}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <h3 className="card-title text-gray-900">{advertisement.name}</h3>
@@ -38,6 +53,11 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
         </div>
         
         <div className="flex flex-col items-end space-y-2">
+          {isSelected && (
+            <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
+              ✓ Selected
+            </span>
+          )}
           <span className={`px-2 py-1 text-xs rounded-full ${
             advertisement.active_placement 
               ? 'bg-green-100 text-green-800' 
@@ -92,23 +112,30 @@ function AdvertisementCard({ advertisement }: AdvertisementCardProps) {
 
 interface AdvertisementsListProps {
   advertisements: AdvertisementLean[];
+  selectedAdvertisements?: string[];
+  showOnlySelectedAds?: boolean;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
+  filteredAdvertisements?: AdvertisementLean[];
 }
 
-export default function AdvertisementsList({ advertisements }: AdvertisementsListProps) {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign } = useFilters();
-  const [searchTerm, setSearchTerm] = useState('');
+export default function AdvertisementsList({ 
+  advertisements, 
+  selectedAdvertisements = [], 
+  showOnlySelectedAds = false,
+  searchTerm = '',
+  onSearchChange,
+  filteredAdvertisements
+}: AdvertisementsListProps) {
+  const { selectedNetwork, selectedAdvertiser, selectedCampaign, toggleAdvertisementSelection } = useFilters();
+  const [localSearchTerm, setLocalSearchTerm] = useState('');
 
-  const filteredAdvertisements = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return advertisements;
-    }
-    
-    return advertisements.filter(advertisement =>
-      advertisement.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      advertisement.advertiser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      advertisement.type.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [advertisements, searchTerm]);
+  // Use provided search term or local one
+  const currentSearchTerm = searchTerm || localSearchTerm;
+  const handleSearchChange = onSearchChange || setLocalSearchTerm;
+
+  // Use filtered advertisements if provided, otherwise fall back to local filtering
+  const displayAdvertisements = filteredAdvertisements || advertisements;
 
   // Check if network is selected
   if (!selectedNetwork) {
@@ -137,7 +164,7 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
             Please select an advertiser from the sidebar filters to view advertisements.
           </p>
           <p className="card-text text-blue-600">
-            Advertisements belong to specific advertisers, so you need to choose which advertiser&apos;s advertisements you want to see.
+            Advertisements belong to specific advertisers, so you need to choose which advertiser&apos;s advertisements you want to see. Advertisement selection is only available within a specific advertiser context.
           </p>
         </div>
       </div>
@@ -158,19 +185,24 @@ export default function AdvertisementsList({ advertisements }: AdvertisementsLis
       <div className="max-w-md">
         <SearchInput
           placeholder="Search advertisements..."
-          value={searchTerm}
-          onChange={setSearchTerm}
+          value={currentSearchTerm}
+          onChange={handleSearchChange}
         />
       </div>
       
-      {filteredAdvertisements.length === 0 ? (
+      {displayAdvertisements.length === 0 ? (
         <div className="text-center py-12">
           <p className="card-text text-gray-500">No advertisements match your search.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAdvertisements.map((advertisement) => (
-            <AdvertisementCard key={advertisement.id} advertisement={advertisement} />
+          {displayAdvertisements.map((advertisement) => (
+            <AdvertisementCard 
+              key={advertisement.id} 
+              advertisement={advertisement}
+              isSelected={selectedAdvertisements.includes(advertisement._id)}
+              onToggleSelection={toggleAdvertisementSelection}
+            />
           ))}
         </div>
       )}

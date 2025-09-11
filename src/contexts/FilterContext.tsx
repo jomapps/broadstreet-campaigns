@@ -13,12 +13,18 @@ interface FilterContextType {
   selectedZones: string[]; // Array of zone IDs
   showOnlySelected: boolean;
   
+  // Advertisement selection
+  selectedAdvertisements: string[]; // Array of advertisement IDs
+  showOnlySelectedAds: boolean;
+  
   // Setters
   setSelectedNetwork: (network: Network | null) => void;
   setSelectedAdvertiser: (advertiser: Advertiser | null) => void;
   setSelectedCampaign: (campaign: Campaign | null) => void;
   setSelectedZones: (zones: string[]) => void;
   setShowOnlySelected: (show: boolean) => void;
+  setSelectedAdvertisements: (advertisements: string[]) => void;
+  setShowOnlySelectedAds: (show: boolean) => void;
   
   // Data
   networks: Network[];
@@ -45,11 +51,17 @@ interface FilterContextType {
   clearAdvertiserFilter: () => void;
   clearCampaignFilter: () => void;
   clearZoneSelection: () => void;
+  clearAdvertisementSelection: () => void;
   
   // Zone selection actions
   selectZones: (zoneIds: string[]) => void;
   deselectZones: (zoneIds: string[]) => void;
   toggleZoneSelection: (zoneId: string) => void;
+  
+  // Advertisement selection actions
+  selectAdvertisements: (advertisementIds: string[]) => void;
+  deselectAdvertisements: (advertisementIds: string[]) => void;
+  toggleAdvertisementSelection: (advertisementId: string) => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -60,6 +72,8 @@ const STORAGE_KEYS = {
   CAMPAIGN: 'broadstreet_selected_campaign',
   SELECTED_ZONES: 'broadstreet_selected_zones',
   SHOW_ONLY_SELECTED: 'broadstreet_show_only_selected',
+  SELECTED_ADVERTISEMENTS: 'broadstreet_selected_advertisements',
+  SHOW_ONLY_SELECTED_ADS: 'broadstreet_show_only_selected_ads',
 };
 
 export function FilterProvider({ children }: { children: React.ReactNode }) {
@@ -68,6 +82,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [showOnlySelected, setShowOnlySelected] = useState<boolean>(false);
+  const [selectedAdvertisements, setSelectedAdvertisements] = useState<string[]>([]);
+  const [showOnlySelectedAds, setShowOnlySelectedAds] = useState<boolean>(false);
   
   const [networks, setNetworks] = useState<Network[]>([]);
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
@@ -86,6 +102,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         const storedCampaign = localStorage.getItem(STORAGE_KEYS.CAMPAIGN);
         const storedSelectedZones = localStorage.getItem(STORAGE_KEYS.SELECTED_ZONES);
         const storedShowOnlySelected = localStorage.getItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+        const storedSelectedAdvertisements = localStorage.getItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
+        const storedShowOnlySelectedAds = localStorage.getItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
         
         if (storedNetwork) {
           setSelectedNetwork(JSON.parse(storedNetwork));
@@ -101,6 +119,12 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         }
         if (storedShowOnlySelected) {
           setShowOnlySelected(JSON.parse(storedShowOnlySelected));
+        }
+        if (storedSelectedAdvertisements) {
+          setSelectedAdvertisements(JSON.parse(storedSelectedAdvertisements));
+        }
+        if (storedShowOnlySelectedAds) {
+          setShowOnlySelectedAds(JSON.parse(storedShowOnlySelectedAds));
         }
       } catch (error) {
         console.error('Error loading filters from localStorage:', error);
@@ -218,6 +242,14 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(STORAGE_KEYS.SHOW_ONLY_SELECTED, JSON.stringify(showOnlySelected));
   }, [showOnlySelected]);
 
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS, JSON.stringify(selectedAdvertisements));
+  }, [selectedAdvertisements]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS, JSON.stringify(showOnlySelectedAds));
+  }, [showOnlySelectedAds]);
+
   // Clear functions
   const clearAllFilters = () => {
     setSelectedNetwork(null);
@@ -225,11 +257,15 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setSelectedCampaign(null);
     setSelectedZones([]);
     setShowOnlySelected(false);
+    setSelectedAdvertisements([]);
+    setShowOnlySelectedAds(false);
     localStorage.removeItem(STORAGE_KEYS.NETWORK);
     localStorage.removeItem(STORAGE_KEYS.ADVERTISER);
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
     localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
+    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
   };
 
   const clearAdvertiserFilter = () => {
@@ -249,6 +285,13 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setShowOnlySelected(false);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
     localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+  };
+
+  const clearAdvertisementSelection = () => {
+    setSelectedAdvertisements([]);
+    setShowOnlySelectedAds(false);
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
+    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
   };
 
   // Zone selection actions
@@ -271,6 +314,26 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  // Advertisement selection actions
+  const selectAdvertisements = (advertisementIds: string[]) => {
+    setSelectedAdvertisements(prev => {
+      const newSelection = [...new Set([...prev, ...advertisementIds])];
+      return newSelection;
+    });
+  };
+
+  const deselectAdvertisements = (advertisementIds: string[]) => {
+    setSelectedAdvertisements(prev => prev.filter(id => !advertisementIds.includes(id)));
+  };
+
+  const toggleAdvertisementSelection = (advertisementId: string) => {
+    setSelectedAdvertisements(prev => 
+      prev.includes(advertisementId) 
+        ? prev.filter(id => id !== advertisementId)
+        : [...prev, advertisementId]
+    );
+  };
+
   return (
     <FilterContext.Provider
       value={{
@@ -279,11 +342,15 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         selectedCampaign,
         selectedZones,
         showOnlySelected,
+        selectedAdvertisements,
+        showOnlySelectedAds,
         setSelectedNetwork,
         setSelectedAdvertiser,
         setSelectedCampaign,
         setSelectedZones,
         setShowOnlySelected,
+        setSelectedAdvertisements,
+        setShowOnlySelectedAds,
         networks,
         advertisers,
         campaigns,
@@ -300,9 +367,13 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         clearAdvertiserFilter,
         clearCampaignFilter,
         clearZoneSelection,
+        clearAdvertisementSelection,
         selectZones,
         deselectZones,
         toggleZoneSelection,
+        selectAdvertisements,
+        deselectAdvertisements,
+        toggleAdvertisementSelection,
       }}
     >
       {children}

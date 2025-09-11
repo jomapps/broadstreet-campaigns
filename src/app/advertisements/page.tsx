@@ -3,7 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
 import AdvertisementActions from '@/components/advertisements/AdvertisementActions';
 import CreationButton from '@/components/creation/CreationButton';
-import AdvertisementsList from './AdvertisementsList';
+import AdvertisementFiltersWrapper from './AdvertisementFiltersWrapper';
 
 // Type for lean query result (plain object without Mongoose methods)
 type AdvertisementLean = {
@@ -77,7 +77,7 @@ async function AdvertisementsData() {
     updatedAt: advertisement.updatedAt.toISOString(),
   }));
   
-  return <AdvertisementsList advertisements={serializedAdvertisements} />;
+  return <AdvertisementFiltersWrapper advertisements={serializedAdvertisements} />;
 }
 
 export default function AdvertisementsPage() {
