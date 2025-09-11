@@ -185,7 +185,6 @@ MONGODB_URI=<your_mongodb_connection_string>
 
 ### API Key Management
 - API key stored in environment variables
-- No hardcoded credentials in codebase
 - Secure API communication
 
 ### Data Validation

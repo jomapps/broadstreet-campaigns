@@ -1,16 +1,19 @@
 'use client';
 
 import { Suspense, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import CampaignActions from '@/components/campaigns/CampaignActions';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
+import { Button } from '@/components/ui/button';
+import { X } from 'lucide-react';
 
 // Type for campaign data from filter context
 type CampaignLean = {
-  id: number;
+  id: number | string;
   name: string;
   advertiser_id: number;
   start_date: string;
@@ -21,6 +24,8 @@ type CampaignLean = {
   notes?: string;
   display_type: 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign';
   path: string;
+  created_locally?: boolean;
+  synced_with_api?: boolean;
 };
 
 interface CampaignCardProps {
@@ -28,21 +33,46 @@ interface CampaignCardProps {
   advertiserName?: string;
   isSelected: boolean;
   onSelect: (campaign: CampaignLean) => void;
+  onDelete?: (campaign: CampaignLean) => void;
 }
 
-function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: CampaignCardProps) {
+function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete }: CampaignCardProps) {
+  const isLocal = campaign.created_locally && !campaign.synced_with_api;
   const startDate = new Date(campaign.start_date);
   const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
   const now = new Date();
   
   const isActive = campaign.active && startDate <= now && (!endDate || endDate >= now);
   
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    if (!confirm(`Are you sure you want to delete "${campaign.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    onDelete(campaign);
+  };
+  
   return (
-    <div className={`bg-white rounded-lg shadow-sm border p-6 transition-all duration-200 ${
-      isSelected 
-        ? 'border-primary shadow-md shadow-primary/10' 
-        : 'border-gray-200 hover:border-gray-300'
+    <div className={`relative rounded-lg shadow-sm border p-6 transition-all duration-200 ${
+      isLocal 
+        ? 'border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
+        : isSelected 
+          ? 'bg-white border-primary shadow-md shadow-primary/10' 
+          : 'bg-white border-gray-200 hover:border-gray-300'
     }`}>
+      {/* Delete Button for Local Entities */}
+      {isLocal && onDelete && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+          onClick={handleDelete}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-3">
@@ -60,10 +90,15 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
           </div>
         </div>
         
-        <div className="flex flex-col items-end space-y-2">
+        <div className="flex flex-col items-end space-y-1">
           {isSelected && (
             <Badge variant="default" className="text-xs px-2 py-1">
               Selected
+            </Badge>
+          )}
+          {campaign.created_locally && !campaign.synced_with_api && (
+            <Badge variant="secondary" className="text-xs px-2 py-1 bg-orange-100 text-orange-800">
+              Local
             </Badge>
           )}
           <span className={`px-2 py-1 text-xs rounded-full ${
@@ -73,7 +108,9 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect }: Campai
           }`}>
             {isActive ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">ID: {campaign.id}</span>
+          <span className="card-meta text-gray-500">
+            ID: {typeof campaign.id === 'string' ? campaign.id.slice(-8) : campaign.id}
+          </span>
         </div>
       </div>
       
@@ -148,6 +185,8 @@ function LoadingSkeleton() {
 function CampaignsList() {
   const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const router = useRouter();
 
   const filteredCampaigns = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -215,6 +254,27 @@ function CampaignsList() {
     }
   };
 
+  const handleDelete = async (campaign: CampaignLean) => {
+    setIsDeleting(campaign.id.toString());
+    try {
+      const response = await fetch(`/api/delete/campaign/${campaign.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete campaign');
+      }
+
+      // Refresh the page to show updated data
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      alert('Failed to delete campaign. Please try again.');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="max-w-md">
@@ -238,6 +298,7 @@ function CampaignsList() {
               advertiserName={selectedAdvertiser?.name}
               isSelected={selectedCampaign?.id === campaign.id}
               onSelect={handleCampaignSelect}
+              onDelete={handleDelete}
             />
           ))}
         </div>

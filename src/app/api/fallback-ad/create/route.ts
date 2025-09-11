@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Zone from '@/lib/models/zone';
 import Placement from '@/lib/models/placement';
-import broadstreetAPI from '@/lib/broadstreet-api';
 import { ZoneSize } from '@/lib/types/broadstreet';
 
 interface CreateFallbackAdRequest {
@@ -53,21 +52,20 @@ export async function POST(request: Request) {
     for (const advertisementId of advertisementIds) {
       for (const zone of matchedZones) {
         try {
-          const placement = await broadstreetAPI.createPlacement({
-            campaign_id: campaignId,
-            advertisement_id: advertisementId,
-            zone_id: zone.id,
-          });
-          
-          // Save placement to local database
-          await Placement.create({
+          // Create placement locally in database only
+          const placement = await Placement.create({
             advertisement_id: advertisementId,
             zone_id: zone.id,
             campaign_id: campaignId,
-            restrictions: placement.restrictions || undefined,
+            restrictions: [], // No default restrictions - user must specify
           });
           
-          createdPlacements.push(placement);
+          createdPlacements.push({
+            advertisement_id: advertisementId,
+            zone_id: zone.id,
+            campaign_id: campaignId,
+            restrictions: placement.restrictions,
+          });
           placementsCreated++;
         } catch (error) {
           const errorMessage = `Failed to create placement for ad ${advertisementId} in zone ${zone.name}: ${

@@ -4,6 +4,27 @@
 
 This document provides technical details about the API endpoints, data models, and integration points in the Broadstreet Campaigns application.
 
+**CRITICAL ARCHITECTURE PRINCIPLE:**
+This app works with a local database (MongoDB) for ALL data operations. The Broadstreet API is ONLY used during sync operations. All page queries, filtering, and data display come from the app database.
+
+## 📊 Data Access Patterns
+
+### ✅ Correct Data Access
+- **Page Queries**: All `/api/networks`, `/api/advertisers`, `/api/campaigns`, `/api/zones`, `/api/advertisements`, `/api/placements` endpoints query the local database
+- **Filtering**: All filtering operations use local database queries
+- **Search**: All search operations use local database queries
+- **Local Entity Management**: All local entity operations use the database
+
+### ❌ Incorrect Data Access (DO NOT DO)
+- **Direct Broadstreet API calls** for page data loading
+- **Direct Broadstreet API calls** for filtering or searching
+- **Direct Broadstreet API calls** for regular UI operations
+
+### 🔄 Sync Operations Only
+- **Sync endpoints** (`/api/sync/*`) are the ONLY places that call Broadstreet API
+- **Fallback ad creation** creates local placements only (no direct API calls)
+- **Local entity sync** pushes local changes to Broadstreet API
+
 ## 🌐 API Endpoints
 
 ### Base URL

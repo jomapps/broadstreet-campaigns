@@ -26,6 +26,9 @@ The Broadstreet Campaigns application is a comprehensive dashboard for managing 
 
 ## 🔄 Data Flow
 
+**CRITICAL ARCHITECTURE PRINCIPLE:**
+This app works with a local database (MongoDB) for ALL data operations. The Broadstreet API is ONLY used during sync operations.
+
 ```
 Broadstreet API → Sync Operations → MongoDB → UI Components
                      ↓
@@ -33,6 +36,13 @@ Broadstreet API → Sync Operations → MongoDB → UI Components
                      ↓
          Local Entities → Local Only Dashboard → Sync to API
 ```
+
+**Data Access Rules:**
+- ✅ **ALL page queries** (networks, advertisers, campaigns, zones, advertisements, placements) come from the app database
+- ✅ **Sync operations** are the ONLY time the app calls Broadstreet API
+- ✅ **Local entity creation** happens in the database first, then syncs to Broadstreet
+- ❌ **NEVER** call Broadstreet API for regular page data loading
+- ❌ **NEVER** call Broadstreet API for filtering or searching
 
 ## 🎨 User Interface
 

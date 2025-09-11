@@ -18,7 +18,6 @@ The sync system manages data synchronization between the local MongoDB database 
 
 ### Real API Integration
 - All sync operations use real Broadstreet API calls
-- No mock or fallback data
 - Proper error handling for API failures
 
 ## Sync Process
