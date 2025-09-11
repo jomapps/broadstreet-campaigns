@@ -11,7 +11,6 @@ This directory contains comprehensive documentation for the Broadstreet Campaign
 
 ### Utilities & Workflows
 - **[Utilities Guide](./utilities-guide.md)** - Detailed guide to all utilities and tools
-- **[Fallback Ad Workflow](./fallback-ad-workflow.md)** - Complete workflow for creating fallback ads
 - **[Sync Operations](./sync-operations.md)** - Data synchronization workflows
 
 ### Technical Documentation
@@ -28,7 +27,6 @@ This directory contains comprehensive documentation for the Broadstreet Campaign
 1. **New Users**: Start with [App Overview](./app-overview.md) and [User Guide](./user-guide.md)
 2. **Using Utilities**: See [Utilities Guide](./utilities-guide.md) for all available tools
 3. **Filtering Data**: Check [Filter System](./filter-system.md) for advanced filtering
-4. **Creating Fallback Ads**: Follow [Fallback Ad Workflow](./fallback-ad-workflow.md)
 
 ## 📝 Contributing to Documentation
 

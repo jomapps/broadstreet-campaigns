@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import FallbackAdWizard from '@/components/fallback-ad/FallbackAdWizard';
 
 export default function CampaignActions() {
-  const [showFallbackAdWizard, setShowFallbackAdWizard] = useState(false);
 
   const handleSync = async () => {
     try {
@@ -32,17 +30,8 @@ export default function CampaignActions() {
           Sync Campaigns
         </button>
         
-        <button
-          onClick={() => setShowFallbackAdWizard(true)}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-        >
-          Create Fallback Ad
-        </button>
       </div>
 
-      {showFallbackAdWizard && (
-        <FallbackAdWizard onClose={() => setShowFallbackAdWizard(false)} />
-      )}
     </>
   );
 }

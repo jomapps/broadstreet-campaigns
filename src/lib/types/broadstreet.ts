@@ -117,17 +117,3 @@ export interface SyncStatus {
   error?: string;
 }
 
-// Fallback Ad Creation Types
-export interface FallbackAdRequest {
-  networkId: number;
-  advertiserId: number;
-  campaignId: number;
-  advertisementIds: number[];
-  sizes: ZoneSize[];
-}
-
-export interface FallbackAdResponse {
-  placementsCreated: number;
-  placements: Placement[];
-  zonesMatched: Zone[];
-}

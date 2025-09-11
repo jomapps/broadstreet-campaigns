@@ -36,7 +36,7 @@ export default function PlacementActions() {
   };
 
   const handleCreatePlacement = () => {
-    // For now, redirect to the fallback ad wizard which can create placements
+    // Placement creation functionality will be implemented here
     window.location.href = '/dashboard';
   };
 

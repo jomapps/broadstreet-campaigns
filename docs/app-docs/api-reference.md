@@ -369,55 +369,6 @@ All API endpoints are relative to the application base URL with `/api` prefix.
 }
 ```
 
-## 🛠️ Utility Endpoints
-
-### Fallback Ad Creation
-
-#### POST `/api/fallback-ad/create`
-**Purpose**: Create fallback ad placements
-
-**Request Body**:
-```json
-{
-  "networkId": 123,
-  "advertiserId": 789,
-  "campaignId": 101112,
-  "advertisementIds": [161718, 161719],
-  "sizes": ["SQ", "PT", "LS"]
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "message": "Fallback ads created successfully",
-  "data": {
-    "placementsCreated": 12,
-    "placements": [
-      {
-        "advertisement_id": 161718,
-        "zone_id": 131415,
-        "campaign_id": 101112,
-        "restrictions": ["home_page_only"]
-      }
-    ],
-    "zonesMatched": [
-      {
-        "id": 131415,
-        "name": "Home Banner",
-        "network_id": 123
-      }
-    ]
-  }
-}
-```
-
-**Error Responses**:
-- `400`: Invalid request parameters
-- `404`: Network, advertiser, or campaign not found
-- `500`: Creation failed
-
 ## 🏗️ Creation Endpoints
 
 ### Advertiser Creation

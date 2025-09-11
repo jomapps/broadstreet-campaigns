@@ -40,7 +40,6 @@ This document provides a comprehensive status report of all documentation in the
 - **`docs/app-docs/user-guide.md`** - Comprehensive user instructions
 - **`docs/app-docs/filter-system.md`** - Filter system documentation
 - **`docs/app-docs/utilities-guide.md`** - Utilities documentation
-- **`docs/app-docs/fallback-ad-workflow.md`** - Fallback ad workflow
 - **`docs/app-docs/sync-operations.md`** - Sync operations guide
 - **`docs/app-docs/sync-with-broadstreet.md`** - Detailed sync implementation
 

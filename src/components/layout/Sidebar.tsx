@@ -7,25 +7,15 @@ import { Badge } from '@/components/ui/badge';
 import FiltersCard from './FiltersCard';
 
 const utilities = [
-  {
-    name: 'Create Fallback Ad',
-    description: 'Create fallback ad placements',
-    action: 'fallback-ad',
-  },
+  // Utilities will be added here as they are developed
 ];
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleUtilityAction = (action: string) => {
-    switch (action) {
-      case 'fallback-ad':
-        // Navigate to fallback ad creation
-        window.location.href = '/campaigns?utility=fallback-ad';
-        break;
-      default:
-        console.log('Unknown action:', action);
-    }
+    // Utility actions will be implemented here
+    console.log('Utility action:', action);
   };
 
   return (

@@ -155,11 +155,6 @@ Manage ad creatives and their details.
 
 ### Available Utilities
 
-#### Create Fallback Ad
-- **Purpose**: Create backup ad placements
-- **When to Use**: For campaign redundancy and reliability
-- **Requirements**: Network, advertiser, and campaign must be selected
-- **Process**: See [Fallback Ad Workflow](./fallback-ad-workflow.md)
 
 ## 🔄 Data Synchronization
 
@@ -247,7 +242,6 @@ Manage ad creatives and their details.
 - [App Overview](./app-overview.md) - High-level application overview
 - [Filter System](./filter-system.md) - Detailed filter system guide
 - [Utilities Guide](./utilities-guide.md) - Complete utilities documentation
-- [Fallback Ad Workflow](./fallback-ad-workflow.md) - Fallback ad creation process
 
 ---
 

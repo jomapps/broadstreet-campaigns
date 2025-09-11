@@ -10,18 +10,7 @@ Utilities are located in the **sidebar** and are always accessible regardless of
 
 ## 🔧 Available Utilities
 
-### 1. Create Fallback Ad
-
-**Purpose**: Automatically create fallback ad placements for campaigns
-
-**When to Use**:
-- When you need backup ads for campaigns
-- To ensure continuous ad delivery
-- For campaign redundancy and reliability
-
-**Access**: Click "Create Fallback Ad" button in the Utilities card
-
-**Workflow**: See [Fallback Ad Workflow](./fallback-ad-workflow.md) for detailed steps
+*Utilities will be added here as they are developed.*
 
 ## 🎯 Utility Features
 

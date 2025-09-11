@@ -2,7 +2,7 @@
 
 ## 🎯 Purpose
 
-The Broadstreet Campaigns application is a comprehensive dashboard for managing advertising campaigns, networks, advertisers, and zones. It provides tools for data synchronization, campaign management, and fallback ad creation.
+The Broadstreet Campaigns application is a comprehensive dashboard for managing advertising campaigns, networks, advertisers, and zones. It provides tools for data synchronization and campaign management.
 
 ## 🏗️ Architecture
 
@@ -19,7 +19,6 @@ The Broadstreet Campaigns application is a comprehensive dashboard for managing 
 - **Real-time Data Sync**: Synchronize data with Broadstreet API with proper validation
 - **Local Entity Management**: Create and manage entities locally before syncing
 - **Advanced Filtering**: Filter content by network, advertiser, and campaign
-- **Fallback Ad Creation**: Automated fallback ad placement system
 - **Entity Lifecycle Management**: Proper handling of local vs synced entities
 - **Responsive Design**: Works on desktop and mobile devices
 - **Persistent State**: Filter selections saved across sessions
@@ -96,7 +95,7 @@ Broadstreet API → Sync Operations → MongoDB → UI Components
 2. **Sync Data**: Use sync operations to load latest data
 3. **Set Filters**: Select network, advertiser, and campaign filters
 4. **Explore Data**: Browse through filtered content
-5. **Use Utilities**: Access tools like fallback ad creation
+5. **Use Utilities**: Access tools for campaign management
 
 ## 📈 Performance Considerations
 
