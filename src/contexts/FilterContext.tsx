@@ -169,7 +169,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingAdvertisers(true);
       try {
-        const response = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`);
+        const response = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           setAdvertisers(data.advertisers || []);

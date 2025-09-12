@@ -148,5 +148,6 @@ Response shape:
 
 
 ## Manual Test results
-- Created zone "Leo Test Zone 51". Created success and shows properly. sync success. Removed from local-only page. Did not remove from zone page
-- Created Advertisers "Leo Test Advertiser 51". Created success and shows properly. sync success. Removed from local-only page. Did not remove from advertisers page
+- Created zone "Leo Test Zone 51". Created success and shows properly. sync success. Removed from local-only page. Removed from zone page
+- Created Advertisers "Leo Test Advertiser 51". Created success and shows properly. sync success. Removed from local-only page. Removed from advertisers page
+- Created Campaign "Leo Test Campaign 51". Created success and shows properly. sync success. Removed from local-only page. Removed from campaign page

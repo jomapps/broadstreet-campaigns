@@ -84,7 +84,8 @@ async function ZonesData() {
     // Fetch zones from both models
     const [apiZones, localZones] = await Promise.all([
       Zone.find({}).sort({ name: 1 }).lean() as ZoneLean[],
-      LocalZone.find({}).sort({ name: 1 }).lean() as ZoneLean[]
+      // Show only truly local, not-yet-synced zones
+      LocalZone.find({ synced_with_api: false }).sort({ name: 1 }).lean() as ZoneLean[]
     ]);
     
     // Combine zones from both sources

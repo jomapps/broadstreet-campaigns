@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import CreationButton from '@/components/creation/CreationButton';
@@ -165,6 +165,21 @@ function AdvertisersList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
+
+  // Ensure fresh data on mount to avoid stale cached list after sync
+  useEffect(() => {
+    const refresh = async () => {
+      if (!selectedNetwork) return;
+      try {
+        const listRes = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setAdvertisers(listData.advertisers || []);
+        }
+      } catch {}
+    };
+    refresh();
+  }, []);
 
   const filteredAdvertisers = useMemo(() => {
     if (!searchTerm.trim()) {

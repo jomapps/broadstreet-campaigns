@@ -10,6 +10,7 @@ import SyncLog from './models/sync-log';
 // Import regular models for reference data
 import Network from './models/network';
 import Advertisement from './models/advertisement';
+import Advertiser from './models/advertiser';
 
 // Types for sync operations
 export interface SyncResult<T = any> {
@@ -129,34 +130,42 @@ class SyncService {
 
       // Check campaign dependencies
       for (const campaign of localCampaigns) {
-        if (!campaign.advertiser_id) {
+        if (!campaign.advertiser_id && campaign.advertiser_id !== 0) {
           result.errors.push(`Campaign "${campaign.name}" missing advertiser_id`);
           result.valid = false;
           continue;
         }
 
-        // Check if advertiser exists in Broadstreet
-        const advertiserExists = await broadstreetAPI.checkExistingAdvertiser(
-          `temp_check_${campaign.advertiser_id}`, 
-          networkId
-        );
-        
-        // Check if advertiser is synced locally
-        const localAdvertiser = await LocalAdvertiser.findOne({ 
-          _id: campaign.advertiser_id,
-          synced_with_api: true 
-        });
-        
-        if (!localAdvertiser) {
+        // Resolve advertiser Broadstreet ID from either LocalAdvertiser (_id) or main Advertiser (numeric id)
+        let advertiserBroadstreetId: number | null = null;
+        // If advertiser_id looks like an ObjectId string, try LocalAdvertiser
+        const isObjectIdLike = typeof (campaign as any).advertiser_id === 'string' && (campaign as any).advertiser_id.length === 24;
+        if (isObjectIdLike) {
+          const la = await LocalAdvertiser.findOne({
+            _id: (campaign as any).advertiser_id,
+            synced_with_api: true,
+          });
+          if (la?.original_broadstreet_id) {
+            advertiserBroadstreetId = la.original_broadstreet_id;
+          }
+        } else if (typeof campaign.advertiser_id === 'number') {
+          const synced = await Advertiser.findOne({ id: campaign.advertiser_id });
+          if (synced?.id) {
+            advertiserBroadstreetId = synced.id;
+          }
+        }
+
+        if (!advertiserBroadstreetId) {
           result.dependencyChecks.missingAdvertisers.push(campaign.name);
-          result.errors.push(`Campaign "${campaign.name}" depends on unsynced advertiser`);
+          result.errors.push(`Campaign "${campaign.name}" depends on unsynced/unknown advertiser reference: ${campaign.advertiser_id}`);
           result.valid = false;
+          continue;
         }
 
         // Check for campaign name duplicates within advertiser
         const campaignExists = await broadstreetAPI.checkExistingCampaign(
-          campaign.name, 
-          localAdvertiser?.original_broadstreet_id || 0
+          campaign.name,
+          advertiserBroadstreetId
         );
         result.duplicateChecks.campaigns.push({ name: campaign.name, exists: campaignExists });
         if (campaignExists) {
@@ -214,13 +223,27 @@ class SyncService {
     try {
       await connectDB();
 
-      // Check for duplicates
+      // Check for duplicates; if exists, link instead of failing
       const exists = await broadstreetAPI.checkExistingAdvertiser(
         localAdvertiser.name, 
         localAdvertiser.network_id
       );
       
       if (exists) {
+        // Try to find the existing advertiser and link it
+        const existing = await broadstreetAPI.findAdvertiserByName(localAdvertiser.network_id, localAdvertiser.name);
+        if (existing && existing.id) {
+          localAdvertiser.original_broadstreet_id = existing.id;
+          localAdvertiser.synced_with_api = true;
+          localAdvertiser.synced_at = new Date();
+          localAdvertiser.sync_errors = [];
+          await localAdvertiser.save();
+          result.success = true;
+          result.entity = existing;
+          result.syncedAt = new Date();
+          result.code = 'LINKED_DUPLICATE';
+          return result;
+        }
         result.error = `Advertiser "${localAdvertiser.name}" already exists in Broadstreet`;
         result.code = 'DUPLICATE';
         return result;
@@ -337,9 +360,25 @@ class SyncService {
         return result;
       }
 
-      const localAdvertiser = await LocalAdvertiser.findById(localCampaign.advertiser_id);
-      if (!localAdvertiser || !localAdvertiser.synced_with_api || !localAdvertiser.original_broadstreet_id) {
-        result.error = `Campaign depends on unsynced advertiser ID: ${localCampaign.advertiser_id}`;
+      // Resolve advertiser: prefer local advertiser by ObjectId, otherwise fall back to synced main Advertiser by numeric id
+      let advertiserBroadstreetId: number | null = null;
+      if (typeof localCampaign.advertiser_id === 'number') {
+        advertiserBroadstreetId = localCampaign.advertiser_id;
+      } else {
+        const localAdvertiser = await LocalAdvertiser.findById(localCampaign.advertiser_id);
+        if (localAdvertiser && localAdvertiser.synced_with_api && localAdvertiser.original_broadstreet_id) {
+          advertiserBroadstreetId = localAdvertiser.original_broadstreet_id;
+        } else {
+          // Try from main Advertiser collection (synced data)
+          const syncedAdvertiser = await Advertiser.findOne({ id: localCampaign.advertiser_id });
+          if (syncedAdvertiser && syncedAdvertiser.id) {
+            advertiserBroadstreetId = syncedAdvertiser.id;
+          }
+        }
+      }
+
+      if (!advertiserBroadstreetId) {
+        result.error = `Campaign depends on unknown/unsynced advertiser reference: ${localCampaign.advertiser_id}`;
         result.code = 'DEPENDENCY';
         return result;
       }
@@ -347,31 +386,64 @@ class SyncService {
       // Check for duplicates
       const exists = await broadstreetAPI.checkExistingCampaign(
         localCampaign.name, 
-        localAdvertiser.original_broadstreet_id
+        advertiserBroadstreetId
       );
       
       if (exists) {
+        // Link to existing campaign rather than failing
+        const existing = await broadstreetAPI.findCampaignByName(advertiserBroadstreetId, localCampaign.name);
+        if (existing && existing.id) {
+          localCampaign.original_broadstreet_id = existing.id;
+          localCampaign.synced_with_api = true;
+          localCampaign.synced_at = new Date();
+          localCampaign.sync_errors = [];
+          await localCampaign.save();
+          result.success = true;
+          result.entity = existing;
+          result.syncedAt = new Date();
+          result.code = 'LINKED_DUPLICATE';
+          return result;
+        }
         result.error = `Campaign "${localCampaign.name}" already exists for advertiser`;
         result.code = 'DUPLICATE';
         return result;
       }
 
-      // Create campaign in Broadstreet
-      const broadstreetCampaign = await broadstreetAPI.createCampaign({
+      // Normalize date strings to YYYY-MM-DD for API
+      const normalizeDate = (d?: string) => {
+        if (!d) return undefined;
+        try {
+          // Accept either YYYY-MM-DD or YYYY-MM-DDTHH:mm and output YYYY-MM-DD
+          const onlyDate = d.split('T')[0];
+          return onlyDate;
+        } catch {
+          return undefined;
+        }
+      };
+
+      const payload: any = {
         name: localCampaign.name,
-        advertiser_id: localAdvertiser.original_broadstreet_id,
-        start_date: localCampaign.start_date,
-        end_date: localCampaign.end_date,
-        max_impression_count: localCampaign.max_impression_count,
-        display_type: localCampaign.display_type,
-        active: localCampaign.active,
-        weight: localCampaign.weight,
-        archived: localCampaign.archived,
-        pacing_type: localCampaign.pacing_type,
-        impression_max_type: localCampaign.impression_max_type,
-        paused: localCampaign.paused,
-        notes: localCampaign.notes
-      });
+        advertiser_id: advertiserBroadstreetId,
+      };
+
+      const startDate = normalizeDate(localCampaign.start_date);
+      if (startDate) payload.start_date = startDate;
+
+      const endDate = normalizeDate(localCampaign.end_date);
+      if (endDate) payload.end_date = endDate;
+
+      if (typeof localCampaign.max_impression_count === 'number') payload.max_impression_count = localCampaign.max_impression_count;
+      if (localCampaign.display_type && localCampaign.display_type !== 'no_repeat') payload.display_type = localCampaign.display_type;
+      if (localCampaign.active === false) payload.active = false;
+      if (typeof localCampaign.weight === 'number') payload.weight = localCampaign.weight;
+      if (localCampaign.archived === true) payload.archived = true;
+      if (localCampaign.pacing_type && localCampaign.pacing_type !== 'asap') payload.pacing_type = localCampaign.pacing_type;
+      if (localCampaign.impression_max_type && localCampaign.impression_max_type !== 'cap') payload.impression_max_type = localCampaign.impression_max_type;
+      if (localCampaign.paused === true) payload.paused = true;
+      if (localCampaign.notes && localCampaign.notes.trim()) payload.notes = localCampaign.notes.trim();
+
+      // Create campaign in Broadstreet
+      const broadstreetCampaign = await broadstreetAPI.createCampaign(payload);
 
       // Update local campaign with Broadstreet ID
       localCampaign.original_broadstreet_id = broadstreetCampaign.id;

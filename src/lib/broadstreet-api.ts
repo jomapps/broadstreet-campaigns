@@ -290,6 +290,21 @@ class BroadstreetAPI {
     }
   }
 
+  /**
+   * Find an existing advertiser by name for a given network. Returns the remote advertiser or null.
+   */
+  async findAdvertiserByName(networkId: number, name: string): Promise<Advertiser | null> {
+    try {
+      const response = await this.request<{ advertisers: Advertiser[] }>(`/advertisers?network_id=${networkId}`);
+      const normalized = name.toLowerCase().trim();
+      const match = response.advertisers.find(a => a.name.toLowerCase().trim() === normalized);
+      return match || null;
+    } catch (error) {
+      console.error('Error finding existing advertiser by name:', error);
+      return null;
+    }
+  }
+
   async checkExistingCampaign(name: string, advertiserId: number): Promise<boolean> {
     try {
       const response = await this.request<{ campaigns: Campaign[] }>(`/campaigns?advertiser_id=${advertiserId}`);
@@ -299,6 +314,18 @@ class BroadstreetAPI {
     } catch (error) {
       console.error('Error checking existing campaign:', error);
       return false; // Assume no conflict if we can't check
+    }
+  }
+
+  async findCampaignByName(advertiserId: number, name: string): Promise<Campaign | null> {
+    try {
+      const response = await this.request<{ campaigns: Campaign[] }>(`/campaigns?advertiser_id=${advertiserId}`);
+      const normalized = name.toLowerCase().trim();
+      const match = response.campaigns.find(c => c.name.toLowerCase().trim() === normalized);
+      return match || null;
+    } catch (error) {
+      console.error('Error finding existing campaign by name:', error);
+      return null;
     }
   }
 
