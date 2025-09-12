@@ -137,48 +137,11 @@ Response shape:
 
 ---
 
-## Conflicts / Divergences to Resolve
+## Truths / Decisions (Authoritative)
 
-- Placement creation process:
-  - Document says: "placement creation happens one by one" supplying a single unit each time.
-  - Implementation: single POST accepts arrays; expands combinations (ads × zones) and inserts missing placements in bulk.
-  >>> I am ok with batch processing. so make the changes as needed.
-
-- Button location:
-  - Document: Sidebar button triggers creation. (Matches.)
-  - Implementation: Sidebar only; header/display area does not show a create button. If the doc implies header button exists, that is no longer true.
-  >>> Button is correct. Currect stage is ok. pls correct / remove
-
-- Duplicate placement behavior:
-  - Document: Not specified.
-  - Implementation: Existing ad+zone pairs are skipped; current behavior does NOT update `restrictions` for duplicates.
-  >>> A duplication is a combination of campaign, ad and zone. So if a placement already exists, we should not create it again. pls correct / remove
-
-- External creation of Networks and Advertisements:
-  - Document: States Networks and Advertisements are never created in-app. (Matches.)
-  - Implementation: Creation modal explicitly blocks these and provides links to Broadstreet with a resync reminder.
->>> Current behavior is correct. It pops the modal and asks you to create the network or advertisement in the broadstreet back office. pls correct / remove
-
-- API contract for GET placements:
-  - Document: Not specified.
-  - Implementation: Returns `{ success, placements }` and performs batch enrichment with network filter applied via zone map.
-  >>> The idea is - not to remove local placements until theya confirmed as synced. Please correct /remove /implement
-
-- Image preview fallback:
-  - Document: Not specified.
-  - Implementation: On image load error, shows a text fallback block instead of a broken image.
-  >>> The images are coming from broadstreet. They will always be available. The only ones not available are videos. Dont bother to try and fix this. Simply show the url you get. If it is not a video, it will show. pls correct / remove /implement
-
----
-
-## Next Steps (Planning)
-
-1) Decide whether to change duplicate behavior (e.g., update `restrictions` when a duplicate ad+zone is posted) or keep current "skip only" logic.
-2) If desired, document and/or add server-side validation rules for allowed `restrictions`.
-3) Add explicit API reference for placements in `/docs/app-docs/api-reference.md` including request/response examples mirrored here.
-4) Confirm whether bulk creation should report per-combination errors for partial failures (currently all-or-skip for existing pairs).
-5) Ensure e2e tests cover:
-   - Sidebar gating for create button
-   - POST creation with `campaign_mongo_id` and `campaign_id`
-   - Duplicate skip behavior
-   - GET placements enrichment and network filtering
+- Batch creation is the standard: POST accepts arrays; expands (ads × zones); inserts only missing combinations.
+- Create trigger location: Sidebar Utilities only; no header/display area create button.
+- Duplicate definition: (campaign, advertisement, zone); duplicates are not recreated.
+- Networks and Advertisements are never created in-app; use Broadstreet and resync.
+- GET `/api/placements` includes both local and synced (deduped) and performs batch enrichment; network filter applied via zone map.
+- Thumbnails: render preview URL directly; no special fallback.

@@ -49,7 +49,6 @@ interface PlacementCardProps {
 }
 
 function PlacementCard({ placement }: PlacementCardProps) {
-  const [imgError, setImgError] = useState(false);
   const startDate = placement.campaign?.start_date ? new Date(placement.campaign.start_date) : null;
   const endDate = placement.campaign?.end_date ? new Date(placement.campaign.end_date) : null;
   const now = new Date();
@@ -62,19 +61,14 @@ function PlacementCard({ placement }: PlacementCardProps) {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       {/* Thumbnail and title */}
       <div className="relative h-36 bg-gray-50 border-b border-gray-100">
-        {placement.advertisement?.preview_url && !imgError ? (
+        {placement.advertisement?.preview_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={placement.advertisement.preview_url}
             alt={`Preview of ${placement.advertisement.name}`}
             className="w-full h-full object-cover"
-            onError={() => setImgError(true)}
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
-            No preview available
-          </div>
-        )}
+        ) : null}
         <div className="absolute top-2 right-2">
           {isActive ? (
             <Badge variant="default" className="text-xs bg-green-100 text-green-800 px-2 py-0.5">
