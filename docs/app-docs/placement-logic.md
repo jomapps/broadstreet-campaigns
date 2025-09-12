@@ -145,3 +145,7 @@ Response shape:
 - Networks and Advertisements are never created in-app; use Broadstreet and resync.
 - GET `/api/placements` includes both local and synced (deduped) and performs batch enrichment; network filter applied via zone map.
 - Thumbnails: render preview URL directly; no special fallback.
+
+
+## Manual Test results
+- Created zone "Leo Test Zone 51". Created success and shows properly. but sync to broadstreet is not working. pls fix.

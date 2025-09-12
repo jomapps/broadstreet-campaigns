@@ -4,11 +4,16 @@ import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const { networkId } = await request.json();
+    // Require JSON body with networkId; do not accept query fallback
+    let networkId: number | undefined;
+    const body = await request.json();
+    if (body && typeof body.networkId !== 'undefined') {
+      networkId = typeof body.networkId === 'string' ? parseInt(body.networkId, 10) : body.networkId;
+    }
 
     if (!networkId) {
       return NextResponse.json(
-        { error: 'Network ID is required' },
+        { error: 'Network ID is required in JSON body' },
         { status: 400 }
       );
     }

@@ -194,6 +194,17 @@ Network → Advertisers → Campaigns
 3. **Check Data Freshness**: Ensure data is synced before filtering
 4. **Document Selections**: Note important filter combinations
 
+### Source of Truth for Actions
+- **Sidebar Drives Actions**: All operations that depend on context (e.g., syncing to Broadstreet, creating placements) must use the selections from the sidebar filters as the single source of truth.
+- **No Guessing From Data**: Do not infer `networkId` or related context from visible page data; read it from `FilterContext.selectedNetwork` (and other selected items) instead.
+- **Persistence**: Because the sidebar persists selections in localStorage, actions can reliably access the same context across pages and sessions.
+- **Example**: `POST /api/sync/local-all` should send `{ networkId: selectedNetwork.id }` derived from `FilterContext`, not from entity lists.
+
+### Request Payload Policy
+- **Required-Only**: Client requests must include only the fields required by the API and only when they are populated.
+- **No Empty Fields**: Never send empty strings, nulls, or undefined values in payloads. Omit fields instead.
+- **Body Required When Specified**: Endpoints that require a JSON body (e.g., `POST /api/sync/local-all`) must receive it; the server will reject requests without the required body fields.
+
 ### Performance Tips
 1. **Limit Selections**: Don't select unnecessary filters
 2. **Clear When Done**: Clear filters when switching contexts

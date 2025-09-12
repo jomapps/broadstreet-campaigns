@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
+import { useFilters } from '@/contexts/FilterContext';
 
 // Type for local entity data
 type LocalEntity = {
@@ -327,6 +328,7 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete }:
 
 export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
+  const { selectedNetwork } = useFilters();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -396,8 +398,16 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       // Start dry run validation
       setStepInProgress('dry-run');
       
+      // Use network selection from the sidebar as the single source of truth
+      if (!selectedNetwork) {
+        throw new Error('Select a network in the sidebar before syncing');
+      }
+      const selectedNetworkId = selectedNetwork.id;
+
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ networkId: selectedNetworkId }),
       });
 
       if (!response.ok) {
