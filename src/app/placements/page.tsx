@@ -105,13 +105,23 @@ function PlacementsData() {
         }
         
         if (selectedCampaign) {
-          params.append('campaign_id', selectedCampaign.id.toString());
+          if (typeof (selectedCampaign as any).id === 'number') {
+            params.append('campaign_id', (selectedCampaign as any).id.toString());
+          } else if ((selectedCampaign as any)._id) {
+            params.append('campaign_mongo_id', (selectedCampaign as any)._id);
+          }
         }
 
         const response = await fetch(`/api/placements?${params.toString()}`);
         if (response.ok) {
           const data = await response.json();
-          setPlacements(data.placements || []);
+          // API contract: {success, placements} - verify success and use placements array
+          if (data.success && data.placements) {
+            setPlacements(data.placements);
+          } else {
+            console.error('API returned success=false or missing placements');
+            setPlacements([]);
+          }
         } else {
           console.error('Failed to fetch placements');
           setPlacements([]);

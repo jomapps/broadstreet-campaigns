@@ -3,7 +3,6 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
-import AdvertiserActions from '@/components/advertisers/AdvertiserActions';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -284,7 +283,7 @@ export default function AdvertisersPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <AdvertiserActions />
+          <CreationButton entityType="advertiser" />
         </Suspense>
       </div>
 

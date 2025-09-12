@@ -3,7 +3,6 @@ import connectDB from '@/lib/mongodb';
 import Zone from '@/lib/models/zone';
 import LocalZone from '@/lib/models/local-zone';
 import Network from '@/lib/models/network';
-import ZoneActions from '@/components/zones/ZoneActions';
 import CreationButton from '@/components/creation/CreationButton';
 import ZoneFiltersWrapper from './ZoneFiltersWrapper';
 
@@ -161,7 +160,7 @@ export default function ZonesPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <ZoneActions />
+          <CreationButton entityType="zone" />
         </Suspense>
       </div>
 

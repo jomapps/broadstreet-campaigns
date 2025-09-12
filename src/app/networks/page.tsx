@@ -2,7 +2,6 @@
 
 import { Suspense } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
-import NetworkActions from '@/components/networks/NetworkActions';
 import CreationButton from '@/components/creation/CreationButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -153,7 +152,7 @@ export default function NetworksPage() {
           </div>
           
           <Suspense fallback={<div className="bg-muted animate-pulse h-10 w-32 rounded-lg"></div>}>
-            <NetworkActions />
+            <CreationButton entityType="network" />
           </Suspense>
         </div>
       </div>

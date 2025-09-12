@@ -3,7 +3,6 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
-import CampaignActions from '@/components/campaigns/CampaignActions';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -318,8 +317,8 @@ export default function CampaignsPage() {
           </p>
         </div>
         
-        <Suspense fallback={<div className="flex space-x-3"><div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div><div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div></div>}>
-          <CampaignActions />
+        <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
+          <CreationButton entityType="campaign" />
         </Suspense>
       </div>
 

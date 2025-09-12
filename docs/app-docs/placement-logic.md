@@ -56,3 +56,8 @@ There may be a function that is present to create the placements
 - no fallbacks
 - no mockdata
 - no hardcoded ids
+- when creating, if the field has no data, we dont include it in the creation 
+- networkds and advertisements are NEVER created. They simply exist. We create them manuall in backend.
+- remember, this app works as follows:
+-- all data is local
+-- it interacts with broadstreet api only for sync operations - upload or download. at no other time are you to acceess broadstreet otherwise.

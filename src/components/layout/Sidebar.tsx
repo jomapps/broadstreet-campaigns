@@ -1,20 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import FiltersCard from './FiltersCard';
-
-const utilities = [
-  // Utilities will be added here as they are developed
-];
+import { useFilters } from '@/contexts/FilterContext';
+import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCreatePlacementsOpen, setIsCreatePlacementsOpen] = useState(false);
+  const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilters();
+
+  const canCreatePlacements = !!selectedCampaign && selectedZones.length > 0 && selectedAdvertisements.length > 0;
+
+  const utilities = useMemo(() => {
+    return [
+      {
+        name: 'Create Placements',
+        description: 'Requires: Campaign, Zones, Advertisement',
+        action: 'create-placements',
+        enabled: canCreatePlacements,
+        disabledReason: !selectedCampaign
+          ? 'Select a campaign'
+          : selectedZones.length === 0
+          ? 'Select at least one zone'
+          : selectedAdvertisements.length === 0
+          ? 'Select at least one advertisement'
+          : undefined,
+      },
+    ];
+  }, [canCreatePlacements, selectedCampaign, selectedZones.length, selectedAdvertisements.length]);
 
   const handleUtilityAction = (action: string) => {
-    // Utility actions will be implemented here
+    if (action === 'create-placements') {
+      if (!canCreatePlacements) {
+        const msg = utilities[0]?.disabledReason || 'Missing prerequisites';
+        alert(`Cannot create placements: ${msg}`);
+        return;
+      }
+      setIsCreatePlacementsOpen(true);
+      return;
+    }
     console.log('Utility action:', action);
   };
 
@@ -46,10 +74,14 @@ export default function Sidebar() {
                 {utilities.map((utility) => (
                   <div key={utility.name} className="bg-sidebar-accent/30 rounded-lg p-3 border border-sidebar-border/50">
                     <p className="text-xs text-sidebar-foreground/70 mb-3 leading-relaxed">{utility.description}</p>
+                    {!utility.enabled && utility.disabledReason && (
+                      <p className="text-xs text-red-400 mb-2">{utility.disabledReason}</p>
+                    )}
                     <Button
                       onClick={() => handleUtilityAction(utility.action)}
                       size="sm"
                       className="w-full"
+                      disabled={!utility.enabled}
                     >
                       {utility.name}
                     </Button>
@@ -59,6 +91,11 @@ export default function Sidebar() {
             </Card>
           </>
         )}
+
+        <CreatePlacementsModal
+          isOpen={isCreatePlacementsOpen}
+          onClose={() => setIsCreatePlacementsOpen(false)}
+        />
       </div>
     </aside>
   );

@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
-import AdvertisementActions from '@/components/advertisements/AdvertisementActions';
 import CreationButton from '@/components/creation/CreationButton';
 import AdvertisementFiltersWrapper from './AdvertisementFiltersWrapper';
 
@@ -92,7 +91,7 @@ export default function AdvertisementsPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <AdvertisementActions />
+          <CreationButton entityType="advertisement" />
         </Suspense>
       </div>
 
