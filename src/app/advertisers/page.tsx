@@ -161,7 +161,7 @@ function LoadingSkeleton() {
 }
 
 function AdvertisersList() {
-  const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers } = useFilters();
+  const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers, setAdvertisers } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -230,7 +230,20 @@ function AdvertisersList() {
         throw new Error('Failed to delete advertiser');
       }
 
-      // Refresh the page to show updated data
+      // Reload advertisers for the current network so the list updates immediately
+      try {
+        if (selectedNetwork) {
+          const listRes = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setAdvertisers(listData.advertisers || []);
+          }
+        }
+      } catch (e) {
+        console.info('Post-delete advertisers reload failed; falling back to refresh');
+      }
+      
+      // Soft refresh for any server components
       router.refresh();
     } catch (error) {
       console.error('Error deleting advertiser:', error);

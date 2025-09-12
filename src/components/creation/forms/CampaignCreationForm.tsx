@@ -16,7 +16,7 @@ interface CampaignCreationFormProps {
 }
 
 export default function CampaignCreationForm({ onClose, setIsLoading }: CampaignCreationFormProps) {
-  const { selectedNetwork, selectedAdvertiser } = useFilters();
+  const { selectedNetwork, selectedAdvertiser, setCampaigns } = useFilters();
   const router = useRouter();
   
   // Get today's date in datetime-local format
@@ -269,11 +269,24 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       }
 
       const result = await response.json();
-      
+
       // Show success message
       alert(`Campaign "${result.campaign.name}" created successfully!`);
+
+      // Immediately reload campaigns for the current advertiser so the list updates without a full reload
+      try {
+        if (selectedAdvertiser) {
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setCampaigns(listData.campaigns || []);
+          }
+        }
+      } catch (e) {
+        console.info('Post-create campaigns reload failed; falling back to refresh');
+      }
       
-      // Refresh the page to show the new campaign
+      // Soft refresh for any server components
       router.refresh();
       
       onClose();

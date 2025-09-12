@@ -21,7 +21,7 @@ interface AdminContact {
 }
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
-  const { selectedNetwork } = useFilters();
+  const { selectedNetwork, setAdvertisers } = useFilters();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
@@ -205,11 +205,25 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       }
 
       const result = await response.json();
-      
+
       // Show success message
       alert(`Advertiser "${result.advertiser.name}" created successfully!`);
+
+      // Immediately reload advertisers for the current network so the list updates without a full reload
+      try {
+        if (selectedNetwork) {
+          const listRes = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setAdvertisers(listData.advertisers || []);
+          }
+        }
+      } catch (e) {
+        // Non-fatal: fallback to a soft refresh
+        console.info('Post-create advertisers reload failed; falling back to refresh');
+      }
       
-      // Refresh the page to show the new advertiser
+      // Soft refresh for any server components
       router.refresh();
       
       onClose();

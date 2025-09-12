@@ -58,18 +58,34 @@ export async function POST(request: NextRequest) {
     let syncReport = await syncService.syncAllEntities(networkId);
     console.log('[local-all] Finished full sync');
 
-    // Fallback: if report shows 0 but we detected unsynced zones, run zone-only sync to surface POST logs
-    if (syncReport.totalEntities === 0 && unsyncedZoneCount > 0) {
-      console.warn('[local-all] Sync report had 0 entities but zones are unsynced; running zone-only sync fallback');
-      const zoneResults = await syncService.syncZones(networkId);
-      const successful = zoneResults.filter(r => r.success).length;
-      const failed = zoneResults.length - successful;
+    // Fallbacks: if report shows 0 but we detected unsynced entities, run per-entity syncs to surface POST logs
+    if (syncReport.totalEntities === 0 && (unsyncedAdvCount > 0 || unsyncedZoneCount > 0 || unsyncedCampCount > 0)) {
+      console.warn('[local-all] Sync report had 0 entities; running per-entity sync fallbacks');
+      const fallbackResults: any[] = [];
+      if (unsyncedAdvCount > 0) {
+        console.warn('[local-all] Running advertiser-only sync fallback');
+        const advResults = await syncService.syncAdvertisers(networkId);
+        fallbackResults.push(...advResults);
+      }
+      if (unsyncedZoneCount > 0) {
+        console.warn('[local-all] Running zone-only sync fallback');
+        const zoneResults = await syncService.syncZones(networkId);
+        fallbackResults.push(...zoneResults);
+      }
+      if (unsyncedCampCount > 0) {
+        console.warn('[local-all] Running campaign-only sync fallback');
+        const campResults = await syncService.syncCampaigns(networkId);
+        fallbackResults.push(...campResults);
+      }
+
+      const successful = fallbackResults.filter(r => r.success).length;
+      const failed = fallbackResults.length - successful;
       syncReport = {
         ...syncReport,
-        totalEntities: zoneResults.length,
+        totalEntities: fallbackResults.length,
         successfulSyncs: syncReport.successfulSyncs + successful,
         failedSyncs: syncReport.failedSyncs + failed,
-        results: [...syncReport.results, ...zoneResults],
+        results: [...syncReport.results, ...fallbackResults],
         success: failed === 0 && syncReport.failedSyncs === 0,
       };
     }

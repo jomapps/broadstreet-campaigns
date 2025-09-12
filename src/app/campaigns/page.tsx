@@ -182,7 +182,7 @@ function LoadingSkeleton() {
 }
 
 function CampaignsList() {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
+  const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns, setCampaigns } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -264,7 +264,20 @@ function CampaignsList() {
         throw new Error('Failed to delete campaign');
       }
 
-      // Refresh the page to show updated data
+      // Reload campaigns for the current advertiser so the list updates immediately
+      try {
+        if (selectedAdvertiser) {
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setCampaigns(listData.campaigns || []);
+          }
+        }
+      } catch (e) {
+        console.info('Post-delete campaigns reload failed; falling back to refresh');
+      }
+      
+      // Soft refresh for any server components
       router.refresh();
     } catch (error) {
       console.error('Error deleting campaign:', error);
