@@ -72,14 +72,22 @@ export default function CreationModal({ isOpen, onClose, entityType }: CreationM
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Advertisement Creation Not Available</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">We do not create advertisements</h3>
               <p className="text-gray-600 mb-4">
                 Advertisement creation is complex and requires features not available through the API.
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Please log into Broadstreet Backend to carry out this command.</strong><br />
-                  Remember to sync afterwards.
+                  <strong>Please use this link to create advertisements:</strong><br />
+                  <a
+                    href="https://my.broadstreetads.com/networks/9396/advertisers"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    https://my.broadstreetads.com/networks/9396/advertisers
+                  </a><br />
+                  <strong>Remember to resync if you add something in backend.</strong>
                 </p>
               </div>
             </div>
@@ -99,14 +107,22 @@ export default function CreationModal({ isOpen, onClose, entityType }: CreationM
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Creation Not Available</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">We do not create networks</h3>
               <p className="text-gray-600 mb-4">
                 Network creation requires commercial contracts and special business processes.
               </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <p className="text-sm text-blue-800">
-                  <strong>Please log into Broadstreet Backend to carry out this command.</strong><br />
-                  Remember to sync afterwards.
+                  <strong>Please use this link to create networks:</strong><br />
+                  <a
+                    href="https://my.broadstreetads.com/networks"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    https://my.broadstreetads.com/networks
+                  </a><br />
+                  <strong>Remember to resync if you add something in backend.</strong>
                 </p>
               </div>
             </div>

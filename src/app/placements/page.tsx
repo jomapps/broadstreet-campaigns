@@ -2,7 +2,6 @@
 
 import { Suspense, useState, useEffect } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
-import PlacementActions from '@/components/placements/PlacementActions';
 import PlacementsList from './PlacementsList';
 
 // Type for enriched placement data
@@ -172,9 +171,6 @@ export default function PlacementsPage() {
           </p>
         </div>
         
-        <Suspense fallback={<div className="flex space-x-3"><div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div><div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div></div>}>
-          <PlacementActions />
-        </Suspense>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
