@@ -103,6 +103,12 @@ function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCar
             <Badge className={`text-xs ${getEntityTypeColor(entity.type)}`}>
               {entity.type}
             </Badge>
+            <Badge variant="outline" className="text-xs">
+              NET: {entity.network_id}
+            </Badge>
+            <Badge variant={entity.synced_with_api ? 'secondary' : 'outline'} className={`text-xs ${entity.synced_with_api ? 'bg-green-100 text-green-800' : ''}`}>
+              {entity.synced_with_api ? 'Synced' : 'Not Synced'}
+            </Badge>
           </div>
           {networkName && (
             <p className="text-sm text-gray-600">Network: {networkName}</p>
@@ -382,14 +388,21 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       return;
     }
 
-    // Initialize progress modal with entity counts
-    const entityCounts = {
-      networks: data.networks.length,
-      advertisers: data.advertisers.length,
-      zones: data.zones.length,
-      advertisements: data.advertisements.length,
-      campaigns: data.campaigns.length
-    };
+    // Initialize progress modal with entity counts for the selected network and unsynced only
+    const entityCounts = (() => {
+      if (!selectedNetwork) {
+        return { networks: 0, advertisers: 0, zones: 0, advertisements: 0, campaigns: 0 };
+      }
+      const nid = selectedNetwork.id;
+      const advertisers = data.advertisers.filter(a => a.network_id === nid && !a.synced_with_api).length;
+      const zones = data.zones.filter(z => z.network_id === nid && !z.synced_with_api).length;
+      const campaigns = data.campaigns.filter(c => c.network_id === nid && !c.synced_with_api).length;
+      const networks = data.networks.filter(n => (n as any).id === nid && !(n as any).synced_with_api).length;
+      const advertisements = data.advertisements.filter(ad => ad.network_id === nid && !ad.synced_with_api).length;
+      // Debug log to help audit
+      console.info('[LocalOnly] Computed unsynced counts', { nid, advertisers, zones, campaigns, networks, advertisements });
+      return { advertisers, zones, campaigns, networks, advertisements };
+    })();
     
     initializeSteps(entityCounts);
     setProgressModalOpen(true);
@@ -409,6 +422,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ networkId: selectedNetworkId }),
       });
+      console.info('[LocalOnly] Sent sync request body:', { networkId: selectedNetworkId });
 
       if (!response.ok) {
         throw new Error('Failed to sync entities');

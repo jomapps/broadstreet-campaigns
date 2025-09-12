@@ -12,8 +12,12 @@
  */
 export function clearZoneSelectionsFromStorage(): void {
   try {
-    localStorage.removeItem('broadstreet_selected_zones');
-    localStorage.removeItem('broadstreet_show_only_selected');
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      // Server environment: nothing to clear
+      return;
+    }
+    window.localStorage.removeItem('broadstreet_selected_zones');
+    window.localStorage.removeItem('broadstreet_show_only_selected');
     console.log('Zone selections cleared from localStorage');
   } catch (error) {
     console.error('Error clearing zone selections from localStorage:', error);
@@ -26,8 +30,12 @@ export function clearZoneSelectionsFromStorage(): void {
  */
 export function clearZoneSelectionsFromSession(): void {
   try {
-    sessionStorage.removeItem('broadstreet_selected_zones');
-    sessionStorage.removeItem('broadstreet_show_only_selected');
+    if (typeof window === 'undefined' || typeof window.sessionStorage === 'undefined') {
+      // Server environment: nothing to clear
+      return;
+    }
+    window.sessionStorage.removeItem('broadstreet_selected_zones');
+    window.sessionStorage.removeItem('broadstreet_show_only_selected');
     console.log('Zone selections cleared from sessionStorage');
   } catch (error) {
     console.error('Error clearing zone selections from sessionStorage:', error);
@@ -49,8 +57,11 @@ export function clearAllZoneSelections(): void {
  */
 export function hasZoneSelections(): boolean {
   try {
-    const selectedZones = localStorage.getItem('broadstreet_selected_zones');
-    const showOnlySelected = localStorage.getItem('broadstreet_show_only_selected');
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      return false;
+    }
+    const selectedZones = window.localStorage.getItem('broadstreet_selected_zones');
+    const showOnlySelected = window.localStorage.getItem('broadstreet_show_only_selected');
     
     return !!(selectedZones || showOnlySelected);
   } catch (error) {
@@ -68,8 +79,11 @@ export function getZoneSelectionsFromStorage(): {
   showOnlySelected: boolean;
 } {
   try {
-    const selectedZonesStr = localStorage.getItem('broadstreet_selected_zones');
-    const showOnlySelectedStr = localStorage.getItem('broadstreet_show_only_selected');
+    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+      return { selectedZones: [], showOnlySelected: false };
+    }
+    const selectedZonesStr = window.localStorage.getItem('broadstreet_selected_zones');
+    const showOnlySelectedStr = window.localStorage.getItem('broadstreet_show_only_selected');
     
     const selectedZones = selectedZonesStr ? JSON.parse(selectedZonesStr) : [];
     const showOnlySelected = showOnlySelectedStr ? JSON.parse(showOnlySelectedStr) : false;

@@ -32,7 +32,21 @@ class BroadstreetAPI {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${this.token}`;
-    
+    const sanitizedUrl = this.token ? url.replace(this.token, '***') : url;
+
+    // Parse body for logging (if any)
+    let parsedBody: any = undefined;
+    try {
+      if (options.body && typeof options.body === 'string') {
+        parsedBody = JSON.parse(options.body as string);
+      }
+    } catch (_) {
+      parsedBody = options.body;
+    }
+
+    const method = (options.method || 'GET').toUpperCase();
+    console.log('[BroadstreetAPI] Request:', { method, endpoint, url: sanitizedUrl, body: parsedBody });
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -41,11 +55,25 @@ class BroadstreetAPI {
       },
     });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    const status = response.status;
+    const statusText = response.statusText;
+    const responseText = await response.text();
+
+    // Try to parse JSON safely
+    let json: any = undefined;
+    try {
+      json = responseText ? JSON.parse(responseText) : undefined;
+    } catch (_) {
+      json = undefined;
     }
 
-    return response.json();
+    if (!response.ok) {
+      console.error('[BroadstreetAPI] Response (error):', { method, endpoint, status, statusText, body: responseText?.slice(0, 1000) });
+      throw new Error(`API request failed: ${status} ${statusText}`);
+    }
+
+    console.log('[BroadstreetAPI] Response (ok):', { method, endpoint, status, keys: json ? Object.keys(json) : undefined });
+    return json as T;
   }
 
   // Networks

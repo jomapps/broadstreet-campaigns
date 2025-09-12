@@ -88,21 +88,24 @@ class SyncService {
     try {
       await connectDB();
 
-      // Get all local entities for this network
+      // Get all unsynced local entities for this network (ignore created_locally to avoid missing records)
       const localAdvertisers = await LocalAdvertiser.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
       });
       const localZones = await LocalZone.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
       });
       const localCampaigns = await LocalCampaign.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
+      });
+
+      console.log('[dryRunSync] Unsynced counts:', {
+        advertisers: localAdvertisers.length,
+        zones: localZones.length,
+        campaigns: localCampaigns.length,
       });
 
       // Check for duplicates
@@ -277,16 +280,19 @@ class SyncService {
       if (exists) {
         result.error = `Zone "${localZone.name}" already exists in Broadstreet`;
         result.code = 'DUPLICATE';
+        console.log('[syncZone] Duplicate detected, skipping create:', { name: localZone.name, network_id: localZone.network_id });
         return result;
       }
 
       // Create zone in Broadstreet
-      const broadstreetZone = await broadstreetAPI.createZone({
+      const payload = {
         name: localZone.name,
         network_id: localZone.network_id,
         alias: localZone.alias,
         self_serve: localZone.self_serve
-      });
+      };
+      console.log('[syncZone] POST /zones payload:', payload);
+      const broadstreetZone = await broadstreetAPI.createZone(payload);
 
       // Update local zone with Broadstreet ID
       localZone.original_broadstreet_id = broadstreetZone.id;
@@ -302,6 +308,7 @@ class SyncService {
     } catch (error) {
       result.error = error instanceof Error ? error.message : 'Unknown error';
       result.code = 'NETWORK';
+      console.error('[syncZone] Error during create:', result.error);
       
       // Update local zone with error
       localZone.sync_errors.push(result.error);
@@ -481,26 +488,30 @@ class SyncService {
       });
       await syncLog.save();
 
-      // Get all local entities for this network
+      // Get all unsynced local entities for this network (do not require created_locally)
       const localAdvertisers = await LocalAdvertiser.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
       });
       const localZones = await LocalZone.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
       });
       const localCampaigns = await LocalCampaign.find({ 
         network_id: networkId, 
-        created_locally: true,
         synced_with_api: false 
+      });
+
+      console.log('[syncAllEntities] Unsynced counts:', {
+        advertisers: localAdvertisers.length,
+        zones: localZones.length,
+        campaigns: localCampaigns.length,
       });
 
       report.totalEntities = localAdvertisers.length + localZones.length + localCampaigns.length;
 
       // Step 1: Sync advertisers
+      console.log('[syncAllEntities] BEGIN advertisers loop');
       console.log(`Syncing ${localAdvertisers.length} advertisers...`);
       for (const advertiser of localAdvertisers) {
         const result = await this.syncAdvertiser(advertiser);
@@ -512,11 +523,18 @@ class SyncService {
           report.errors.push(result.error || 'Unknown error');
         }
       }
+      console.log('[syncAllEntities] END advertisers loop');
 
       // Step 2: Sync zones
+      console.log('[syncAllEntities] BEGIN zones loop');
       console.log(`Syncing ${localZones.length} zones...`);
+      if (localZones.length > 0) {
+        console.log('[syncAllEntities] Zones to sync:', localZones.map(z => ({ id: z._id?.toString?.(), name: z.name, network_id: z.network_id })));
+      }
       for (const zone of localZones) {
+        console.log('[syncAllEntities] BEFORE createZone call');
         const result = await this.syncZone(zone);
+        console.log('[syncAllEntities] AFTER createZone call', { success: result.success, error: result.error, code: result.code });
         report.results.push(result);
         if (result.success) {
           report.successfulSyncs++;
@@ -525,8 +543,10 @@ class SyncService {
           report.errors.push(result.error || 'Unknown error');
         }
       }
+      console.log('[syncAllEntities] END zones loop');
 
       // Step 3: Sync campaigns
+      console.log('[syncAllEntities] BEGIN campaigns loop');
       console.log(`Syncing ${localCampaigns.length} campaigns...`);
       for (const campaign of localCampaigns) {
         const result = await this.syncCampaign(campaign);
@@ -538,6 +558,7 @@ class SyncService {
           report.errors.push(result.error || 'Unknown error');
         }
       }
+      console.log('[syncAllEntities] END campaigns loop');
 
       // Step 4: Create placements for synced campaigns
       console.log('Creating placements...');
@@ -598,9 +619,9 @@ class SyncService {
     await connectDB();
     const localAdvertisers = await LocalAdvertiser.find({ 
       network_id: networkId, 
-      created_locally: true,
       synced_with_api: false 
     });
+    console.log('[syncAdvertisers] Unsynced advertisers:', localAdvertisers.length);
 
     const results: SyncResult[] = [];
     for (const advertiser of localAdvertisers) {
@@ -618,9 +639,9 @@ class SyncService {
     await connectDB();
     const localZones = await LocalZone.find({ 
       network_id: networkId, 
-      created_locally: true,
       synced_with_api: false 
     });
+    console.log('[syncZones] Unsynced zones:', localZones.length);
 
     const results: SyncResult[] = [];
     for (const zone of localZones) {
@@ -638,9 +659,9 @@ class SyncService {
     await connectDB();
     const localCampaigns = await LocalCampaign.find({ 
       network_id: networkId, 
-      created_locally: true,
       synced_with_api: false 
     });
+    console.log('[syncCampaigns] Unsynced campaigns:', localCampaigns.length);
 
     const results: SyncResult[] = [];
     for (const campaign of localCampaigns) {

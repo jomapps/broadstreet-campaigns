@@ -115,6 +115,10 @@ function LocalEntityCard({ entity, networkName, advertiserName }: {
               <Badge className={`text-xs px-1.5 py-0.5 ${getEntityTypeColor(entity.type)}`}>
                 {entity.type}
               </Badge>
+              <Badge variant="outline" className="text-[10px] px-1 py-0.5">NET: {entity.network_id}</Badge>
+              <Badge variant={entity.synced_with_api ? 'secondary' : 'outline'} className={`text-[10px] px-1 py-0.5 ${entity.synced_with_api ? 'bg-green-100 text-green-800' : ''}`}>
+                {entity.synced_with_api ? 'Synced' : 'Not Synced'}
+              </Badge>
             </div>
             {networkName && (
               <p className="card-subtitle text-gray-600">Network: {networkName}</p>
