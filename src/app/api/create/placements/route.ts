@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import LocalCampaign from '@/lib/models/local-campaign';
+import Campaign from '@/lib/models/campaign';
 
 type RequestBody = {
   campaign_id?: number;
@@ -24,15 +25,49 @@ export async function POST(request: NextRequest) {
       !Array.isArray(zone_ids) || zone_ids.length === 0
     ) {
       return NextResponse.json(
-        { message: 'campaign_id, advertisement_ids[], and zone_ids[] are required' },
+        { message: 'campaign_mongo_id OR campaign_id, plus advertisement_ids[] and zone_ids[] are required' },
         { status: 400 }
       );
     }
 
-    // Find local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
-    const campaign = campaign_mongo_id
+    // Find or create a local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
+    let campaign = campaign_mongo_id
       ? await LocalCampaign.findById(campaign_mongo_id).lean()
       : await LocalCampaign.findOne({ original_broadstreet_id: campaign_id }).lean();
+
+    // If not found and we have a numeric campaign_id, upsert a mirror from Campaign
+    if (!campaign && typeof campaign_id === 'number') {
+      const source = await Campaign.findOne({ id: campaign_id }).lean();
+      if (!source) {
+        return NextResponse.json(
+          { message: 'Source campaign not found to mirror locally' },
+          { status: 404 }
+        );
+      }
+      const mirror = await LocalCampaign.create({
+        name: (source as any).name,
+        network_id: (source as any).network_id,
+        advertiser_id: (source as any).advertiser_id,
+        start_date: (source as any).start_date,
+        end_date: (source as any).end_date,
+        max_impression_count: (source as any).max_impression_count,
+        display_type: (source as any).display_type,
+        active: (source as any).active,
+        weight: (source as any).weight,
+        path: (source as any).path,
+        archived: (source as any).archived,
+        pacing_type: (source as any).pacing_type,
+        impression_max_type: (source as any).impression_max_type,
+        paused: (source as any).paused,
+        notes: (source as any).notes,
+        placements: [],
+        created_locally: false,
+        synced_with_api: false,
+        original_broadstreet_id: campaign_id,
+        sync_errors: [],
+      });
+      campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
+    }
 
     if (!campaign) {
       return NextResponse.json(

@@ -16,6 +16,19 @@ export async function GET(request: NextRequest) {
     const advertiserId = searchParams.get('advertiser_id');
     const campaignId = searchParams.get('campaign_id');
     const campaignMongoId = searchParams.get('campaign_mongo_id');
+    const advertisementIdFilter = searchParams.get('advertisement_id');
+    const zoneIdFilter = searchParams.get('zone_id');
+    const limitParam = searchParams.get('limit');
+    const hardLimit = Number.isFinite(Number(limitParam)) ? Math.max(1, Math.min(1000, parseInt(limitParam as string))) : 0;
+
+    // Guardrails in production to avoid heavy unfiltered queries
+    const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoId || advertisementIdFilter || zoneIdFilter);
+    if (process.env.NODE_ENV === 'production' && !hasAnyFilter) {
+      return NextResponse.json({
+        success: false,
+        message: 'At least one filter (network_id, advertiser_id, campaign_id, campaign_mongo_id, advertisement_id, or zone_id) is required.',
+      }, { status: 400 });
+    }
     
     // Build campaign query based on filters
     const campaignQuery: Record<string, unknown> = {};
@@ -37,7 +50,8 @@ export async function GET(request: NextRequest) {
       advertisement_id: number;
       zone_id: number;
       restrictions?: string[];
-      campaign_id: number;
+      campaign_id?: number;
+      campaign_mongo_id?: string;
       _localCampaign?: {
         id: string;
         name: string;
@@ -66,13 +80,16 @@ export async function GET(request: NextRequest) {
     for (const lc of localCampaigns) {
       if (lc.placements && lc.placements.length > 0) {
         for (const placement of lc.placements as any[]) {
+          const numericId = (lc as any).original_broadstreet_id;
+          const mongoId = (lc as any)._id.toString();
           allPlacements.push({
             advertisement_id: (placement as any).advertisement_id,
             zone_id: (placement as any).zone_id,
             restrictions: (placement as any).restrictions,
-            campaign_id: (lc as any).original_broadstreet_id || 0,
+            ...(typeof numericId === 'number' ? { campaign_id: numericId } : {}),
+            campaign_mongo_id: mongoId,
             _localCampaign: {
-              id: (lc as any)._id.toString(),
+              id: mongoId,
               name: (lc as any).name,
               start_date: (lc as any).start_date,
               end_date: (lc as any).end_date,
@@ -84,18 +101,21 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Deduplicate across synced/local to avoid duplicates
+    // Deduplicate across synced/local to avoid duplicates. Use composite key including campaign_mongo_id for local-only.
     const seen = new Set<string>();
     const deduped: typeof allPlacements = [];
     for (const p of allPlacements) {
-      const key = `${p.campaign_id}-${p.advertisement_id}-${p.zone_id}`;
+      const compositeCampaign = (p as any).campaign_mongo_id || (typeof p.campaign_id === 'number' ? p.campaign_id : '');
+      const key = `${compositeCampaign}-${p.advertisement_id}-${p.zone_id}`;
       if (!seen.has(key)) { seen.add(key); deduped.push(p); }
     }
     
     // Build unique id sets for batch fetching
     const adIds = Array.from(new Set(deduped.map(p => p.advertisement_id)));
     const zoneIds = Array.from(new Set(deduped.map(p => p.zone_id)));
-    const campaignIds = Array.from(new Set(deduped.map(p => p.campaign_id)));
+    const campaignIds = Array.from(new Set(deduped
+      .map(p => (p as any).campaign_id)
+      .filter((v): v is number => typeof v === 'number')));
     
     // Fetch related entities in batches
     const [ads, zones, campaignsById] = await Promise.all([
@@ -110,12 +130,29 @@ export async function GET(request: NextRequest) {
     const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.id, c]));
     
     // Optional filter by networkId using zoneMap
-    const filtered = networkId
-      ? deduped.filter(p => {
-          const z = zoneMap.get(p.zone_id);
-          return z && z.network_id === parseInt(networkId);
-        })
-      : deduped;
+    let filtered = deduped;
+    if (networkId) {
+      const nid = parseInt(networkId);
+      filtered = filtered.filter(p => {
+        const z = zoneMap.get(p.zone_id);
+        return z && z.network_id === nid;
+      });
+    }
+    if (advertisementIdFilter) {
+      const aid = parseInt(advertisementIdFilter);
+      if (Number.isFinite(aid)) {
+        filtered = filtered.filter(p => p.advertisement_id === aid);
+      }
+    }
+    if (zoneIdFilter) {
+      const zid = parseInt(zoneIdFilter);
+      if (Number.isFinite(zid)) {
+        filtered = filtered.filter(p => p.zone_id === zid);
+      }
+    }
+    if (!hasAnyFilter && hardLimit > 0) {
+      filtered = filtered.slice(0, hardLimit);
+    }
     
     // Batch advertiser and network lookups
     const advertiserIds = Array.from(new Set(
@@ -135,7 +172,7 @@ export async function GET(request: NextRequest) {
     const networkMap = new Map<number, any>(networks.map((n: any) => [n.id, n]));
 
     // Enrich using maps; handle local campaign enrichment
-    const enrichedPlacements = filtered.map((placement) => {
+    const enrichedPlacements = filtered.map((placement: any) => {
       const advertisement = adMap.get(placement.advertisement_id);
       const zone = zoneMap.get(placement.zone_id);
       const campaign = campaignMap.get(placement.campaign_id);
@@ -149,6 +186,7 @@ export async function GET(request: NextRequest) {
 
       return {
         ...placement,
+        ...(placement.campaign_mongo_id ? { campaign_mongo_id: placement.campaign_mongo_id } : {}),
         advertisement: advertisement ? {
           id: (advertisement as any).id,
           name: (advertisement as any).name,
@@ -188,6 +226,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
+      count: enrichedPlacements.length,
       placements: enrichedPlacements,
     });
   } catch (error) {

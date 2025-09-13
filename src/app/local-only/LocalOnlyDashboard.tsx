@@ -206,6 +206,14 @@ function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCar
                 <span className="font-medium text-sm">{entity.max_impression_count.toLocaleString()}</span>
               </div>
             )}
+
+            {/* Placement Count */}
+            {Array.isArray((entity as any).placements) && (entity as any).placements.length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Placements:</span>
+                <Badge variant="secondary" className="text-xs">{(entity as any).placements.length}</Badge>
+              </div>
+            )}
             
             {/* Display Settings */}
             {(entity.display_type || entity.pacing_type) && (

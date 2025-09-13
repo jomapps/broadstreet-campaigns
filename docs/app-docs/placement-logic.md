@@ -40,14 +40,6 @@ Placements are created by the following logic:
 - api formats are in /docs/api-specs.json
 - Broadstreet docs are in /docs/broadstreet-structure.md
 
-## Test
-Test data:
-- network id: 9396
-- advertiser id: 199901
-- campaign id: 842383
-- advertisement id: 1143797
-
-Create placements using the local API so that you can test the creation flow end-to-end without calling Broadstreet directly. See Local API Testing below.
 
 ## Note
 - no fallbacks
@@ -151,3 +143,13 @@ Response shape:
 - Created zone "Leo Test Zone 51". Created success and shows properly. sync success. Removed from local-only page. Removed from zone page
 - Created Advertisers "Leo Test Advertiser 51". Created success and shows properly. sync success. Removed from local-only page. Removed from advertisers page
 - Created Campaign "Leo Test Campaign 51". Created success and shows properly. sync success. Removed from local-only page. Removed from campaign page
+
+## Placement Test
+Test data:
+- network id: 9396
+- advertiser id: 199901
+- campaign id: 842383
+- advertisement id: 1143797
+- Zone ids: 182864,175302, 175301
+
+Create placements using the local API so that you can test the creation flow end-to-end without calling Broadstreet directly. See Local API Testing below.
