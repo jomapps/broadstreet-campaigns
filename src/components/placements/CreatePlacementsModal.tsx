@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { usePlacementCreation } from '@/hooks/usePlacementCreation';
 
 interface CreatePlacementsModalProps {
@@ -12,7 +12,7 @@ interface CreatePlacementsModalProps {
 }
 
 export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlacementsModalProps) {
-  const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilters();
+  const entities = useSelectedEntities();
   const {
     adCount,
     zoneCount,
@@ -27,7 +27,6 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    if (!selectedCampaign) return;
     await createPlacements();
   };
 
@@ -49,34 +48,34 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
         <CardContent className="flex-1 overflow-auto space-y-4">
           <div className="space-y-1">
             <p className="text-sm text-gray-700">Campaign</p>
-            <p className="font-medium">{selectedCampaign?.name ?? 'N/A'}</p>
+            <p className="font-medium">{entities.campaign?.name ?? 'N/A'}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1">
               <p className="text-sm text-gray-700">Selected Advertisements</p>
-              <p className="font-medium">{selectedAdvertisements.length}</p>
-              {selectedAdvertisements.length > 0 && (
+              <p className="font-medium">{entities.advertisements.length}</p>
+              {entities.advertisements.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {selectedAdvertisements.slice(0, 5).map((id) => (
-                    <li key={id}>Ad {id}</li>
+                  {entities.advertisements.slice(0, 5).map((ad) => (
+                    <li key={ad.id}>Ad {ad.id}</li>
                   ))}
-                  {selectedAdvertisements.length > 5 && (
-                    <li>+{selectedAdvertisements.length - 5} more</li>
+                  {entities.advertisements.length > 5 && (
+                    <li>+{entities.advertisements.length - 5} more</li>
                   )}
                 </ul>
               )}
             </div>
             <div className="space-y-1">
               <p className="text-sm text-gray-700">Selected Zones</p>
-              <p className="font-medium">{selectedZones.length}</p>
-              {selectedZones.length > 0 && (
+              <p className="font-medium">{entities.zones.length}</p>
+              {entities.zones.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {selectedZones.slice(0, 5).map((id) => (
-                    <li key={id}>Zone {id}</li>
+                  {entities.zones.slice(0, 5).map((zone) => (
+                    <li key={zone.id}>Zone {zone.id}</li>
                   ))}
-                  {selectedZones.length > 5 && (
-                    <li>+{selectedZones.length - 5} more</li>
+                  {entities.zones.length > 5 && (
+                    <li>+{entities.zones.length - 5} more</li>
                   )}
                 </ul>
               )}
@@ -103,7 +102,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
 
           <div className="flex justify-end space-x-3 pt-2">
             <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || combinationsCount === 0}>
+            <Button onClick={handleSubmit} disabled={isSubmitting || !entities.campaign || combinationsCount === 0}>
               {isSubmitting ? 'Creating...' : 'Create Placements'}
             </Button>
           </div>

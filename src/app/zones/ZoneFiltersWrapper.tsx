@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import ZoneSizeFilters from './ZoneSizeFilters';
 import ZonesList from './ZonesList';
 import ZoneSelectionControls from './ZoneSelectionControls';
@@ -53,7 +54,8 @@ interface ZoneFiltersWrapperProps {
 export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWrapperProps) {
   const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS' | 'CS')[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const { selectedZones, showOnlySelected, selectedNetwork } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedZones, showOnlySelected } = useFilters();
 
   // Apply all filters to get the currently visible zones
   const filteredZones = useMemo(() => {
@@ -122,6 +124,10 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         onSizeFilterChange={setSelectedSizes}
       />
       
+      {/**
+       * Note: Network gating is intentionally handled inside `ZonesList` to avoid duplicating gate logic here.
+       * This keeps the wrapper focused on size/search filters and selection state.
+       */}
       <ZoneSelectionControls 
         zones={filteredZones}
         selectedZones={selectedZones}

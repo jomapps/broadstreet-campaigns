@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 
 interface UsePlacementCreationResult {
   // Computed values
@@ -21,40 +21,29 @@ interface UsePlacementCreationResult {
 }
 
 export function usePlacementCreation(): UsePlacementCreationResult {
-  const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilters();
+  const entities = useSelectedEntities();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const campaignMongoId = useMemo(() => {
-    // Only treat _id as campaign_mongo_id when the selected campaign is a true local campaign
-    // Heuristics:
-    // - Local campaigns are represented with id as a string (the MongoDB ObjectId string)
-    // - Synced campaigns have numeric id and also carry a Mongo _id from the Campaign collection, which we MUST NOT use here
-    if (!selectedCampaign) return undefined;
-    const hasStringId = typeof (selectedCampaign as any).id === 'string';
-    if (hasStringId && (selectedCampaign as any)._id) {
-      return (selectedCampaign as any)._id as string;
-    }
-    return undefined;
-  }, [selectedCampaign]);
+    if (!entities.campaign) return undefined;
+    return typeof entities.campaign.id === 'string' ? entities.campaign.id : undefined;
+  }, [entities.campaign]);
 
-  const adIds = useMemo(() => {
-    // Parse selection values that may be numeric strings
-    return selectedAdvertisements
-      .map((v) => parseInt(v, 10))
-      .filter((v) => Number.isFinite(v));
-  }, [selectedAdvertisements]);
+  const toNumericIds = (items: { id: string }[]) =>
+    items
+      .map((x) => x.id)
+      .filter((id) => /^\d+$/.test(id))
+      .map((id) => Number(id));
 
-  const zoneIds = useMemo(() => {
-    return selectedZones
-      .map((v) => parseInt(v, 10))
-      .filter((v) => Number.isFinite(v));
-  }, [selectedZones]);
+  const adIds = useMemo(() => toNumericIds(entities.advertisements), [entities.advertisements]);
+
+  const zoneIds = useMemo(() => toNumericIds(entities.zones), [entities.zones]);
 
   // Fallback-aware counts to handle string ID selections
-  const adCount = adIds.length > 0 ? adIds.length : selectedAdvertisements.length;
-  const zoneCount = zoneIds.length > 0 ? zoneIds.length : selectedZones.length;
+  const adCount = adIds.length > 0 ? adIds.length : entities.advertisements.length;
+  const zoneCount = zoneIds.length > 0 ? zoneIds.length : entities.zones.length;
 
   const combinationsCount = useMemo(() => adCount * zoneCount, [adCount, zoneCount]);
 
@@ -64,7 +53,7 @@ export function usePlacementCreation(): UsePlacementCreationResult {
   };
 
   const createPlacements = async () => {
-    if (!selectedCampaign) return;
+    if (!entities.campaign) return;
 
     setIsSubmitting(true);
     setError(null);
@@ -72,8 +61,8 @@ export function usePlacementCreation(): UsePlacementCreationResult {
 
     try {
       const payload: any = {
-        advertisement_ids: adIds.length > 0 ? adIds : selectedAdvertisements,
-        zone_ids: zoneIds.length > 0 ? zoneIds : selectedZones,
+        advertisement_ids: adIds.length > 0 ? adIds : entities.advertisements.map((ad) => ad.id),
+        zone_ids: zoneIds.length > 0 ? zoneIds : entities.zones.map((zone) => zone.id),
       };
 
       // Validate that we have either campaign_mongo_id or campaign_id
@@ -81,8 +70,8 @@ export function usePlacementCreation(): UsePlacementCreationResult {
       if (campaignMongoId) {
         payload.campaign_mongo_id = campaignMongoId;
         hasValidCampaignId = true;
-      } else if (typeof selectedCampaign.id === 'number') {
-        payload.campaign_id = selectedCampaign.id;
+      } else if (typeof entities.campaign.id === 'number') {
+        payload.campaign_id = entities.campaign.id;
         hasValidCampaignId = true;
       }
 

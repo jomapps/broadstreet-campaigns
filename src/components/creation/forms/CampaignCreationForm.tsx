@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,8 @@ interface CampaignCreationFormProps {
 }
 
 export default function CampaignCreationForm({ onClose, setIsLoading }: CampaignCreationFormProps) {
-  const { selectedNetwork, selectedAdvertiser, setCampaigns } = useFilters();
+  const entities = useSelectedEntities();
+  const { setCampaigns } = useFilters();
   const router = useRouter();
   
   // Get today's date in datetime-local format
@@ -46,8 +48,6 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0,
-    advertiser_id: selectedAdvertiser?.id || '',
     start_date: getTodayDateTime(),
     weight: 1, // Default weight (default = 1)
     
@@ -83,11 +83,11 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       newErrors.start_date = 'Start date is required';
     }
 
-    if (!selectedNetwork) {
+    if (!entities.network) {
       newErrors.network = 'Network selection is required';
     }
 
-    if (!selectedAdvertiser) {
+    if (!entities.advertiser) {
       newErrors.advertiser = 'Advertiser selection is required';
     }
 
@@ -189,16 +189,6 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       return;
     }
 
-    if (!selectedNetwork) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
-    if (!selectedAdvertiser) {
-      setErrors({ advertiser: 'Please select an advertiser first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
@@ -206,8 +196,8 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       // Build payload with required fields
       const payload: any = {
         name: formData.name.trim(),
-        network_id: selectedNetwork.id,
-        advertiser_id: selectedAdvertiser.id,
+        network_id: entities.network.id,
+        advertiser_id: entities.advertiser.id,
         start_date: formData.start_date,
         weight: parseFloat(formData.weight.toString()), // Ensure weight is a number
       };
@@ -275,8 +265,8 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
       // Immediately reload campaigns for the current advertiser so the list updates without a full reload
       try {
-        if (selectedAdvertiser) {
-          const listRes = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`, { cache: 'no-store' });
+        if (entities.advertiser) {
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${entities.advertiser.id}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setCampaigns(listData.campaigns || []);
@@ -299,31 +289,18 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
     }
   };
 
-  if (!selectedNetwork) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
-        <p className="text-gray-600 mb-4">
-          Please select a network from the sidebar filters before creating a campaign.
-        </p>
-        <Button onClick={onClose} variant="outline">
-          Close
-        </Button>
-      </div>
-    );
-  }
+  
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {selectedNetwork.name}
+          <strong>Network:</strong> {entities.network?.name}
         </p>
-        {selectedAdvertiser && (
+        {entities.advertiser && (
           <p className="text-sm text-blue-800">
-            <strong>Advertiser:</strong> {selectedAdvertiser.name}
+            <strong>Advertiser:</strong> {entities.advertiser.name}
           </p>
         )}
       </div>
@@ -340,7 +317,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !selectedNetwork || !selectedAdvertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Campaign'}
@@ -568,7 +545,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !selectedNetwork || !selectedAdvertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Campaign'}

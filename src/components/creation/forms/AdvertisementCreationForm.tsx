@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,16 +16,14 @@ interface AdvertisementCreationFormProps {
 }
 
 export default function AdvertisementCreationForm({ onClose, setIsLoading }: AdvertisementCreationFormProps) {
-  const { selectedNetwork, selectedAdvertiser } = useFilters();
+  const entities = useSelectedEntities();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0,
     type: 'image' as 'image' | 'text' | 'video' | 'native',
     
     // Optional fields - empty by default
-    advertiser_id: selectedAdvertiser?.id || '',
     preview_url: '',
     target_url: '',
     notes: '',
@@ -131,7 +129,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       return;
     }
 
-    if (!selectedNetwork) {
+    if (!entities.network) {
       setErrors({ network: 'Please select a network first' });
       return;
     }
@@ -143,13 +141,13 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       // Build payload with only non-empty optional fields
       const payload: any = {
         name: formData.name.trim(),
-        network_id: selectedNetwork.id,
+        network_id: entities.network.id,
         type: formData.type,
       };
 
       // Only add optional fields if they have values
-      if (formData.advertiser_id && formData.advertiser_id !== '') {
-        payload.advertiser_id = parseInt(formData.advertiser_id);
+      if (entities.advertiser?.id) {
+        payload.advertiser_id = entities.advertiser.id;
       }
       
       if (formData.preview_url && formData.preview_url.trim()) {
@@ -199,34 +197,27 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
     }
   };
 
-  if (!selectedNetwork) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
-        <p className="text-gray-600 mb-4">
-          Please select a network from the sidebar filters before creating an advertisement.
-        </p>
-        <Button onClick={onClose} variant="outline">
-          Close
-        </Button>
-      </div>
-    );
-  }
+  
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {selectedNetwork.name}
+          <strong>Network:</strong> {entities.network?.name}
         </p>
-        {selectedAdvertiser && (
+        {entities.advertiser && (
           <p className="text-sm text-blue-800">
-            <strong>Advertiser:</strong> {selectedAdvertiser.name}
+            <strong>Advertiser:</strong> {entities.advertiser.name}
           </p>
         )}
       </div>
+
+      {errors.network && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-red-600">{errors.network}</p>
+        </div>
+      )}
 
       {/* Top Submit Button */}
       <div className="flex justify-end space-x-3 mb-6">
@@ -240,7 +231,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertisement'}
@@ -361,7 +352,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertisement'}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,12 +22,12 @@ interface AdminContact {
 }
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
-  const { selectedNetwork, setAdvertisers } = useFilters();
+  const entities = useSelectedEntities();
+  const { setAdvertisers } = useFilters();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0,
     
     // Optional fields - empty by default
     web_home_url: '',
@@ -163,7 +164,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       return;
     }
 
-    if (!selectedNetwork) {
+    if (!entities.network) {
       setErrors({ network: 'Please select a network first' });
       return;
     }
@@ -175,7 +176,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       // Build payload with only non-empty optional fields
       const payload: any = {
         name: formData.name.trim(),
-        network_id: selectedNetwork.id,
+        network_id: entities.network.id,
       };
 
       // Only add optional fields if they have values
@@ -211,8 +212,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
 
       // Immediately reload advertisers for the current network so the list updates without a full reload
       try {
-        if (selectedNetwork) {
-          const listRes = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
+        if (entities.network) {
+          const listRes = await fetch(`/api/advertisers?network_id=${entities.network.id}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);
@@ -236,29 +237,22 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     }
   };
 
-  if (!selectedNetwork) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
-        <p className="text-gray-600 mb-4">
-          Please select a network from the sidebar filters before creating an advertiser.
-        </p>
-        <Button onClick={onClose} variant="outline">
-          Close
-        </Button>
-      </div>
-    );
-  }
+  
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {selectedNetwork.name}
+          <strong>Network:</strong> {entities.network?.name}
         </p>
       </div>
+
+      {errors.network && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-red-600">{errors.network}</p>
+        </div>
+      )}
 
       {/* Top Submit Button */}
       <div className="flex justify-end space-x-3 mb-6">
@@ -272,7 +266,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
@@ -420,7 +414,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}

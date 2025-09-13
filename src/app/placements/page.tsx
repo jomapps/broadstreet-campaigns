@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import PlacementsList from './PlacementsList';
 
 // Type for enriched placement data
@@ -83,13 +83,13 @@ function LoadingSkeleton() {
 }
 
 function PlacementsData() {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign } = useFilters();
+  const entities = useSelectedEntities();
   const [placements, setPlacements] = useState<PlacementLean[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchPlacements = async () => {
-      if (!selectedNetwork) {
+      if (!entities.network) {
         setPlacements([]);
         return;
       }
@@ -97,17 +97,18 @@ function PlacementsData() {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        params.append('network_id', selectedNetwork.id.toString());
+        params.append('network_id', entities.network.id.toString());
         
-        if (selectedAdvertiser) {
-          params.append('advertiser_id', selectedAdvertiser.id.toString());
+        if (entities.advertiser) {
+          params.append('advertiser_id', entities.advertiser.id.toString());
         }
         
-        if (selectedCampaign) {
-          if (typeof (selectedCampaign as any).id === 'number') {
-            params.append('campaign_id', (selectedCampaign as any).id.toString());
-          } else if ((selectedCampaign as any)._id) {
-            params.append('campaign_mongo_id', (selectedCampaign as any)._id);
+        if (entities.campaign) {
+          const id = entities.campaign.id;
+          if (typeof id === 'number') {
+            params.append('campaign_id', String(id));
+          } else {
+            params.append('campaign_mongo_id', String(id));
           }
         }
 
@@ -134,14 +135,14 @@ function PlacementsData() {
     };
 
     fetchPlacements();
-  }, [selectedNetwork, selectedAdvertiser, selectedCampaign]);
+  }, [entities.network, entities.advertiser, entities.campaign]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">

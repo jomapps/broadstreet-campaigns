@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
@@ -180,13 +181,14 @@ export default function ZonesList({
   onSearchChange,
   filteredZones
 }: ZonesListProps) {
-  const { selectedNetwork, toggleZoneSelection } = useFilters();
+  const entities = useSelectedEntities();
+  const { toggleZoneSelection } = useFilters();
   
   // Use filtered zones if provided, otherwise fall back to local filtering
   const displayZones = filteredZones || zones;
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">

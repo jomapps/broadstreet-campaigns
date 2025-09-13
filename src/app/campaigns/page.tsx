@@ -3,6 +3,7 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -177,7 +178,8 @@ function LoadingSkeleton() {
 }
 
 function CampaignsList() {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns, setCampaigns } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns, setCampaigns } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -199,7 +201,7 @@ function CampaignsList() {
   }
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -216,7 +218,7 @@ function CampaignsList() {
   }
 
   // Check if advertiser is selected
-  if (!selectedAdvertiser) {
+  if (!entities.advertiser) {
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
@@ -264,8 +266,8 @@ function CampaignsList() {
 
       // Reload campaigns for the current advertiser so the list updates immediately
       try {
-        if (selectedAdvertiser) {
-          const listRes = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`, { cache: 'no-store' });
+        if (entities.advertiser) {
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${entities.advertiser.id}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setCampaigns(listData.campaigns || []);
@@ -305,7 +307,7 @@ function CampaignsList() {
             <CampaignCard 
               key={campaign.id} 
               campaign={campaign}
-              advertiserName={selectedAdvertiser?.name}
+              advertiserName={entities.advertiser?.name}
               isSelected={selectedCampaign?.id === campaign.id}
               onSelect={handleCampaignSelect}
               onDelete={handleDelete}

@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for local entity data
@@ -362,7 +362,7 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
 
 export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
-  const { selectedNetwork } = useFilters();
+  const entities = useSelectedEntities();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -431,10 +431,10 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
 
     // Initialize progress modal with entity counts for the selected network and unsynced only
     const entityCounts = (() => {
-      if (!selectedNetwork) {
+      if (!entities.network) {
         return { networks: 0, advertisers: 0, zones: 0, advertisements: 0, campaigns: 0 };
       }
-      const nid = selectedNetwork.id;
+      const nid = entities.network.id;
       const advertisers = data.advertisers.filter(a => a.network_id === nid && !a.synced_with_api).length;
       const zones = data.zones.filter(z => z.network_id === nid && !z.synced_with_api).length;
       const campaigns = data.campaigns.filter(c => c.network_id === nid && !c.synced_with_api).length;
@@ -453,10 +453,10 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       setStepInProgress('dry-run');
       
       // Use network selection from the sidebar as the single source of truth
-      if (!selectedNetwork) {
+      if (!entities.network) {
         throw new Error('Select a network in the sidebar before syncing');
       }
-      const selectedNetworkId = selectedNetwork.id;
+      const selectedNetworkId = entities.network.id;
 
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import AdvertisementSelectionControls from './AdvertisementSelectionControls';
 import AdvertisementsList from './AdvertisementsList';
 
@@ -30,20 +31,21 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
-  const { selectedAdvertisements, showOnlySelectedAds, selectedNetwork, selectedAdvertiser } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedAdvertisements, showOnlySelectedAds } = useFilters();
 
   // Get unique advertisement types for filtering (only from the selected advertiser's ads)
   const advertisementTypes = useMemo(() => {
     let adsToFilter = advertisements;
     
     // Only include ads from the selected advertiser
-    if (selectedAdvertiser) {
-      adsToFilter = advertisements.filter(ad => ad.advertiser === selectedAdvertiser.name);
+    if (entities.advertiser) {
+      adsToFilter = advertisements.filter(ad => ad.advertiser === entities.advertiser.name);
     }
     
     const types = [...new Set(adsToFilter.map(ad => ad.type))];
     return types.sort();
-  }, [advertisements, selectedAdvertiser]);
+  }, [advertisements, entities.advertiser]);
 
   // Apply all filters to get the currently visible advertisements
   const filteredAdvertisements = useMemo(() => {
@@ -54,8 +56,8 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     let filtered = advertisements;
     
     // 1. Filter by selected advertiser (highest priority)
-    if (selectedAdvertiser) {
-      filtered = filtered.filter(ad => ad.advertiser === selectedAdvertiser.name);
+    if (entities.advertiser) {
+      filtered = filtered.filter(ad => ad.advertiser === entities.advertiser.name);
     }
     
     // 2. Apply "Only Selected" filter
@@ -85,10 +87,10 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     }
     
     return filtered;
-  }, [advertisements, searchTerm, selectedTypes, showActiveOnly, selectedAdvertisements, showOnlySelectedAds, selectedAdvertiser]);
+  }, [advertisements, searchTerm, selectedTypes, showActiveOnly, selectedAdvertisements, showOnlySelectedAds, entities.advertiser]);
 
   // Check if network and advertiser are selected
-  if (!selectedNetwork || !selectedAdvertiser) {
+  if (!entities.network || !entities.advertiser) {
     return null;
   }
 

@@ -5,6 +5,7 @@ import { useFilters } from '@/contexts/FilterContext';
 import CreationButton from '@/components/creation/CreationButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for network data from filter context
 type NetworkLean = {
@@ -21,11 +22,16 @@ type NetworkLean = {
 
 interface NetworkCardProps {
   network: NetworkLean;
+  isSelected: boolean;
+  onSelect: (network: NetworkLean) => void;
 }
 
-function NetworkCard({ network }: NetworkCardProps) {
+function NetworkCard({ network, isSelected, onSelect }: NetworkCardProps) {
   return (
-    <Card className="h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group-hover:scale-[1.02]">
+    <Card
+      className={`h-full transition-all duration-200 cursor-pointer border-2 ${cardStateClasses({ isLocal: false, isSelected })}`}
+      onClick={() => onSelect(network)}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -115,7 +121,7 @@ function LoadingSkeleton() {
 }
 
 function NetworksList() {
-  const { networks, isLoadingNetworks } = useFilters();
+  const { networks, isLoadingNetworks, selectedNetwork, setSelectedNetwork } = useFilters();
 
   if (isLoadingNetworks) {
     return <LoadingSkeleton />;
@@ -132,7 +138,18 @@ function NetworksList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {networks.map((network) => (
-        <NetworkCard key={network.id} network={network} />
+        <NetworkCard
+          key={network.id}
+          network={network}
+          isSelected={selectedNetwork?.id === network.id}
+          onSelect={(n) => {
+            if (selectedNetwork?.id === n.id) {
+              setSelectedNetwork(null);
+            } else {
+              setSelectedNetwork(n as any);
+            }
+          }}
+        />
       ))}
     </div>
   );

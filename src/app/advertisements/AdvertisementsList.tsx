@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
@@ -133,7 +134,8 @@ export default function AdvertisementsList({
   onSearchChange,
   filteredAdvertisements
 }: AdvertisementsListProps) {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, toggleAdvertisementSelection } = useFilters();
+  const entities = useSelectedEntities();
+  const { toggleAdvertisementSelection } = useFilters();
   const [localSearchTerm, setLocalSearchTerm] = useState('');
 
   // Use provided search term or local one
@@ -144,7 +146,7 @@ export default function AdvertisementsList({
   const displayAdvertisements = filteredAdvertisements || advertisements;
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -161,7 +163,7 @@ export default function AdvertisementsList({
   }
 
   // Check if advertiser is selected
-  if (!selectedAdvertiser) {
+  if (!entities.advertiser) {
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
