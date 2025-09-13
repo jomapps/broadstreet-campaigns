@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
 import { useFilters } from '@/contexts/FilterContext';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for local entity data
 type LocalEntity = {
@@ -39,9 +40,11 @@ interface EntityCardProps {
   networkName?: string;
   advertiserName?: string;
   onDelete: (id: string, type: string) => void;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
 }
 
-function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCardProps) {
+function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected = false, onToggleSelection }: EntityCardProps) {
   const getEntityIcon = (type: string) => {
     switch (type) {
       case 'zone': return <Target className="h-4 w-4" />;
@@ -74,21 +77,34 @@ function EntityCard({ entity, networkName, advertiserName, onDelete }: EntityCar
     });
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button, a, input, label')) return;
+    onToggleSelection?.(entity._id);
+  };
+
   return (
     <Card 
-      className="relative p-4 border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 transition-all duration-200 hover:scale-[1.02]"
+      className={`relative p-4 border-2 transition-all duration-200 ${cardStateClasses({ isLocal: true, isSelected })}`}
       data-testid="entity-card"
+      onClick={handleCardClick}
     >
       {/* Delete Button */}
       <Button
         variant="ghost"
         size="sm"
         className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-        onClick={() => onDelete(entity._id, entity.type)}
+        onClick={(e) => { e.stopPropagation(); onDelete(entity._id, entity.type); }}
         data-testid="delete-button"
       >
         <X className="h-4 w-4" />
       </Button>
+
+      {isSelected && (
+        <span className="absolute top-2 left-2 px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
+          ✓ Selected
+        </span>
+      )}
 
       {/* Header */}
       <div className="flex items-start space-x-3 mb-3">
@@ -310,9 +326,11 @@ interface EntitySectionProps {
   networkMap: Map<number, string>;
   advertiserMap: Map<number, string>;
   onDelete: (id: string, type: string) => void;
+  selectedIds: Set<string>;
+  onToggleSelection: (id: string) => void;
 }
 
-function EntitySection({ title, entities, networkMap, advertiserMap, onDelete }: EntitySectionProps) {
+function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, selectedIds, onToggleSelection }: EntitySectionProps) {
   if (entities.length === 0) {
     return null;
   }
@@ -333,6 +351,8 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete }:
             networkName={networkMap.get(entity.network_id)}
             advertiserName={entity.type === 'campaign' ? advertiserMap.get(entity.advertiser_id) : undefined}
             onDelete={onDelete}
+            isSelected={selectedIds.has(entity._id)}
+            onToggleSelection={onToggleSelection}
           />
         ))}
       </div>
@@ -346,6 +366,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   // Enhanced sync progress management
   const {
@@ -365,6 +386,18 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
   } = useSyncProgress();
 
   const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length;
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   const handleDelete = async (id: string, type: string) => {
     if (!confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`)) {
@@ -585,6 +618,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+        selectedIds={selectedIds}
+        onToggleSelection={toggleSelection}
       />
 
       <EntitySection
@@ -593,6 +628,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+        selectedIds={selectedIds}
+        onToggleSelection={toggleSelection}
       />
 
       <EntitySection
@@ -601,6 +638,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+        selectedIds={selectedIds}
+        onToggleSelection={toggleSelection}
       />
 
       <EntitySection
@@ -609,6 +648,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+        selectedIds={selectedIds}
+        onToggleSelection={toggleSelection}
       />
 
       <EntitySection
@@ -617,6 +658,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
+        selectedIds={selectedIds}
+        onToggleSelection={toggleSelection}
       />
 
       {/* Progress Modal */}

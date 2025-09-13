@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for serialized zone data (plain object without Mongoose methods)
 type ZoneLean = {
@@ -64,13 +65,7 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
   
   return (
     <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${
-        isSelected
-          ? 'border-blue-400 bg-blue-50 shadow-blue-200 hover:shadow-blue-300'
-          : isLocalZone 
-            ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
-            : 'border-gray-200 bg-white hover:shadow-gray-300'
-      }`}
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal: isLocalZone, isSelected })}`}
       onClick={handleCardClick}
     >
       <div className="flex items-start justify-between mb-4">

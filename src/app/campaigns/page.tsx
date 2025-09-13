@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for campaign data from filter context
 type CampaignLean = {
@@ -54,20 +55,14 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
   };
   
   return (
-    <div className={`relative rounded-lg shadow-sm border p-6 transition-all duration-200 ${
-      isLocal 
-        ? 'border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
-        : isSelected 
-          ? 'bg-white border-primary shadow-md shadow-primary/10' 
-          : 'bg-white border-gray-200 hover:border-gray-300'
-    }`}>
+    <div className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}>
       {/* Delete Button for Local Entities */}
       {isLocal && onDelete && (
         <Button
           variant="ghost"
           size="sm"
           className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={handleDelete}
+          onClick={(e) => { e.stopPropagation(); handleDelete(); }}
         >
           <X className="h-4 w-4" />
         </Button>
@@ -263,6 +258,9 @@ function CampaignsList() {
       if (!response.ok) {
         throw new Error('Failed to delete campaign');
       }
+
+      // Clear selection if the deleted campaign was selected
+      if (String(selectedCampaign?.id) === String(campaign.id)) setSelectedCampaign(null);
 
       // Reload campaigns for the current advertiser so the list updates immediately
       try {

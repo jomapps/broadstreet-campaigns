@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { SearchInput } from '@/components/ui/search-input';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for serialized advertisement data (plain object without Mongoose methods)
 type AdvertisementLean = {
@@ -20,6 +21,8 @@ type AdvertisementLean = {
   preview_url: string;
   createdAt: string;
   updatedAt: string;
+  created_locally?: boolean;
+  synced_with_api?: boolean;
 };
 
 interface AdvertisementCardProps {
@@ -30,6 +33,7 @@ interface AdvertisementCardProps {
 
 function AdvertisementCard({ advertisement, isSelected = false, onToggleSelection }: AdvertisementCardProps) {
   const updatedDate = new Date(advertisement.updated_at);
+  const isLocal = (advertisement as any).created_locally && !(advertisement as any).synced_with_api;
 
   const handleCardClick = () => {
     if (onToggleSelection) {
@@ -39,11 +43,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
   
   return (
     <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${
-        isSelected
-          ? 'border-blue-400 bg-blue-50 shadow-blue-200 hover:shadow-blue-300'
-          : 'border-gray-200 bg-white hover:shadow-gray-300'
-      }`}
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal, isSelected })}`}
       onClick={handleCardClick}
     >
       <div className="flex items-start justify-between mb-4">
@@ -56,6 +56,11 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           {isSelected && (
             <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
               ✓ Selected
+            </span>
+          )}
+          {isLocal && (
+            <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 font-semibold">
+              Local
             </span>
           )}
           <span className={`px-2 py-1 text-xs rounded-full ${
@@ -102,6 +107,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded card-text font-medium transition-colors duration-200"
+          onClick={(e) => e.stopPropagation()}
         >
           Preview
         </a>

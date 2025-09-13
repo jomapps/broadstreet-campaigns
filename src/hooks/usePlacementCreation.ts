@@ -27,10 +27,13 @@ export function usePlacementCreation(): UsePlacementCreationResult {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const campaignMongoId = useMemo(() => {
-    // Derive campaign_mongo_id from selectedCampaign._id directly
+    // Only treat _id as campaign_mongo_id when the selected campaign is a true local campaign
+    // Heuristics:
+    // - Local campaigns are represented with id as a string (the MongoDB ObjectId string)
+    // - Synced campaigns have numeric id and also carry a Mongo _id from the Campaign collection, which we MUST NOT use here
     if (!selectedCampaign) return undefined;
-    // If selectedCampaign has _id field (MongoDB ObjectId), use it
-    if ((selectedCampaign as any)._id) {
+    const hasStringId = typeof (selectedCampaign as any).id === 'string';
+    if (hasStringId && (selectedCampaign as any)._id) {
       return (selectedCampaign as any)._id as string;
     }
     return undefined;

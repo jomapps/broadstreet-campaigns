@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import LocalCampaign from '@/lib/models/local-campaign';
 import Campaign from '@/lib/models/campaign';
+import Advertiser from '@/lib/models/advertiser';
 
 type RequestBody = {
   campaign_id?: number;
@@ -44,16 +45,33 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+      // Ensure required LocalCampaign fields exist; derive network_id from Advertiser if missing
+      const advertiser = (source as any).advertiser_id
+        ? await Advertiser.findOne({ id: (source as any).advertiser_id }).lean()
+        : null;
+      const resolvedNetworkId = (source as any).network_id ?? advertiser?.network_id;
+      if (typeof resolvedNetworkId !== 'number') {
+        return NextResponse.json(
+          { message: 'Unable to determine network_id for mirrored campaign' },
+          { status: 422 }
+        );
+      }
+      if (typeof (source as any).advertiser_id !== 'number') {
+        return NextResponse.json(
+          { message: 'Unable to determine advertiser_id for mirrored campaign' },
+          { status: 422 }
+        );
+      }
       const mirror = await LocalCampaign.create({
         name: (source as any).name,
-        network_id: (source as any).network_id,
+        network_id: resolvedNetworkId,
         advertiser_id: (source as any).advertiser_id,
-        start_date: (source as any).start_date,
+        start_date: (source as any).start_date ?? new Date().toISOString().slice(0, 10),
         end_date: (source as any).end_date,
         max_impression_count: (source as any).max_impression_count,
         display_type: (source as any).display_type,
-        active: (source as any).active,
-        weight: (source as any).weight,
+        active: (source as any).active ?? true,
+        weight: typeof (source as any).weight === 'number' ? (source as any).weight : 0,
         path: (source as any).path,
         archived: (source as any).archived,
         pacing_type: (source as any).pacing_type,
@@ -67,6 +85,53 @@ export async function POST(request: NextRequest) {
         sync_errors: [],
       });
       campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
+    }
+
+    // Edge case handling: if campaign_mongo_id was provided but does not match a LocalCampaign,
+    // it might actually be a Mongo _id from the synced Campaign collection; try mirroring by that id.
+    if (!campaign && campaign_mongo_id) {
+      const sourceByMongo = await Campaign.findById(campaign_mongo_id).lean();
+      if (sourceByMongo) {
+        const advertiser = (sourceByMongo as any).advertiser_id
+          ? await Advertiser.findOne({ id: (sourceByMongo as any).advertiser_id }).lean()
+          : null;
+        const resolvedNetworkId = (sourceByMongo as any).network_id ?? advertiser?.network_id;
+        if (typeof resolvedNetworkId !== 'number') {
+          return NextResponse.json(
+            { message: 'Unable to determine network_id for mirrored campaign' },
+            { status: 422 }
+          );
+        }
+        if (typeof (sourceByMongo as any).advertiser_id !== 'number') {
+          return NextResponse.json(
+            { message: 'Unable to determine advertiser_id for mirrored campaign' },
+            { status: 422 }
+          );
+        }
+        const mirror = await LocalCampaign.create({
+          name: (sourceByMongo as any).name,
+          network_id: resolvedNetworkId,
+          advertiser_id: (sourceByMongo as any).advertiser_id,
+          start_date: (sourceByMongo as any).start_date ?? new Date().toISOString().slice(0, 10),
+          end_date: (sourceByMongo as any).end_date,
+          max_impression_count: (sourceByMongo as any).max_impression_count,
+          display_type: (sourceByMongo as any).display_type,
+          active: (sourceByMongo as any).active ?? true,
+          weight: typeof (sourceByMongo as any).weight === 'number' ? (sourceByMongo as any).weight : 0,
+          path: (sourceByMongo as any).path,
+          archived: (sourceByMongo as any).archived,
+          pacing_type: (sourceByMongo as any).pacing_type,
+          impression_max_type: (sourceByMongo as any).impression_max_type,
+          paused: (sourceByMongo as any).paused,
+          notes: (sourceByMongo as any).notes,
+          placements: [],
+          created_locally: false,
+          synced_with_api: false,
+          original_broadstreet_id: (sourceByMongo as any).id,
+          sync_errors: [],
+        });
+        campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
+      }
     }
 
     if (!campaign) {
