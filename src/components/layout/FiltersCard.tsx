@@ -71,12 +71,14 @@ export default function FiltersCard() {
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : (
             <Select
-              value={selectedNetwork?.id.toString() || ''}
+              value={(selectedNetwork as any)?.broadstreet_id?.toString?.() || (selectedNetwork as any)?.id?.toString?.() || ''}
               onValueChange={(value) => {
-                const network = networks.find(n => n.id.toString() === value);
+                const network = networks.find(n => (n as any).broadstreet_id?.toString?.() === value || (n as any).id?.toString?.() === value);
                 setSelectedNetwork(network || null);
                 // Clear dependent filters when network changes
-                if (network?.id !== selectedNetwork?.id) {
+                const oldId = (selectedNetwork as any)?.broadstreet_id ?? (selectedNetwork as any)?.id;
+                const newId = (network as any)?.broadstreet_id ?? (network as any)?.id;
+                if (newId !== oldId) {
                   setSelectedAdvertiser(null);
                   setSelectedCampaign(null);
                 }
@@ -101,8 +103,8 @@ export default function FiltersCard() {
               <SelectContent className="max-h-60">
                 {networks.map((network) => (
                   <SelectItem 
-                    key={network.id} 
-                    value={network.id.toString()}
+                    key={(network as any).broadstreet_id ?? (network as any).id}
+                    value={((network as any).broadstreet_id ?? (network as any).id).toString()}
                     className="text-xs"
                   >
                     <div className="flex items-center justify-between w-full">

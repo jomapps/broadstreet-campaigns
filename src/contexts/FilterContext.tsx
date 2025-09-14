@@ -175,7 +175,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingAdvertisers(true);
       try {
-        const response = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`, { cache: 'no-store' });
+        const nid = (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
+        const response = await fetch(`/api/advertisers?network_id=${nid}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           setAdvertisers(data.advertisers || []);
@@ -200,7 +201,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingCampaigns(true);
       try {
-        const response = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`);
+        const aid = (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
+        const response = await fetch(`/api/campaigns?advertiser_id=${aid}`);
         if (response.ok) {
           const data = await response.json();
           setCampaigns(data.campaigns || []);

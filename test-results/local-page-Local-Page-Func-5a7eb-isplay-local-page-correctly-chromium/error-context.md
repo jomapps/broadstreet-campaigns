@@ -1,0 +1,76 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e23]: Advertiser
+              - generic [ref=e25]: Select on advertisers page
+            - generic [ref=e26]:
+              - generic [ref=e28]: Campaign
+              - generic [ref=e30]: Select advertiser first
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Utilities
+            - generic [ref=e34]: Tools and actions for managing your campaigns
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e38]: Select a campaign
+            - button "Create Placements" [disabled]
+    - generic [ref=e39]:
+      - banner [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: BS
+            - heading "Dashboard" [level=1] [ref=e46]
+          - generic [ref=e47]:
+            - navigation [ref=e48]:
+              - link "Dashboard" [ref=e49] [cursor=pointer]:
+                - /url: /dashboard
+              - link "Networks" [ref=e50] [cursor=pointer]:
+                - /url: /networks
+              - link "Advertisers" [ref=e51] [cursor=pointer]:
+                - /url: /advertisers
+              - link "Advertisements" [ref=e52] [cursor=pointer]:
+                - /url: /advertisements
+              - link "Zones" [ref=e53] [cursor=pointer]:
+                - /url: /zones
+              - link "Campaigns" [ref=e54] [cursor=pointer]:
+                - /url: /campaigns
+              - link "Placements" [ref=e55] [cursor=pointer]:
+                - /url: /placements
+              - link "Local Only" [ref=e56] [cursor=pointer]:
+                - /url: /local-only
+            - generic [ref=e60]: API Connected
+      - main [ref=e61]:
+        - generic [ref=e63]:
+          - generic [ref=e65]:
+            - heading "Local Only" [level=1] [ref=e66]
+            - paragraph [ref=e67]: Manage locally created entities before syncing to Broadstreet
+          - generic [ref=e69]:
+            - img [ref=e71]
+            - heading "No Local Entities" [level=3] [ref=e75]
+            - paragraph [ref=e76]: You haven't created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+            - button "Create Your First Entity" [ref=e77]
+  - button "Open Next.js Dev Tools" [ref=e83] [cursor=pointer]:
+    - img [ref=e84] [cursor=pointer]
+  - alert [ref=e87]
+```

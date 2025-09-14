@@ -1,0 +1,132 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e23]: Advertiser
+              - generic [ref=e25]: Select on advertisers page
+            - generic [ref=e26]:
+              - generic [ref=e28]: Campaign
+              - generic [ref=e30]: Select advertiser first
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Utilities
+            - generic [ref=e34]: Tools and actions for managing your campaigns
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e38]: Select a campaign
+            - button "Create Placements" [disabled]
+    - generic [ref=e39]:
+      - banner [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: BS
+            - heading "Dashboard" [level=1] [ref=e46]
+          - generic [ref=e47]:
+            - navigation [ref=e48]:
+              - link "Dashboard" [ref=e49] [cursor=pointer]:
+                - /url: /dashboard
+              - link "Networks" [ref=e50] [cursor=pointer]:
+                - /url: /networks
+              - link "Advertisers" [ref=e51] [cursor=pointer]:
+                - /url: /advertisers
+              - link "Advertisements" [ref=e52] [cursor=pointer]:
+                - /url: /advertisements
+              - link "Zones" [ref=e53] [cursor=pointer]:
+                - /url: /zones
+              - link "Campaigns" [ref=e54] [cursor=pointer]:
+                - /url: /campaigns
+              - link "Placements" [ref=e55] [cursor=pointer]:
+                - /url: /placements
+              - link "Local Only" [ref=e56] [cursor=pointer]:
+                - /url: /local-only
+            - generic [ref=e60]: API Connected
+      - main [ref=e61]:
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - heading "Campaigns" [level=1] [ref=e66]
+              - paragraph [ref=e67]: Active advertising campaigns and their details
+            - button "Create new campaign" [ref=e68]:
+              - generic [ref=e69]: Create campaign
+              - img
+            - generic [ref=e72]:
+              - generic [ref=e73]:
+                - generic [ref=e74]: Create New Campaign
+                - button [ref=e75]:
+                  - img
+              - generic [ref=e77]:
+                - paragraph [ref=e79]:
+                  - strong [ref=e80]: "Network:"
+                  - text: FASH Medien Verlag GmbH - SCHWULISSIMO
+                  - generic "Broadstreet ID" [ref=e82]: "BS #9396"
+                - generic [ref=e83]:
+                  - button "Cancel" [ref=e84]
+                  - button "Create Campaign" [disabled]
+                - generic [ref=e85]:
+                  - generic [ref=e86]:
+                    - generic [ref=e87]: Campaign Name *
+                    - textbox "Campaign Name *" [active] [ref=e88]: Leo Test Campaign 52
+                  - generic [ref=e89]:
+                    - generic [ref=e90]:
+                      - generic [ref=e91]:
+                        - generic [ref=e92]: Start Date *
+                        - textbox "Start Date *" [ref=e93]: 2025-09-15
+                        - paragraph [ref=e94]: When the campaign will go live (defaults to 12:00 AM)
+                      - generic [ref=e95]:
+                        - generic [ref=e96]: End Date
+                        - textbox "End Date" [ref=e97]
+                        - paragraph [ref=e98]: When the campaign will end (defaults to 11:59 PM)
+                    - generic [ref=e99]:
+                      - generic [ref=e100]: Weight *
+                      - combobox [ref=e101]:
+                        - generic: Default (1)
+                        - img [ref=e102]
+                      - combobox [ref=e104]
+                      - paragraph [ref=e105]: Campaign priority for rotation
+                - generic [ref=e106]:
+                  - button "Basic Settings Impression limits and campaign settings" [ref=e108]:
+                    - generic [ref=e109]:
+                      - heading "Basic Settings" [level=3] [ref=e110]
+                      - paragraph [ref=e111]: Impression limits and campaign settings
+                    - img [ref=e112]
+                  - button "Display Settings Display type, pacing type, and impression limits" [ref=e115]:
+                    - generic [ref=e116]:
+                      - heading "Display Settings" [level=3] [ref=e117]
+                      - paragraph [ref=e118]: Display type, pacing type, and impression limits
+                    - img [ref=e119]
+                  - button "Advanced Settings Path, notes, and status settings" [ref=e122]:
+                    - generic [ref=e123]:
+                      - heading "Advanced Settings" [level=3] [ref=e124]
+                      - paragraph [ref=e125]: Path, notes, and status settings
+                    - img [ref=e126]
+                - generic [ref=e128]:
+                  - button "Cancel" [ref=e129]
+                  - button "Create Campaign" [disabled]
+          - generic [ref=e131]:
+            - heading "Advertiser Required" [level=3] [ref=e132]
+            - paragraph [ref=e133]: Please select an advertiser from the sidebar filters to view campaigns.
+            - paragraph [ref=e134]: Campaigns belong to specific advertisers, so you need to choose which advertiser's campaigns you want to see.
+  - button "Open Next.js Dev Tools" [ref=e140] [cursor=pointer]:
+    - img [ref=e141] [cursor=pointer]
+  - alert [ref=e144]
+```

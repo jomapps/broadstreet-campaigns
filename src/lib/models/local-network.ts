@@ -1,9 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILocalNetwork extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
-  id: number;
   group_id?: number;
   web_home_url?: string;
   logo?: {
@@ -34,10 +35,6 @@ const LocalNetworkSchema = new Schema<ILocalNetwork>({
     type: String,
     required: true,
     trim: true,
-  },
-  id: {
-    type: Number,
-    required: true,
   },
   group_id: {
     type: Number,
@@ -95,12 +92,31 @@ const LocalNetworkSchema = new Schema<ILocalNetwork>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Indexes for performance
-LocalNetworkSchema.index({ id: 1 }, { unique: true });
 LocalNetworkSchema.index({ name: 1 }, { unique: true });
 LocalNetworkSchema.index({ created_locally: 1 });
 LocalNetworkSchema.index({ synced_with_api: 1 });
+
+// Virtual getters for IDs
+LocalNetworkSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalNetworkSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const leanVirtuals = require('mongoose-lean-virtuals');
+  LocalNetworkSchema.plugin(leanVirtuals);
+} catch (_) {
+  // optional in dev without plugin installed
+}
 
 export default mongoose.models.LocalNetwork || mongoose.model<ILocalNetwork>('LocalNetwork', LocalNetworkSchema);

@@ -1,0 +1,100 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - generic [ref=e23]: Advertiser
+                - button [ref=e24]:
+                  - img
+              - generic [ref=e27]: Selected
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - generic [ref=e30]: Campaign
+                - button [ref=e31]:
+                  - img
+              - generic [ref=e34]: Selected
+            - generic [ref=e35]:
+              - generic [ref=e36]:
+                - generic [ref=e37]: Selected Zones
+                - button [ref=e38]:
+                  - img
+              - generic [ref=e39]:
+                - generic [ref=e40]: 3 zones selected
+                - generic [ref=e41]: Filtered
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - generic [ref=e44]: Selected Advertisements
+                - button [ref=e45]:
+                  - img
+              - generic [ref=e46]:
+                - generic [ref=e47]: 1 ad selected
+                - generic [ref=e48]: Filtered
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: Utilities
+            - generic [ref=e52]: Tools and actions for managing your campaigns
+          - generic [ref=e54]:
+            - paragraph [ref=e55]: "Requires: Campaign, Zones, Advertisement"
+            - button "Create Placements" [ref=e56]
+    - generic [ref=e57]:
+      - banner [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e61]:
+            - generic [ref=e63]: BS
+            - heading "Dashboard" [level=1] [ref=e64]
+          - generic [ref=e65]:
+            - navigation [ref=e66]:
+              - link "Dashboard" [ref=e67] [cursor=pointer]:
+                - /url: /dashboard
+              - link "Networks" [ref=e68] [cursor=pointer]:
+                - /url: /networks
+              - link "Advertisers" [ref=e69] [cursor=pointer]:
+                - /url: /advertisers
+              - link "Advertisements" [ref=e70] [cursor=pointer]:
+                - /url: /advertisements
+              - link "Zones" [ref=e71] [cursor=pointer]:
+                - /url: /zones
+              - link "Campaigns" [ref=e72] [cursor=pointer]:
+                - /url: /campaigns
+              - link "Placements" [ref=e73] [cursor=pointer]:
+                - /url: /placements
+              - link "Local Only" [ref=e74] [cursor=pointer]:
+                - /url: /local-only
+            - generic [ref=e78]: API Connected
+      - main [ref=e79]:
+        - generic [ref=e81]:
+          - generic [ref=e82]:
+            - generic [ref=e83]:
+              - heading "Placements" [level=1] [ref=e84]
+              - paragraph [ref=e85]: Active ad placements across campaigns, advertisements, and zones
+            - button "Create Placements" [ref=e87]
+          - generic [ref=e88]:
+            - heading "Placement Overview" [level=2] [ref=e89]
+            - generic [ref=e90]:
+              - generic [ref=e93]: Advertisement + Zone + Campaign
+              - generic [ref=e96]: Active Campaigns Only
+              - generic [ref=e99]: Network Filtered
+  - button "Open Next.js Dev Tools" [ref=e267] [cursor=pointer]:
+    - img [ref=e268] [cursor=pointer]
+  - alert [ref=e271]
+```

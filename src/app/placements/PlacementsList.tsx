@@ -3,43 +3,44 @@
 import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 // Type for enriched placement data
 type PlacementLean = {
   _id: string;
   __v: number;
-  advertisement_id: number;
-  zone_id: number;
-  campaign_id: number;
+  advertisement_id: number | string;
+  zone_id: number | string;
+  campaign_id: number | string;
   restrictions?: string[];
   createdAt: string;
   updatedAt: string;
   advertisement?: {
-    id: number;
+    ids: { broadstreet_id?: number; mongo_id?: string };
     name: string;
     type: string;
     preview_url: string;
   } | null;
   campaign?: {
-    id: number;
+    ids: { broadstreet_id?: number; mongo_id?: string };
     name: string;
     start_date: string;
     end_date?: string;
     active: boolean;
   } | null;
   zone?: {
-    id: number;
+    ids: { broadstreet_id?: number; mongo_id?: string };
     name: string;
     alias?: string | null;
     size_type?: 'SQ' | 'PT' | 'LS' | null;
     size_number?: number | null;
   } | null;
   advertiser?: {
-    id: number;
+    ids: { broadstreet_id?: number; mongo_id?: string };
     name: string;
   } | null;
   network?: {
-    id: number;
+    ids: { broadstreet_id?: number; mongo_id?: string };
     name: string;
   } | null;
 };
@@ -88,20 +89,51 @@ function PlacementCard({ placement }: PlacementCardProps) {
 
       <div className="p-4 space-y-3">
         <div className="min-w-0">
-          <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
-            {placement.advertisement?.name || `Ad #${placement.advertisement_id}`}
-          </h3>
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
+              {placement.advertisement?.name || `Advertisement`}
+            </h3>
+            {placement.advertisement && (
+              <EntityIdBadge
+                broadstreet_id={placement.advertisement.ids?.broadstreet_id}
+                mongo_id={placement.advertisement.ids?.mongo_id}
+              />
+            )}
+          </div>
           <p className="card-meta text-gray-500 mt-0.5">
-            {placement.advertiser?.name ? `${placement.advertiser.name} • ` : ''}
-            {placement.campaign?.name || `Campaign #${placement.campaign_id}`}
+            <span className="inline-flex items-center gap-1">
+              {placement.advertiser?.name || 'Advertiser'}
+              {placement.advertiser && (
+                <EntityIdBadge
+                  broadstreet_id={placement.advertiser.ids?.broadstreet_id}
+                  mongo_id={placement.advertiser.ids?.mongo_id}
+                />
+              )}
+            </span>
+            {' • '}
+            <span className="inline-flex items-center gap-1">
+              {placement.campaign?.name || 'Campaign'}
+              {placement.campaign && (
+                <EntityIdBadge
+                  broadstreet_id={placement.campaign.ids?.broadstreet_id}
+                  mongo_id={placement.campaign.ids?.mongo_id}
+                />
+              )}
+            </span>
           </p>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between card-text">
             <span className="text-gray-500">Zone</span>
-            <span className="font-medium text-gray-900">
-              {placement.zone?.name || `#${placement.zone_id}`}
+            <span className="font-medium text-gray-900 inline-flex items-center gap-2">
+              {placement.zone?.name || 'Zone'}
+              {placement.zone && (
+                <EntityIdBadge
+                  broadstreet_id={placement.zone.ids?.broadstreet_id}
+                  mongo_id={placement.zone.ids?.mongo_id}
+                />
+              )}
               {placement.zone?.alias && (
                 <span className="text-gray-500 ml-1">({placement.zone.alias})</span>
               )}
@@ -160,8 +192,18 @@ function PlacementCard({ placement }: PlacementCardProps) {
         )}
 
         <div className="pt-2 border-t border-gray-100 flex justify-between items-center card-meta text-gray-400">
-          <span>{placement.campaign?.name || `Campaign #${placement.campaign_id}`}</span>
-          <span>Ad #{placement.advertisement_id} • Zone #{placement.zone_id}</span>
+          <span className="inline-flex items-center gap-2">
+            {placement.network?.name || 'Network'}
+            {placement.network && (
+              <EntityIdBadge
+                broadstreet_id={placement.network.ids?.broadstreet_id}
+                mongo_id={placement.network.ids?.mongo_id}
+              />
+            )}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            IDs linked
+          </span>
         </div>
       </div>
     </div>

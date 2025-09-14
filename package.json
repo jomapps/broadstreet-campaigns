@@ -29,6 +29,7 @@
     "date-fns": "^3.0.0",
     "lucide-react": "^0.543.0",
     "mongoose": "^8.0.0",
+    "mongoose-lean-virtuals": "^1.1.0",
     "next": "15.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",

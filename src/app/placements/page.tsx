@@ -99,19 +99,19 @@ function PlacementsData() {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        params.append('network_id', entities.network.id.toString());
+        if (entities.network?.ids.broadstreet_id != null) {
+          params.append('network_id', String(entities.network.ids.broadstreet_id));
+        }
         
-        if (entities.advertiser) {
-          params.append('advertiser_id', entities.advertiser.id.toString());
+        if (entities.advertiser?.ids.broadstreet_id != null) {
+          params.append('advertiser_id', String(entities.advertiser.ids.broadstreet_id));
         }
         
         if (entities.campaign) {
-          const id = entities.campaign.id;
-          if (typeof id === 'number') {
-            params.append('campaign_id', String(id));
-          } else {
-            params.append('campaign_mongo_id', String(id));
-          }
+          const mongoId = entities.campaign.ids.mongo_id;
+          const bsId = entities.campaign.ids.broadstreet_id;
+          if (mongoId) params.append('campaign_mongo_id', mongoId);
+          else if (bsId != null) params.append('campaign_id', String(bsId));
         }
 
         const response = await fetch(`/api/placements?${params.toString()}`, { cache: 'no-store' });

@@ -1,0 +1,108 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - generic [ref=e23]: Advertiser
+                - button [ref=e24]:
+                  - img
+              - generic [ref=e27]: Selected
+            - generic [ref=e28]:
+              - generic [ref=e29]:
+                - generic [ref=e30]: Campaign
+                - button [ref=e31]:
+                  - img
+              - generic [ref=e34]: Selected
+            - generic [ref=e35]:
+              - generic [ref=e36]:
+                - generic [ref=e37]: Selected Zones
+                - button [ref=e38]:
+                  - img
+              - generic [ref=e39]:
+                - generic [ref=e40]: 3 zones selected
+                - generic [ref=e41]: Filtered
+            - generic [ref=e42]:
+              - generic [ref=e43]:
+                - generic [ref=e44]: Selected Advertisements
+                - button [ref=e45]:
+                  - img
+              - generic [ref=e46]:
+                - generic [ref=e47]: 1 ad selected
+                - generic [ref=e48]: Filtered
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: Utilities
+            - generic [ref=e52]: Tools and actions for managing your campaigns
+          - generic [ref=e54]:
+            - paragraph [ref=e55]: "Requires: Campaign, Zones, Advertisement"
+            - button "Create Placements" [ref=e56]
+    - generic [ref=e57]:
+      - banner [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e61]:
+            - generic [ref=e63]: BS
+            - heading "Dashboard" [level=1] [ref=e64]
+          - generic [ref=e69]: API Connected
+      - main [ref=e70]:
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - generic [ref=e74]:
+              - heading "Placements" [level=1] [ref=e75]
+              - paragraph [ref=e76]: Active ad placements across campaigns, advertisements, and zones
+            - button "Create Placements" [ref=e78]
+          - generic [ref=e79]:
+            - heading "Placement Overview" [level=2] [ref=e80]
+            - generic [ref=e81]:
+              - generic [ref=e84]: Advertisement + Zone + Campaign
+              - generic [ref=e87]: Active Campaigns Only
+              - generic [ref=e90]: Network Filtered
+          - generic [ref=e92]:
+            - generic [ref=e94]:
+              - generic:
+                - img
+              - textbox "Search placements..." [ref=e95]
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - img "Preview of Test Malta Video" [ref=e99]
+                - generic [ref=e101]: Active
+              - generic [ref=e102]:
+                - generic [ref=e103]:
+                  - heading "Test Malta Video" [level=3] [ref=e104]
+                  - paragraph [ref=e105]: Leo Test Advertiser - Do not use Live • Leo Test Advertiser - Do not use Live
+                - generic [ref=e106]:
+                  - generic [ref=e107]:
+                    - generic [ref=e108]: Zone
+                    - generic [ref=e109]: Leo Test Video
+                  - generic [ref=e110]:
+                    - generic [ref=e111]: Duration
+                    - generic [ref=e112]: 9/7/2025
+                  - generic [ref=e113]:
+                    - generic [ref=e114]: Type
+                    - generic [ref=e115]: StencilAdvertisement
+                - generic [ref=e116]:
+                  - generic [ref=e117]: Leo Test Advertiser - Do not use Live
+                  - generic [ref=e118]: "Ad #1249038 • Zone #182810"
+  - button "Open Next.js Dev Tools" [ref=e124] [cursor=pointer]:
+    - img [ref=e125] [cursor=pointer]
+  - alert [ref=e128]
+```

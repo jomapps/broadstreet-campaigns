@@ -12,6 +12,7 @@ import {
   AdvertisementsResponse,
   PlacementsResponse,
 } from './types/broadstreet';
+import { mapApiIds } from './types/mapApiIds';
 
 const API_BASE_URL = process.env.BROADSTREET_API_BASE_URL || 'https://api.broadstreetads.com/api/1';
 const API_TOKEN = process.env.BROADSTREET_API_TOKEN || '';
@@ -79,12 +80,13 @@ class BroadstreetAPI {
   // Networks
   async getNetworks(): Promise<Network[]> {
     const response = await this.request<NetworksResponse>('/networks');
-    return response.networks;
+    // Map legacy id -> broadstreet_id but keep legacy id for compatibility
+    return response.networks.map((n: any) => mapApiIds(n, { stripId: false })) as unknown as Network[];
   }
 
   async getNetwork(id: number): Promise<Network> {
-    const response = await this.request<{ network: Network }>(`/networks/${id}`);
-    return response.network;
+    const response = await this.request<{ network: any }>(`/networks/${id}`);
+    return mapApiIds(response.network, { stripId: false }) as unknown as Network;
   }
 
   async createNetwork(network: {
@@ -96,22 +98,22 @@ class BroadstreetAPI {
     path?: string;
     notes?: string;
   }): Promise<Network> {
-    const response = await this.request<{ network: Network }>('/networks', {
+    const response = await this.request<{ network: any }>('/networks', {
       method: 'POST',
       body: JSON.stringify(network),
     });
-    return response.network;
+    return mapApiIds(response.network, { stripId: false }) as unknown as Network;
   }
 
   // Advertisers
   async getAdvertisers(networkId: number): Promise<Advertiser[]> {
     const response = await this.request<AdvertisersResponse>(`/advertisers?network_id=${networkId}`);
-    return response.advertisers;
+    return response.advertisers.map((a: any) => mapApiIds(a, { stripId: false })) as unknown as Advertiser[];
   }
 
   async getAdvertiser(id: number): Promise<Advertiser> {
-    const response = await this.request<{ advertiser: Advertiser }>(`/advertisers/${id}`);
-    return response.advertiser;
+    const response = await this.request<{ advertiser: any }>(`/advertisers/${id}`);
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
 
   async createAdvertiser(advertiser: {
@@ -122,22 +124,22 @@ class BroadstreetAPI {
     notes?: string;
     admins?: Array<{ name: string; email: string }>;
   }): Promise<Advertiser> {
-    const response = await this.request<{ advertiser: Advertiser }>('/advertisers', {
+    const response = await this.request<{ advertiser: any }>('/advertisers', {
       method: 'POST',
       body: JSON.stringify(advertiser),
     });
-    return response.advertiser;
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
 
   // Zones
   async getZones(networkId: number): Promise<Zone[]> {
     const response = await this.request<ZonesResponse>(`/zones?network_id=${networkId}`);
-    return response.zones;
+    return response.zones.map((z: any) => mapApiIds(z, { stripId: false })) as unknown as Zone[];
   }
 
   async getZone(id: number): Promise<Zone> {
-    const response = await this.request<{ zone: Zone }>(`/zones/${id}`);
-    return response.zone;
+    const response = await this.request<{ zone: any }>(`/zones/${id}`);
+    return mapApiIds(response.zone, { stripId: false }) as unknown as Zone;
   }
 
   async createZone(zone: {
@@ -158,27 +160,27 @@ class BroadstreetAPI {
     rss_shuffle?: boolean;
     style?: string;
   }): Promise<Zone> {
-    const response = await this.request<{ zone: Zone }>('/zones', {
+    const response = await this.request<{ zone: any }>('/zones', {
       method: 'POST',
       body: JSON.stringify(zone),
     });
-    return response.zone;
+    return mapApiIds(response.zone, { stripId: false }) as unknown as Zone;
   }
 
   // Campaigns
   async getCampaignsByAdvertiser(advertiserId: number): Promise<Campaign[]> {
     const response = await this.request<CampaignsResponse>(`/campaigns?advertiser_id=${advertiserId}`);
-    return response.campaigns;
+    return response.campaigns.map((c: any) => mapApiIds(c, { stripId: false })) as unknown as Campaign[];
   }
 
   async getCampaignsByZone(zoneId: number): Promise<Campaign[]> {
     const response = await this.request<CampaignsResponse>(`/campaigns?zone_id=${zoneId}`);
-    return response.campaigns;
+    return response.campaigns.map((c: any) => mapApiIds(c, { stripId: false })) as unknown as Campaign[];
   }
 
   async getCampaign(id: number): Promise<Campaign> {
-    const response = await this.request<{ campaign: Campaign }>(`/campaigns/${id}`);
-    return response.campaign;
+    const response = await this.request<{ campaign: any }>(`/campaigns/${id}`);
+    return mapApiIds(response.campaign, { stripId: false }) as unknown as Campaign;
   }
 
   async createCampaign(campaign: {
@@ -197,11 +199,11 @@ class BroadstreetAPI {
     paused?: boolean;
     notes?: string;
   }): Promise<Campaign> {
-    const response = await this.request<{ campaign: Campaign }>('/campaigns', {
+    const response = await this.request<{ campaign: any }>('/campaigns', {
       method: 'POST',
       body: JSON.stringify(campaign),
     });
-    return response.campaign;
+    return mapApiIds(response.campaign, { stripId: false }) as unknown as Campaign;
   }
 
   // Advertisements
@@ -215,7 +217,7 @@ class BroadstreetAPI {
     if (params.advertiserId) query += `&advertiser_id=${params.advertiserId}`;
     
     const response = await this.request<AdvertisementsResponse>(`/advertisements?${query}`);
-    return response.advertisements;
+    return response.advertisements.map((a: any) => mapApiIds(a, { stripId: false })) as unknown as Advertisement[];
   }
 
   async createAdvertisement(advertisement: {
@@ -229,23 +231,25 @@ class BroadstreetAPI {
     preview_url?: string;
     notes?: string;
   }): Promise<Advertisement> {
-    const response = await this.request<{ advertisement: Advertisement }>('/advertisements', {
+    const response = await this.request<{ advertisement: any }>('/advertisements', {
       method: 'POST',
       body: JSON.stringify(advertisement),
     });
-    return response.advertisement;
+    return mapApiIds(response.advertisement, { stripId: false }) as unknown as Advertisement;
   }
 
   // Placements
-  async getPlacements(campaignId: number): Promise<Placement[]> {
-    const response = await this.request<Placement[]>(`/placements?campaign_id=${campaignId}`);
+  async getPlacements(campaignId: number): Promise<any[]> {
+    const response = await this.request<any[]>(`/placements?campaign_id=${campaignId}`);
     
     // API returns array of placement objects directly
     // Need to add campaign_id since it's not in the API response
     if (Array.isArray(response)) {
-      return response.map(placement => ({
-        ...placement,
-        campaign_id: campaignId
+      return response.map((placement: any) => ({
+        advertisement_broadstreet_id: placement.advertisement_id,
+        zone_broadstreet_id: placement.zone_id,
+        campaign_broadstreet_id: campaignId,
+        restrictions: placement.restrictions || [],
       }));
     }
     
@@ -263,7 +267,13 @@ class BroadstreetAPI {
       method: 'POST',
       body: JSON.stringify(placement),
     });
-    return response.placement;
+    const p: any = response.placement as any;
+    return {
+      advertisement_broadstreet_id: p.advertisement_id,
+      zone_broadstreet_id: p.zone_id,
+      campaign_broadstreet_id: placement.campaign_id,
+      restrictions: p.restrictions || [],
+    } as Placement;
   }
 
   async deletePlacement(params: {

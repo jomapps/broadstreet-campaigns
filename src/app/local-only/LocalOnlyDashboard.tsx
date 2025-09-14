@@ -8,16 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for local entity data
 type LocalEntity = {
   _id: string;
   name: string;
-  network_id: number;
+  network_id: number | string;
   created_at: string;
   synced_with_api: boolean;
   type: 'zone' | 'advertiser' | 'campaign' | 'network' | 'advertisement';
+  broadstreet_id?: number;
+  mongo_id?: string;
   [key: string]: any;
 };
 
@@ -125,9 +129,19 @@ function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected 
             <Badge variant="outline" className="text-xs">
               NET: {entity.network_id}
             </Badge>
-            <Badge variant={entity.synced_with_api ? 'secondary' : 'outline'} className={`text-xs ${entity.synced_with_api ? 'bg-green-100 text-green-800' : ''}`}>
-              {entity.synced_with_api ? 'Synced' : 'Not Synced'}
-            </Badge>
+            {(() => {
+              const mongo = entity.mongo_id ?? entity._id;
+              const bs = entity.broadstreet_id ?? (entity as any).original_broadstreet_id;
+              const hasMongo = Boolean(mongo);
+              const hasBs = typeof bs === 'number';
+              if (hasBs && hasMongo) {
+                return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Both</Badge>;
+              }
+              if (hasBs) {
+                return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Synced</Badge>;
+              }
+              return <Badge variant="outline" className="text-xs">Local Only</Badge>;
+            })()}
           </div>
           {networkName && (
             <p className="text-sm text-gray-600">Network: {networkName}</p>
@@ -324,7 +338,10 @@ function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected 
       <div className="mt-3 pt-3 border-t border-orange-200">
         <div className="flex justify-between items-center text-xs text-gray-500">
           <span>Created: {formatDate(entity.created_at)}</span>
-          <span>ID: {entity._id.slice(-8)}</span>
+          <EntityIdBadge
+            broadstreet_id={entity.broadstreet_id ?? (entity as any).original_broadstreet_id}
+            mongo_id={entity.mongo_id ?? entity._id}
+          />
         </div>
       </div>
     </Card>
@@ -359,8 +376,16 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
           <EntityCard
             key={entity._id}
             entity={entity}
-            networkName={networkMap.get(entity.network_id)}
-            advertiserName={entity.type === 'campaign' ? advertiserMap.get(entity.advertiser_id) : undefined}
+            networkName={networkMap.get(
+              typeof entity.network_id === 'string' ? Number(entity.network_id) : entity.network_id
+            )}
+            advertiserName={entity.type === 'campaign'
+              ? advertiserMap.get(
+                  typeof (entity as any).advertiser_id === 'string'
+                    ? Number((entity as any).advertiser_id)
+                    : (entity as any).advertiser_id
+                )
+              : undefined}
             onDelete={onDelete}
             isSelected={selectedIds.has(entity._id)}
             onToggleSelection={onToggleSelection}
@@ -445,12 +470,12 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       if (!entities.network) {
         return { networks: 0, advertisers: 0, zones: 0, advertisements: 0, campaigns: 0 };
       }
-      const nid = entities.network.id;
-      const advertisers = data.advertisers.filter(a => a.network_id === nid && !a.synced_with_api).length;
-      const zones = data.zones.filter(z => z.network_id === nid && !z.synced_with_api).length;
-      const campaigns = data.campaigns.filter(c => c.network_id === nid && !c.synced_with_api).length;
-      const networks = data.networks.filter(n => (n as any).id === nid && !(n as any).synced_with_api).length;
-      const advertisements = data.advertisements.filter(ad => ad.network_id === nid && !ad.synced_with_api).length;
+      const nid = getEntityId(entities.network);
+      const advertisers = data.advertisers.filter(a => String(a.network_id) === String(nid) && !a.synced_with_api).length;
+      const zones = data.zones.filter(z => String(z.network_id) === String(nid) && !z.synced_with_api).length;
+      const campaigns = data.campaigns.filter(c => String(c.network_id) === String(nid) && !c.synced_with_api).length;
+      const networks = data.networks.filter(n => String((n as any).broadstreet_id ?? (n as any)._id) === String(nid) && !(n as any).synced_with_api).length;
+      const advertisements = data.advertisements.filter(ad => String(ad.network_id) === String(nid) && !ad.synced_with_api).length;
       // Debug log to help audit
       console.info('[LocalOnly] Computed unsynced counts', { nid, advertisers, zones, campaigns, networks, advertisements });
       return { advertisers, zones, campaigns, networks, advertisements };
@@ -467,7 +492,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       if (!entities.network) {
         throw new Error('Select a network in the sidebar before syncing');
       }
-      const selectedNetworkId = entities.network.id;
+      const selectedNetworkId = getEntityId(entities.network);
 
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',

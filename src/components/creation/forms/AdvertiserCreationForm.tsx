@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Plus, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface AdvertiserCreationFormProps {
   onClose: () => void;
@@ -61,6 +63,13 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         newErrors[`admin_${index}_email`] = 'Please enter a valid email address';
       }
     });
+
+    // Network selection and ID availability validation
+    if (!entities.network) {
+      newErrors.network = 'Network selection is required';
+    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
+      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -164,19 +173,19 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       return;
     }
 
-    if (!entities.network) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
       // Build payload with only non-empty optional fields
+      const networkIdValue = getEntityId(entities.network);
       const payload: any = {
         name: formData.name.trim(),
-        network_id: entities.network.id,
+        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network: {
+          broadstreet_id: entities.network?.ids.broadstreet_id,
+          mongo_id: entities.network?.ids.mongo_id,
+        },
       };
 
       // Only add optional fields if they have values
@@ -213,7 +222,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       // Immediately reload advertisers for the current network so the list updates without a full reload
       try {
         if (entities.network) {
-          const listRes = await fetch(`/api/advertisers?network_id=${entities.network.id}`, { cache: 'no-store' });
+          const networkId = getEntityId(entities.network);
+          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String(networkId ?? ''))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);
@@ -243,8 +253,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="advertiser-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {entities.network?.name}
+        <p className="text-sm text-blue-800 flex items-center gap-2">
+          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
         </p>
       </div>
 
@@ -267,7 +277,12 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
           data-testid="submit-button"
         >
@@ -418,7 +433,12 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
           data-testid="submit-button"
         >

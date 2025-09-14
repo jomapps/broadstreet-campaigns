@@ -10,6 +10,9 @@ import Campaign from '../models/campaign';
 import Advertisement from '../models/advertisement';
 import Placement from '../models/placement';
 import SyncLog from '../models/sync-log';
+import LocalAdvertiser from '../models/local-advertiser';
+import LocalCampaign from '../models/local-campaign';
+import LocalZone from '../models/local-zone';
 
 export async function syncNetworks(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
@@ -92,6 +95,8 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
               web_home_url: advertiser.web_home_url,
               notes: advertiser.notes,
               admins: advertiser.admins,
+              // Persist network context so we can derive campaign network_id when needed
+              network_id: network.id,
             });
           }
         });
@@ -525,4 +530,63 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
       }
     };
   }
+}
+
+// -----------------------------------------------------------------------------
+// ID resolution and entity helpers for sync operations
+// -----------------------------------------------------------------------------
+
+export async function resolveAdvertiserBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
+  try {
+    await connectDB();
+    if (typeof ref?.broadstreet_id === 'number') {
+      return ref.broadstreet_id;
+    }
+    if (ref?.mongo_id) {
+      const local = await LocalAdvertiser.findById(ref.mongo_id).lean();
+      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function resolveCampaignBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
+  try {
+    await connectDB();
+    if (typeof ref?.broadstreet_id === 'number') {
+      return ref.broadstreet_id;
+    }
+    if (ref?.mongo_id) {
+      const local = await LocalCampaign.findById(ref.mongo_id).lean();
+      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
+    }
+  } catch (_) {}
+  return null;
+}
+
+export async function resolveZoneBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
+  try {
+    await connectDB();
+    if (typeof ref?.broadstreet_id === 'number') {
+      return ref.broadstreet_id;
+    }
+    if (ref?.mongo_id) {
+      const local = await LocalZone.findById(ref.mongo_id).lean();
+      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
+    }
+  } catch (_) {}
+  return null;
+}
+
+export function isLocalEntity(entity: any): boolean {
+  if (!entity || typeof entity !== 'object') return false;
+  if (entity.created_locally === true) return true;
+  const hasMongoId = typeof entity.mongo_id === 'string' || typeof entity._id === 'string';
+  const hasBroadstreetId = typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number';
+  return hasMongoId && !hasBroadstreetId;
+}
+
+export function isSyncedEntity(entity: any): boolean {
+  if (!entity || typeof entity !== 'object') return false;
+  return typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number' || entity.synced_with_api === true;
 }

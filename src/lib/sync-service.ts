@@ -11,6 +11,7 @@ import SyncLog from './models/sync-log';
 import Network from './models/network';
 import Advertisement from './models/advertisement';
 import Advertiser from './models/advertiser';
+import { resolveAdvertiserBroadstreetId } from './utils/sync-helpers';
 
 // Types for sync operations
 export interface SyncResult<T = any> {
@@ -54,7 +55,9 @@ export interface DryRunResult {
 export interface PlacementData {
   advertisement_id: number;
   zone_id: number;
-  restrictions?: string;
+  // Local type stores multiple restriction strings; API expects a single string.
+  // Conversion to a single restriction is performed at API call sites.
+  restrictions?: string[];
 }
 
 class SyncService {
@@ -136,24 +139,12 @@ class SyncService {
           continue;
         }
 
-        // Resolve advertiser Broadstreet ID from either LocalAdvertiser (_id) or main Advertiser (numeric id)
-        let advertiserBroadstreetId: number | null = null;
-        // If advertiser_id looks like an ObjectId string, try LocalAdvertiser
-        const isObjectIdLike = typeof (campaign as any).advertiser_id === 'string' && (campaign as any).advertiser_id.length === 24;
-        if (isObjectIdLike) {
-          const la = await LocalAdvertiser.findOne({
-            _id: (campaign as any).advertiser_id,
-            synced_with_api: true,
-          });
-          if (la?.original_broadstreet_id) {
-            advertiserBroadstreetId = la.original_broadstreet_id;
-          }
-        } else if (typeof campaign.advertiser_id === 'number') {
-          const synced = await Advertiser.findOne({ id: campaign.advertiser_id });
-          if (synced?.id) {
-            advertiserBroadstreetId = synced.id;
-          }
-        }
+        // Resolve advertiser Broadstreet ID using explicit field resolution
+        const advertiserBroadstreetId = await resolveAdvertiserBroadstreetId(
+          typeof campaign.advertiser_id === 'number'
+            ? { broadstreet_id: campaign.advertiser_id }
+            : { mongo_id: campaign.advertiser_id as any }
+        );
 
         if (!advertiserBroadstreetId) {
           result.dependencyChecks.missingAdvertisers.push(campaign.name);
@@ -189,7 +180,7 @@ class SyncService {
 
             // Check if zone exists and is synced
             const localZone = await LocalZone.findOne({ 
-              _id: placement.zone_id,
+              original_broadstreet_id: placement.zone_id,
               synced_with_api: true 
             });
             if (!localZone) {
@@ -360,22 +351,12 @@ class SyncService {
         return result;
       }
 
-      // Resolve advertiser: prefer local advertiser by ObjectId, otherwise fall back to synced main Advertiser by numeric id
-      let advertiserBroadstreetId: number | null = null;
-      if (typeof localCampaign.advertiser_id === 'number') {
-        advertiserBroadstreetId = localCampaign.advertiser_id;
-      } else {
-        const localAdvertiser = await LocalAdvertiser.findById(localCampaign.advertiser_id);
-        if (localAdvertiser && localAdvertiser.synced_with_api && localAdvertiser.original_broadstreet_id) {
-          advertiserBroadstreetId = localAdvertiser.original_broadstreet_id;
-        } else {
-          // Try from main Advertiser collection (synced data)
-          const syncedAdvertiser = await Advertiser.findOne({ id: localCampaign.advertiser_id });
-          if (syncedAdvertiser && syncedAdvertiser.id) {
-            advertiserBroadstreetId = syncedAdvertiser.id;
-          }
-        }
-      }
+      // Resolve advertiser Broadstreet ID using explicit resolver
+      const advertiserBroadstreetId = await resolveAdvertiserBroadstreetId(
+        typeof localCampaign.advertiser_id === 'number'
+          ? { broadstreet_id: localCampaign.advertiser_id }
+          : { mongo_id: localCampaign.advertiser_id as any }
+      );
 
       if (!advertiserBroadstreetId) {
         result.error = `Campaign depends on unknown/unsynced advertiser reference: ${localCampaign.advertiser_id}`;
@@ -517,7 +498,7 @@ class SyncService {
         campaign_id: campaignId,
         advertisement_id: placement.advertisement_id,
         zone_id: placement.zone_id,
-        restrictions: placement.restrictions
+        restrictions: placement.restrictions?.[0]
       });
 
       result.success = true;
@@ -648,7 +629,7 @@ class SyncService {
               {
                 advertisement_id: placement.advertisement_id,
                 zone_id: placement.zone_id,
-                restrictions: placement.restrictions?.[0] // Take first restriction if any
+                restrictions: placement.restrictions // pass array; conversion happens in syncPlacement
               }
             );
             report.results.push(result);
@@ -764,7 +745,7 @@ class SyncService {
             {
               advertisement_id: placement.advertisement_id,
               zone_id: placement.zone_id,
-              restrictions: placement.restrictions?.[0]
+              restrictions: placement.restrictions
             }
           );
           results.push(result);

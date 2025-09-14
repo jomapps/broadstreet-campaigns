@@ -26,20 +26,16 @@ export function usePlacementCreation(): UsePlacementCreationResult {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const campaignMongoId = useMemo(() => {
-    if (!entities.campaign) return undefined;
-    return typeof entities.campaign.id === 'string' ? entities.campaign.id : undefined;
-  }, [entities.campaign]);
+  const campaignMongoId = useMemo(() => entities.campaign?.ids.mongo_id, [entities.campaign]);
 
-  const toNumericIds = (items: { id: string }[]) =>
+  const toNumericIds = (items: { ids: { broadstreet_id?: number } }[]) =>
     items
-      .map((x) => x.id)
-      .filter((id) => /^\d+$/.test(id))
-      .map((id) => Number(id));
+      .map((x) => x.ids.broadstreet_id)
+      .filter((id): id is number => typeof id === 'number');
 
-  const adIds = useMemo(() => toNumericIds(entities.advertisements), [entities.advertisements]);
+  const adIds = useMemo(() => toNumericIds(entities.advertisements as any), [entities.advertisements]);
 
-  const zoneIds = useMemo(() => toNumericIds(entities.zones), [entities.zones]);
+  const zoneIds = useMemo(() => toNumericIds(entities.zones as any), [entities.zones]);
 
   // Fallback-aware counts to handle string ID selections
   const adCount = adIds.length > 0 ? adIds.length : entities.advertisements.length;
@@ -61,8 +57,8 @@ export function usePlacementCreation(): UsePlacementCreationResult {
 
     try {
       const payload: any = {
-        advertisement_ids: adIds.length > 0 ? adIds : entities.advertisements.map((ad) => ad.id),
-        zone_ids: zoneIds.length > 0 ? zoneIds : entities.zones.map((zone) => zone.id),
+        advertisement_ids: adIds.length > 0 ? adIds : (entities.advertisements as any).map((ad: any) => ad.ids.broadstreet_id).filter((n: any) => typeof n === 'number'),
+        zone_ids: zoneIds.length > 0 ? zoneIds : (entities.zones as any).map((zone: any) => zone.ids.broadstreet_id).filter((n: any) => typeof n === 'number'),
       };
 
       // Validate that we have either campaign_mongo_id or campaign_id
@@ -70,8 +66,8 @@ export function usePlacementCreation(): UsePlacementCreationResult {
       if (campaignMongoId) {
         payload.campaign_mongo_id = campaignMongoId;
         hasValidCampaignId = true;
-      } else if (typeof entities.campaign.id === 'number') {
-        payload.campaign_id = entities.campaign.id;
+      } else if (typeof (entities.campaign as any)?.ids?.broadstreet_id === 'number') {
+        payload.campaign_id = (entities.campaign as any).ids.broadstreet_id as number;
         hasValidCampaignId = true;
       }
 

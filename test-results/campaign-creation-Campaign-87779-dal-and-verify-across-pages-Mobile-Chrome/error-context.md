@@ -1,0 +1,125 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e23]: Advertiser
+              - generic [ref=e25]: Select on advertisers page
+            - generic [ref=e26]:
+              - generic [ref=e28]: Campaign
+              - generic [ref=e30]: Select advertiser first
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Utilities
+            - generic [ref=e34]: Tools and actions for managing your campaigns
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e38]: Select a campaign
+            - button "Create Placements" [disabled]
+    - generic [ref=e39]:
+      - banner [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: BS
+            - heading "Dashboard" [level=1] [ref=e46]
+          - generic [ref=e51]: API Connected
+      - main [ref=e52]:
+        - generic [ref=e54]:
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - heading "Campaigns" [level=1] [ref=e57]
+              - paragraph [ref=e58]: Active advertising campaigns and their details
+            - button "Create new campaign" [ref=e59]:
+              - generic [ref=e60]: Create campaign
+              - img
+            - generic [ref=e63]:
+              - generic [ref=e64]:
+                - generic [ref=e65]: Create New Campaign
+                - button [ref=e66]:
+                  - img
+              - generic [ref=e68]:
+                - paragraph [ref=e70]:
+                  - strong [ref=e71]: "Network:"
+                  - text: FASH Medien Verlag GmbH - SCHWULISSIMO
+                  - generic "Broadstreet ID" [ref=e73]: "BS #9396"
+                - generic [ref=e74]:
+                  - button "Cancel" [ref=e75]
+                  - button "Create Campaign" [disabled]
+                - generic [ref=e76]:
+                  - generic [ref=e77]:
+                    - generic [ref=e78]: Campaign Name *
+                    - textbox "Campaign Name *" [active] [ref=e79]: Leo Test Campaign 52
+                  - generic [ref=e80]:
+                    - generic [ref=e81]:
+                      - generic [ref=e82]:
+                        - generic [ref=e83]: Start Date *
+                        - textbox "Start Date *" [ref=e84]: 2025-09-15
+                        - paragraph [ref=e85]: When the campaign will go live (defaults to 12:00 AM)
+                      - generic [ref=e86]:
+                        - generic [ref=e87]: End Date
+                        - textbox "End Date" [ref=e88]
+                        - paragraph [ref=e89]: When the campaign will end (defaults to 11:59 PM)
+                    - generic [ref=e90]:
+                      - generic [ref=e91]: Weight *
+                      - combobox [ref=e92]:
+                        - generic: Default (1)
+                        - img [ref=e93]
+                      - combobox [ref=e95]
+                      - paragraph [ref=e96]: Campaign priority for rotation
+                - generic [ref=e97]:
+                  - button "Basic Settings Impression limits and campaign settings" [ref=e99]:
+                    - generic [ref=e100]:
+                      - heading "Basic Settings" [level=3] [ref=e101]
+                      - paragraph [ref=e102]: Impression limits and campaign settings
+                    - img [ref=e103]
+                  - button "Display Settings Display type, pacing type, and impression limits" [ref=e106]:
+                    - generic [ref=e107]:
+                      - heading "Display Settings" [level=3] [ref=e108]
+                      - paragraph [ref=e109]: Display type, pacing type, and impression limits
+                    - img [ref=e110]
+                  - button "Advanced Settings Path, notes, and status settings" [ref=e113]:
+                    - generic [ref=e114]:
+                      - heading "Advanced Settings" [level=3] [ref=e115]
+                      - paragraph [ref=e116]: Path, notes, and status settings
+                    - img [ref=e117]
+                - generic [ref=e119]:
+                  - button "Cancel" [ref=e120]
+                  - button "Create Campaign" [disabled]
+          - generic [ref=e122]:
+            - heading "Advertiser Required" [level=3] [ref=e123]
+            - paragraph [ref=e124]: Please select an advertiser from the sidebar filters to view campaigns.
+            - paragraph [ref=e125]: Campaigns belong to specific advertisers, so you need to choose which advertiser's campaigns you want to see.
+  - generic [ref=e130] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e131] [cursor=pointer]:
+      - img [ref=e132] [cursor=pointer]
+    - generic [ref=e135] [cursor=pointer]:
+      - button "Open issues overlay" [ref=e136] [cursor=pointer]:
+        - generic [ref=e137] [cursor=pointer]:
+          - generic [ref=e138] [cursor=pointer]: "1"
+          - generic [ref=e139] [cursor=pointer]: "2"
+        - generic [ref=e140] [cursor=pointer]:
+          - text: Issue
+          - generic [ref=e141] [cursor=pointer]: s
+      - button "Collapse issues badge" [ref=e142] [cursor=pointer]:
+        - img [ref=e143] [cursor=pointer]
+  - alert [ref=e145]
+```

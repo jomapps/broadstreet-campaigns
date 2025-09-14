@@ -4,6 +4,8 @@ import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +16,9 @@ import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for campaign data from filter context
 type CampaignLean = {
-  id: number | string;
+  ids: { broadstreet_id?: number; mongo_id?: string };
   name: string;
-  advertiser_id: number;
+  advertiser_id: number | string;
   start_date: string;
   end_date?: string;
   active: boolean;
@@ -110,9 +112,10 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
           }`}>
             {isActive ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">
-            ID: {typeof campaign.id === 'string' ? campaign.id.slice(-8) : campaign.id}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={campaign.ids?.broadstreet_id}
+            mongo_id={campaign.ids?.mongo_id}
+          />
         </div>
       </div>
       
@@ -196,11 +199,14 @@ function CampaignsList() {
       return campaigns;
     }
     
-    return campaigns.filter(campaign =>
-      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (campaign.notes && campaign.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      campaign.id.toString().includes(searchTerm)
-    );
+    return campaigns.filter(campaign => {
+      const term = searchTerm.toLowerCase();
+      const nameMatch = campaign.name.toLowerCase().includes(term);
+      const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
+      const idStr = String(campaign.ids?.broadstreet_id ?? campaign.ids?.mongo_id ?? '');
+      const idMatch = idStr.toLowerCase().includes(term);
+      return nameMatch || notesMatch || idMatch;
+    });
   }, [campaigns, searchTerm]);
 
   if (isLoadingCampaigns) {
@@ -250,7 +256,9 @@ function CampaignsList() {
   }
 
   const handleCampaignSelect = (campaign: CampaignLean) => {
-    if (selectedCampaign?.id === campaign.id) {
+    const currentId = getEntityId(selectedCampaign as any);
+    const nextId = getEntityId(campaign as any);
+    if (String(currentId) === String(nextId)) {
       setSelectedCampaign(null);
     } else {
       setSelectedCampaign(campaign);
@@ -258,9 +266,14 @@ function CampaignsList() {
   };
 
   const handleDelete = async (campaign: CampaignLean) => {
-    setIsDeleting(campaign.id.toString());
+    const campId = getEntityId(campaign as any);
+    if (campId == null) {
+      alert('Missing campaign ID. Cannot delete.');
+      return;
+    }
+    setIsDeleting(String(campId));
     try {
-      const response = await fetch(`/api/delete/campaign/${campaign.id}`, {
+      const response = await fetch(`/api/delete/campaign/${campId}`, {
         method: 'DELETE',
       });
 
@@ -269,17 +282,18 @@ function CampaignsList() {
       }
 
       // Clear selection if the deleted campaign was selected
-      if (String(selectedCampaign?.id) === String(campaign.id)) setSelectedCampaign(null);
+      if (String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any))) setSelectedCampaign(null);
 
       // Reload campaigns for the current advertiser so the list updates immediately
       try {
         if (entities.advertiser) {
-          const listRes = await fetch(`/api/campaigns?advertiser_id=${entities.advertiser.id}`, { cache: 'no-store' });
+          const advId = getEntityId(entities.advertiser as any);
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${advId}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             const next = Array.isArray(listData.campaigns) ? listData.campaigns : [];
             // Ensure deleted campaign is not present even if API is stale
-            const filtered = next.filter((c: any) => String(c.id) !== String(campaign.id));
+            const filtered = next.filter((c: any) => String(getEntityId(c)) !== String(getEntityId(campaign as any)));
             setCampaigns(filtered);
             // Give React a tick to commit state before refreshing server components
             await new Promise((r) => setTimeout(r, 0));
@@ -317,10 +331,12 @@ function CampaignsList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map((campaign) => (
             <CampaignCard 
-              key={campaign.id} 
+              key={String(getEntityId(campaign as any))}
               campaign={campaign}
               advertiserName={entities.advertiser?.name}
-              isSelected={selectedCampaign?.id === campaign.id}
+              isSelected={
+                String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any))
+              }
               onSelect={handleCampaignSelect}
               onDelete={handleDelete}
             />

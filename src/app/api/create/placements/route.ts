@@ -3,9 +3,11 @@ import connectDB from '@/lib/mongodb';
 import LocalCampaign from '@/lib/models/local-campaign';
 import Campaign from '@/lib/models/campaign';
 import Advertiser from '@/lib/models/advertiser';
+import Zone from '@/lib/models/zone';
+import { resolveCampaignBroadstreetId, resolveZoneBroadstreetId } from '@/lib/utils/sync-helpers';
 
 type RequestBody = {
-  campaign_id?: number;
+  campaign_broadstreet_id?: number;
   campaign_mongo_id?: string;
   advertisement_ids: Array<number | string>;
   zone_ids: Array<number | string>;
@@ -17,16 +19,29 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = (await request.json()) as RequestBody;
-    const { campaign_id, campaign_mongo_id, advertisement_ids, zone_ids, restrictions } = body || ({} as RequestBody);
+    const { campaign_broadstreet_id, campaign_mongo_id, advertisement_ids, zone_ids, restrictions } = body || ({} as RequestBody);
 
     // Validate required fields
     if (
-      (!campaign_mongo_id && typeof campaign_id !== 'number') ||
+      (!campaign_mongo_id && typeof campaign_broadstreet_id !== 'number') ||
       !Array.isArray(advertisement_ids) || advertisement_ids.length === 0 ||
       !Array.isArray(zone_ids) || zone_ids.length === 0
     ) {
       return NextResponse.json(
-        { message: 'campaign_mongo_id OR campaign_id, plus advertisement_ids[] and zone_ids[] are required' },
+        { message: 'campaign_mongo_id OR campaign_broadstreet_id, plus advertisement_ids[] and zone_ids[] are required' },
+        { status: 400 }
+      );
+    }
+
+    // Strictly normalize and validate advertisement_ids and zone_ids to numeric Broadstreet IDs
+    const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
+    const normalizedAdIdsAll = Array.isArray(advertisement_ids) ? advertisement_ids.map(toNum) : [];
+    const normalizedZoneIdsAll = Array.isArray(zone_ids) ? zone_ids.map(toNum) : [];
+    const normalizedAdIds = normalizedAdIdsAll.filter((v) => Number.isFinite(v)) as number[];
+    const normalizedZoneIds = normalizedZoneIdsAll.filter((v) => Number.isFinite(v)) as number[];
+    if (normalizedAdIds.length !== normalizedAdIdsAll.length || normalizedZoneIds.length !== normalizedZoneIdsAll.length) {
+      return NextResponse.json(
+        { message: 'advertisement_ids and zone_ids must be numbers or numeric strings' },
         { status: 400 }
       );
     }
@@ -34,11 +49,11 @@ export async function POST(request: NextRequest) {
     // Find or create a local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
     let campaign = campaign_mongo_id
       ? await LocalCampaign.findById(campaign_mongo_id).lean()
-      : await LocalCampaign.findOne({ original_broadstreet_id: campaign_id }).lean();
+      : await LocalCampaign.findOne({ original_broadstreet_id: campaign_broadstreet_id }).lean();
 
     // If not found and we have a numeric campaign_id, upsert a mirror from Campaign
-    if (!campaign && typeof campaign_id === 'number') {
-      const source = await Campaign.findOne({ id: campaign_id }).lean();
+    if (!campaign && typeof campaign_broadstreet_id === 'number') {
+      const source = await Campaign.findOne({ id: campaign_broadstreet_id }).lean();
       if (!source) {
         return NextResponse.json(
           { message: 'Source campaign not found to mirror locally' },
@@ -49,12 +64,34 @@ export async function POST(request: NextRequest) {
       const advertiser = (source as any).advertiser_id
         ? await Advertiser.findOne({ id: (source as any).advertiser_id }).lean()
         : null;
-      const resolvedNetworkId = (source as any).network_id ?? advertiser?.network_id;
+      let resolvedNetworkId = (source as any).network_id ?? advertiser?.network_id;
       if (typeof resolvedNetworkId !== 'number') {
-        return NextResponse.json(
-          { message: 'Unable to determine network_id for mirrored campaign' },
-          { status: 422 }
-        );
+        // Fallback: derive network_id from the first selected zone
+        const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
+        if (firstZoneIdRaw != null) {
+          let zoneDoc: any = null;
+          const resolvedZoneId = await resolveZoneBroadstreetId(
+            typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
+              ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
+              : { mongo_id: firstZoneIdRaw as string }
+          );
+          if (typeof resolvedZoneId !== 'number') {
+            return NextResponse.json(
+              { message: 'Unable to resolve numeric zone_id from provided zone_ids' },
+              { status: 422 }
+            );
+          }
+          zoneDoc = await Zone.findOne({ id: resolvedZoneId }).lean();
+          if (zoneDoc && typeof zoneDoc.network_id === 'number') {
+            resolvedNetworkId = zoneDoc.network_id;
+          }
+        }
+        if (typeof resolvedNetworkId !== 'number') {
+          return NextResponse.json(
+            { message: 'Unable to determine network_id for mirrored campaign' },
+            { status: 422 }
+          );
+        }
       }
       if (typeof (source as any).advertiser_id !== 'number') {
         return NextResponse.json(
@@ -81,7 +118,7 @@ export async function POST(request: NextRequest) {
         placements: [],
         created_locally: false,
         synced_with_api: false,
-        original_broadstreet_id: campaign_id,
+        original_broadstreet_id: campaign_broadstreet_id,
         sync_errors: [],
       });
       campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
@@ -95,12 +132,34 @@ export async function POST(request: NextRequest) {
         const advertiser = (sourceByMongo as any).advertiser_id
           ? await Advertiser.findOne({ id: (sourceByMongo as any).advertiser_id }).lean()
           : null;
-        const resolvedNetworkId = (sourceByMongo as any).network_id ?? advertiser?.network_id;
+        let resolvedNetworkId = (sourceByMongo as any).network_id ?? advertiser?.network_id;
         if (typeof resolvedNetworkId !== 'number') {
-          return NextResponse.json(
-            { message: 'Unable to determine network_id for mirrored campaign' },
-            { status: 422 }
-          );
+          // Fallback: derive network_id from the first selected zone
+          const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
+          if (firstZoneIdRaw != null) {
+            let zoneDoc: any = null;
+            const resolvedZoneId = await resolveZoneBroadstreetId(
+              typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
+                ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
+                : { mongo_id: firstZoneIdRaw as string }
+            );
+            if (typeof resolvedZoneId !== 'number') {
+              return NextResponse.json(
+                { message: 'Unable to resolve numeric zone_id from provided zone_ids' },
+                { status: 422 }
+              );
+            }
+            zoneDoc = await Zone.findOne({ id: resolvedZoneId }).lean();
+            if (zoneDoc && typeof zoneDoc.network_id === 'number') {
+              resolvedNetworkId = zoneDoc.network_id;
+            }
+          }
+          if (typeof resolvedNetworkId !== 'number') {
+            return NextResponse.json(
+              { message: 'Unable to determine network_id for mirrored campaign' },
+              { status: 422 }
+            );
+          }
         }
         if (typeof (sourceByMongo as any).advertiser_id !== 'number') {
           return NextResponse.json(
@@ -141,14 +200,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Normalize ids to numbers if strings were sent
-    const normalizedAdIds = advertisement_ids.map((v) => (typeof v === 'string' ? parseInt(v, 10) : v)).filter((v) => Number.isFinite(v)) as number[];
-    const normalizedZoneIds = zone_ids.map((v) => (typeof v === 'string' ? parseInt(v, 10) : v)).filter((v) => Number.isFinite(v)) as number[];
+    // IDs already strictly normalized above
+    const normalizedAdIdsFinal = normalizedAdIds;
+    const normalizedZoneIdsFinal = normalizedZoneIds;
 
     // Build combinations (Cartesian product)
     const combinations = [] as Array<{ advertisement_id: number; zone_id: number; restrictions?: string[] }>;
-    for (const adId of normalizedAdIds) {
-      for (const zoneId of normalizedZoneIds) {
+    for (const adId of normalizedAdIdsFinal) {
+      for (const zoneId of normalizedZoneIdsFinal) {
         combinations.push({ advertisement_id: adId, zone_id: zoneId, restrictions });
       }
     }

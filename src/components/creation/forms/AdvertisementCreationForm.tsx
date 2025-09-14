@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface AdvertisementCreationFormProps {
   onClose: () => void;
@@ -49,6 +51,18 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
 
     if (formData.target_url && !isValidUrl(formData.target_url)) {
       newErrors.target_url = 'Please enter a valid URL';
+    }
+
+    // Network selection and ID availability validation
+    if (!entities.network) {
+      newErrors.network = 'Network selection is required';
+    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
+      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    }
+
+    // Optional advertiser ID availability validation (when advertiser present)
+    if (entities.advertiser && (!entities.advertiser.ids || (!entities.advertiser.ids.broadstreet_id && !entities.advertiser.ids.mongo_id))) {
+      newErrors.advertiser = 'Advertiser must have at least one ID (broadstreet_id or mongo_id)';
     }
 
     setErrors(newErrors);
@@ -129,27 +143,31 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       return;
     }
 
-    if (!entities.network) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
       // Build payload with only non-empty optional fields
+      const networkIdValue = getEntityId(entities.network);
+      const advertiserIdValue = getEntityId(entities.advertiser);
       const payload: any = {
         name: formData.name.trim(),
-        network_id: entities.network.id,
+        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
+        network: {
+          broadstreet_id: entities.network?.ids.broadstreet_id,
+          mongo_id: entities.network?.ids.mongo_id,
+        },
+        ...(entities.advertiser ? {
+          advertiser: {
+            broadstreet_id: entities.advertiser?.ids.broadstreet_id,
+            mongo_id: entities.advertiser?.ids.mongo_id,
+          }
+        } : {}),
         type: formData.type,
       };
 
       // Only add optional fields if they have values
-      if (entities.advertiser?.id) {
-        payload.advertiser_id = entities.advertiser.id;
-      }
-      
       if (formData.preview_url && formData.preview_url.trim()) {
         payload.preview_url = formData.preview_url.trim();
       }
@@ -203,12 +221,12 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {entities.network?.name}
+        <p className="text-sm text-blue-800 flex items-center gap-2">
+          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
         </p>
         {entities.advertiser && (
-          <p className="text-sm text-blue-800">
-            <strong>Advertiser:</strong> {entities.advertiser.name}
+          <p className="text-sm text-blue-800 flex items-center gap-2">
+            <strong>Advertiser:</strong> {entities.advertiser.name} <EntityIdBadge {...(entities.advertiser?.ids || {})} />
           </p>
         )}
       </div>
@@ -216,6 +234,11 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       {errors.network && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
           <p className="text-sm text-red-600">{errors.network}</p>
+        </div>
+      )}
+      {errors.advertiser && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-red-600">{errors.advertiser}</p>
         </div>
       )}
 
@@ -231,7 +254,12 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertisement'}
@@ -352,7 +380,12 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertisement'}

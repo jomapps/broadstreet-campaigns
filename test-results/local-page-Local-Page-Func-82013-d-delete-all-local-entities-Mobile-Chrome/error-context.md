@@ -1,0 +1,105 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e23]: Advertiser
+              - generic [ref=e25]: Select on advertisers page
+            - generic [ref=e26]:
+              - generic [ref=e28]: Campaign
+              - generic [ref=e30]: Select advertiser first
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Utilities
+            - generic [ref=e34]: Tools and actions for managing your campaigns
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e38]: Select a campaign
+            - button "Create Placements" [disabled]
+    - generic [ref=e39]:
+      - banner [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: BS
+            - heading "Dashboard" [level=1] [ref=e46]
+          - generic [ref=e51]: API Connected
+      - main [ref=e52]:
+        - generic [ref=e54]:
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - heading "Networks" [level=1] [ref=e58]
+              - paragraph [ref=e59]: Different websites where campaigns are run
+            - button "Create new network" [ref=e60]:
+              - generic [ref=e61]: Create network
+              - img
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - heading "Available Networks" [level=2] [ref=e64]
+              - paragraph [ref=e65]: Manage and view all your advertising networks
+            - generic [ref=e66]:
+              - generic [ref=e67] [cursor=pointer]:
+                - generic [ref=e69] [cursor=pointer]:
+                  - generic [ref=e70] [cursor=pointer]:
+                    - img "FASH Medien Verlag GmbH - SCHWULISSIMO logo" [ref=e71] [cursor=pointer]
+                    - generic [ref=e72] [cursor=pointer]:
+                      - generic [ref=e73] [cursor=pointer]: FASH Medien Verlag GmbH - SCHWULISSIMO
+                      - generic [ref=e74] [cursor=pointer]: "ID: 9396"
+                  - generic [ref=e75] [cursor=pointer]: Standard
+                - generic [ref=e76] [cursor=pointer]:
+                  - link "https://schwulissimo.de" [ref=e77] [cursor=pointer]:
+                    - /url: https://schwulissimo.de
+                    - generic [ref=e78] [cursor=pointer]: https://schwulissimo.de
+                    - img [ref=e79] [cursor=pointer]
+                  - generic [ref=e81] [cursor=pointer]:
+                    - generic [ref=e82] [cursor=pointer]:
+                      - paragraph [ref=e83] [cursor=pointer]: Advertisers
+                      - paragraph [ref=e84] [cursor=pointer]: "0"
+                    - generic [ref=e85] [cursor=pointer]:
+                      - paragraph [ref=e86] [cursor=pointer]: Zones
+                      - paragraph [ref=e87] [cursor=pointer]: "0"
+              - generic [ref=e88] [cursor=pointer]:
+                - generic [ref=e90] [cursor=pointer]:
+                  - generic [ref=e91] [cursor=pointer]:
+                    - img "FASH Medien Verlag GmbH - Travel M logo" [ref=e92] [cursor=pointer]
+                    - generic [ref=e93] [cursor=pointer]:
+                      - generic [ref=e94] [cursor=pointer]: FASH Medien Verlag GmbH - Travel M
+                      - generic [ref=e95] [cursor=pointer]: "ID: 9415"
+                  - generic [ref=e96] [cursor=pointer]: Valet Active
+                - generic [ref=e97] [cursor=pointer]:
+                  - link "travelm.de" [ref=e98] [cursor=pointer]:
+                    - /url: travelm.de
+                    - generic [ref=e99] [cursor=pointer]: travelm.de
+                    - img [ref=e100] [cursor=pointer]
+                  - generic [ref=e102] [cursor=pointer]:
+                    - generic [ref=e103] [cursor=pointer]:
+                      - paragraph [ref=e104] [cursor=pointer]: Advertisers
+                      - paragraph [ref=e105] [cursor=pointer]: "0"
+                    - generic [ref=e106] [cursor=pointer]:
+                      - paragraph [ref=e107] [cursor=pointer]: Zones
+                      - paragraph [ref=e108] [cursor=pointer]: "0"
+          - button "Create new network" [ref=e109]:
+            - generic [ref=e110]: Create network
+            - img
+  - button "Open Next.js Dev Tools" [ref=e116] [cursor=pointer]:
+    - img [ref=e117] [cursor=pointer]
+  - alert [ref=e120]
+```

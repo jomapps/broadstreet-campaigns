@@ -1,6 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILocalCampaign extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
   network_id: number;
@@ -138,6 +140,9 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Indexes for performance
@@ -145,5 +150,22 @@ LocalCampaignSchema.index({ network_id: 1, name: 1 }, { unique: true });
 LocalCampaignSchema.index({ advertiser_id: 1 });
 LocalCampaignSchema.index({ created_locally: 1 });
 LocalCampaignSchema.index({ synced_with_api: 1 });
+
+// Virtual getters for IDs
+LocalCampaignSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalCampaignSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const leanVirtuals = require('mongoose-lean-virtuals');
+  LocalCampaignSchema.plugin(leanVirtuals);
+} catch (_) {
+  // optional in dev without plugin installed
+}
 
 export default mongoose.models.LocalCampaign || mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);

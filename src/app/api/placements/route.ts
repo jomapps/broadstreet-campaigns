@@ -30,6 +30,17 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
     
+    // Validate ObjectId-like campaign_mongo_id early to avoid CastError
+    if (campaignMongoId) {
+      const { isValidObjectId } = await import('mongoose');
+      if (!isValidObjectId(campaignMongoId)) {
+        return NextResponse.json({
+          success: false,
+          message: 'Invalid campaign_mongo_id. Must be a valid Mongo ObjectId.',
+        }, { status: 400 });
+      }
+    }
+
     // Build campaign query based on filters
     const campaignQuery: Record<string, unknown> = {};
     if (campaignId) campaignQuery.id = parseInt(campaignId);
@@ -50,15 +61,16 @@ export async function GET(request: NextRequest) {
       advertisement_id: number;
       zone_id: number;
       restrictions?: string[];
-      campaign_id?: number;
+      campaign_id?: number; // broadstreet_id
       campaign_mongo_id?: string;
       _localCampaign?: {
-        id: string;
+        mongo_id: string;
         name: string;
         start_date?: string;
         end_date?: string;
         active: boolean;
         advertiser_id?: number;
+        broadstreet_id?: number;
       };
     }> = [];
 
@@ -89,7 +101,8 @@ export async function GET(request: NextRequest) {
             ...(typeof numericId === 'number' ? { campaign_id: numericId } : {}),
             campaign_mongo_id: mongoId,
             _localCampaign: {
-              id: mongoId,
+              mongo_id: mongoId,
+              ...(typeof numericId === 'number' ? { broadstreet_id: numericId } : {}),
               name: (lc as any).name,
               start_date: (lc as any).start_date,
               end_date: (lc as any).end_date,
@@ -101,11 +114,13 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Deduplicate across synced/local to avoid duplicates. Use composite key including campaign_mongo_id for local-only.
+    // Deduplicate across synced/local to avoid duplicates. Prefer numeric campaign_id when present; fall back to campaign_mongo_id.
     const seen = new Set<string>();
     const deduped: typeof allPlacements = [];
     for (const p of allPlacements) {
-      const compositeCampaign = (p as any).campaign_mongo_id || (typeof p.campaign_id === 'number' ? p.campaign_id : '');
+      const compositeCampaign = (typeof p.campaign_id === 'number'
+        ? String(p.campaign_id)
+        : ((p as any).campaign_mongo_id ? String((p as any).campaign_mongo_id) : ''));
       const key = `${compositeCampaign}-${p.advertisement_id}-${p.zone_id}`;
       if (!seen.has(key)) { seen.add(key); deduped.push(p); }
     }
@@ -188,37 +203,43 @@ export async function GET(request: NextRequest) {
         ...placement,
         ...(placement.campaign_mongo_id ? { campaign_mongo_id: placement.campaign_mongo_id } : {}),
         advertisement: advertisement ? {
-          id: (advertisement as any).id,
+          broadstreet_id: (advertisement as any).id,
+          mongo_id: (advertisement as any)._id?.toString?.(),
           name: (advertisement as any).name,
           type: (advertisement as any).type,
           preview_url: (advertisement as any).preview_url,
         } : null,
         campaign: local ? {
-          id: placement.campaign_id,
+          ...(typeof local.broadstreet_id === 'number' ? { broadstreet_id: local.broadstreet_id } : {}),
+          mongo_id: local.mongo_id,
           name: local.name,
           start_date: local.start_date,
           end_date: local.end_date,
           active: local.active,
         } : (campaign ? {
-          id: (campaign as any).id,
+          broadstreet_id: (campaign as any).id,
+          mongo_id: (campaign as any)._id?.toString?.(),
           name: (campaign as any).name,
           start_date: (campaign as any).start_date,
           end_date: (campaign as any).end_date,
           active: (campaign as any).active,
         } : null),
         zone: zone ? {
-          id: (zone as any).id,
+          broadstreet_id: (zone as any).id,
+          mongo_id: (zone as any)._id?.toString?.(),
           name: (zone as any).name,
           alias: (zone as any).alias,
           size_type: (zone as any).size_type,
           size_number: (zone as any).size_number,
         } : null,
         advertiser: advertiser ? {
-          id: (advertiser as any).id,
+          broadstreet_id: (advertiser as any).id,
+          mongo_id: (advertiser as any)._id?.toString?.(),
           name: (advertiser as any).name,
         } : null,
         network: network ? {
-          id: (network as any).id,
+          broadstreet_id: (network as any).id,
+          mongo_id: (network as any)._id?.toString?.(),
           name: (network as any).name,
         } : null,
       };

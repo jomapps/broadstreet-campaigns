@@ -59,8 +59,8 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
   const isConflictZone = hasMultipleSizeTypes(zone.name);
 
   const handleCardClick = () => {
-    if (onToggleSelection) {
-      onToggleSelection(zone._id);
+    if (onToggleSelection && typeof zone.id === 'number') {
+      onToggleSelection(String(zone.id));
     }
   };
   
@@ -237,7 +237,7 @@ export default function ZonesList({
               key={zone._id} 
               zone={zone} 
               networkName={networkMap.get(zone.network_id)}
-              isSelected={selectedZones.includes(zone._id)}
+              isSelected={selectedZones.includes(String(zone.id))}
               onToggleSelection={toggleZoneSelection}
             />
           ))}

@@ -4,6 +4,8 @@ import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +16,7 @@ import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for advertiser data from filter context
 type AdvertiserLean = {
-  id: number | string;
+  ids: { broadstreet_id?: number; mongo_id?: string };
   name: string;
   logo?: { url: string };
   web_home_url?: string;
@@ -104,9 +106,10 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
               Local
             </Badge>
           )}
-          <span className="card-meta text-gray-500">
-            ID: {typeof advertiser.id === 'string' ? advertiser.id.slice(-8) : advertiser.id}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={advertiser.ids?.broadstreet_id}
+            mongo_id={advertiser.ids?.mongo_id}
+          />
         </div>
       </div>
       
@@ -170,19 +173,28 @@ function AdvertisersList() {
   const router = useRouter();
 
   // Ensure fresh data on mount to avoid stale cached list after sync
+  const selectedNetworkId = useMemo(() => getEntityId(entities.network as any), [entities.network]);
+
   useEffect(() => {
+    const controller = new AbortController();
     const refresh = async () => {
-      if (!entities.network) return;
+      if (selectedNetworkId == null) return;
       try {
-        const listRes = await fetch(`/api/advertisers?network_id=${entities.network.id}`, { cache: 'no-store' });
+        const listRes = await fetch(`/api/advertisers?network_id=${selectedNetworkId}`, { cache: 'no-store', signal: controller.signal });
         if (listRes.ok) {
           const listData = await listRes.json();
           setAdvertisers(listData.advertisers || []);
         }
-      } catch {}
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          // Swallow non-critical errors; user can retry manually
+          console.info('Advertisers refresh aborted or failed');
+        }
+      }
     };
     refresh();
-  }, []);
+    return () => controller.abort();
+  }, [selectedNetworkId]);
 
   const filteredAdvertisers = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -230,7 +242,9 @@ function AdvertisersList() {
   }
 
   const handleAdvertiserSelect = (advertiser: AdvertiserLean) => {
-    if (selectedAdvertiser?.id === advertiser.id) {
+    const currentId = getEntityId(selectedAdvertiser as any);
+    const nextId = getEntityId(advertiser as any);
+    if (String(currentId) === String(nextId)) {
       setSelectedAdvertiser(null);
     } else {
       setSelectedAdvertiser(advertiser);
@@ -238,9 +252,14 @@ function AdvertisersList() {
   };
 
   const handleDelete = async (advertiser: AdvertiserLean) => {
-    setIsDeleting(advertiser.id.toString());
+    const advId = getEntityId(advertiser as any);
+    if (advId == null) {
+      alert('Missing advertiser ID. Cannot delete.');
+      return;
+    }
+    setIsDeleting(String(advId));
     try {
-      const response = await fetch(`/api/delete/advertiser/${advertiser.id}`, {
+      const response = await fetch(`/api/delete/advertiser/${advId}` , {
         method: 'DELETE',
       });
 
@@ -250,8 +269,9 @@ function AdvertisersList() {
 
       // Reload advertisers for the current network so the list updates immediately
       try {
-        if (entities.network) {
-          const listRes = await fetch(`/api/advertisers?network_id=${entities.network.id}`, { cache: 'no-store' });
+        const netId = getEntityId(entities.network as any);
+        if (netId != null) {
+          const listRes = await fetch(`/api/advertisers?network_id=${netId}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);
@@ -289,9 +309,11 @@ function AdvertisersList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAdvertisers.map((advertiser) => (
             <AdvertiserCard 
-              key={advertiser.id} 
+              key={String(getEntityId(advertiser as any))}
               advertiser={advertiser}
-              isSelected={selectedAdvertiser?.id === advertiser.id}
+              isSelected={
+                String(getEntityId(selectedAdvertiser as any)) === String(getEntityId(advertiser as any))
+              }
               onSelect={handleAdvertiserSelect}
               onDelete={handleDelete}
             />

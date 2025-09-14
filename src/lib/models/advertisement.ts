@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface IAdvertisement extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
   name: string;
   updated_at: string;
   type: string;
@@ -22,7 +24,7 @@ export interface IAdvertisement extends Document {
 }
 
 const AdvertisementSchema = new Schema<IAdvertisement>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
@@ -77,12 +79,35 @@ const AdvertisementSchema = new Schema<IAdvertisement>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Create indexes for faster queries
-// Note: id field already has unique: true which creates an index
+// Note: broadstreet_id field already has unique: true which creates an index
 AdvertisementSchema.index({ advertiser: 1 });
 AdvertisementSchema.index({ type: 1 });
 AdvertisementSchema.index({ active_placement: 1 });
+
+// Virtual getters for IDs
+AdvertisementSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// Ensure virtuals are present in lean() results
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const leanVirtuals = require('mongoose-lean-virtuals');
+  AdvertisementSchema.plugin(leanVirtuals);
+} catch (_) {
+  // optional in dev without plugin installed
+}
+
+// Temporary static to safely map API payloads
+AdvertisementSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
 
 export default mongoose.models.Advertisement || mongoose.model<IAdvertisement>('Advertisement', AdvertisementSchema);

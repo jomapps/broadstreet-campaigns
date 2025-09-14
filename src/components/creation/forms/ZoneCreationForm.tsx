@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface ZoneCreationFormProps {
   onClose: () => void;
@@ -74,6 +76,13 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
 
     if (formData.concurrent_campaigns && (isNaN(parseInt(formData.concurrent_campaigns)) || parseInt(formData.concurrent_campaigns) < 0)) {
       newErrors.concurrent_campaigns = 'Concurrent campaigns must be a non-negative number';
+    }
+
+    // Network selection and ID availability validation
+    if (!entities.network) {
+      newErrors.network = 'Network selection is required';
+    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
+      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
     }
 
     setErrors(newErrors);
@@ -145,19 +154,19 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
       return;
     }
 
-    if (!entities.network) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
       // Build payload with only non-empty optional fields
+      const networkIdValue = getEntityId(entities.network);
       const payload: any = {
         name: formData.name.trim(),
-        network_id: entities.network.id,
+        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network: {
+          broadstreet_id: entities.network?.ids.broadstreet_id,
+          mongo_id: entities.network?.ids.mongo_id,
+        },
       };
 
       // Only add optional fields if they have values
@@ -254,8 +263,8 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
     <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="zone-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {entities.network?.name}
+        <p className="text-sm text-blue-800 flex items-center gap-2">
+          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
         </p>
       </div>
 
@@ -278,7 +287,12 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
           data-testid="submit-button"
         >
@@ -534,7 +548,12 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !entities.network}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
           data-testid="submit-button"
         >

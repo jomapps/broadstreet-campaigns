@@ -1,0 +1,58 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - button "← Collapse" [ref=e5]
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - generic [ref=e11]:
+              - img [ref=e12]
+              - text: Filters
+            - button [ref=e14]:
+              - img
+          - generic [ref=e15]:
+            - generic [ref=e16]:
+              - generic [ref=e17]: Network
+              - combobox [ref=e18]:
+                - generic:
+                  - generic:
+                    - generic "FASH Medien Verlag GmbH - SCHWULISSIMO": "- SCHWULISSIMO"
+                - img [ref=e19]
+            - generic [ref=e21]:
+              - generic [ref=e23]: Advertiser
+              - generic [ref=e25]: Select on advertisers page
+            - generic [ref=e26]:
+              - generic [ref=e28]: Campaign
+              - generic [ref=e30]: Select advertiser first
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Utilities
+            - generic [ref=e34]: Tools and actions for managing your campaigns
+          - generic [ref=e36]:
+            - paragraph [ref=e37]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e38]: Select a campaign
+            - button "Create Placements" [disabled]
+    - generic [ref=e39]:
+      - banner [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - generic [ref=e45]: BS
+            - heading "Dashboard" [level=1] [ref=e46]
+          - generic [ref=e51]: API Connected
+      - main [ref=e52]:
+        - generic [ref=e54]:
+          - generic [ref=e56]:
+            - heading "Local Only" [level=1] [ref=e57]
+            - paragraph [ref=e58]: Manage locally created entities before syncing to Broadstreet
+          - generic [ref=e60]:
+            - img [ref=e62]
+            - heading "No Local Entities" [level=3] [ref=e66]
+            - paragraph [ref=e67]: You haven't created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+            - button "Create Your First Entity" [ref=e68]
+  - button "Open Next.js Dev Tools" [ref=e74] [cursor=pointer]:
+    - img [ref=e75] [cursor=pointer]
+  - alert [ref=e78]
+```

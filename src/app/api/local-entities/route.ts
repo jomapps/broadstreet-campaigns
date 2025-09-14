@@ -24,56 +24,74 @@ export async function GET() {
       created_locally: true,
     }).select('-id').sort({ created_at: -1 }).lean();
 
-    const convertedMainAdvertisers = mainLocalAdvertisers.map((advertiser: any) => ({
-      _id: advertiser._id.toString(),
-      name: advertiser.name,
-      network_id: advertiser.network_id,
-      web_home_url: advertiser.web_home_url,
-      notes: advertiser.notes,
-      admins: advertiser.admins,
-      created_locally: advertiser.created_locally,
-      synced_with_api: advertiser.synced_with_api,
-      created_at: (advertiser.created_at || new Date()).toISOString(),
-      type: 'advertiser' as const,
-    }));
+    const convertedMainAdvertisers = mainLocalAdvertisers.map((advertiser: any) => {
+      const { _id, ...rest } = advertiser;
+      return {
+        ...rest,
+        mongo_id: _id.toString(),
+        ...(typeof advertiser.original_broadstreet_id === 'number' ? { broadstreet_id: advertiser.original_broadstreet_id } : {}),
+        created_at: (advertiser.created_at || new Date()).toISOString(),
+        type: 'advertiser' as const,
+      };
+    });
 
-    const zones = localZones.map((zone: any) => ({
-      ...zone,
-      _id: zone._id.toString(),
-      created_at: zone.created_at.toISOString(),
-      type: 'zone' as const,
-    }));
+    const zones = localZones.map((zone: any) => {
+      const { _id, created_at, ...rest } = zone;
+      return {
+        ...rest,
+        mongo_id: _id.toString(),
+        created_at: (created_at || new Date()).toISOString(),
+        type: 'zone' as const,
+        ...(typeof zone.original_broadstreet_id === 'number' ? { broadstreet_id: zone.original_broadstreet_id } : {}),
+      };
+    });
 
     const advertisers = [
-      ...localAdvertisers.map((a: any) => ({
-        ...a,
-        _id: a._id.toString(),
-        created_at: a.created_at.toISOString(),
-        type: 'advertiser' as const,
-      })),
+      ...localAdvertisers.map((a: any) => {
+        const { _id, created_at, ...rest } = a;
+        return {
+          ...rest,
+          mongo_id: _id.toString(),
+          ...(typeof a.original_broadstreet_id === 'number' ? { broadstreet_id: a.original_broadstreet_id } : {}),
+          created_at: (created_at || new Date()).toISOString(),
+          type: 'advertiser' as const,
+        };
+      }),
       ...convertedMainAdvertisers,
     ];
 
-    const campaigns = localCampaigns.map((c: any) => ({
-      ...c,
-      _id: c._id.toString(),
-      created_at: c.created_at.toISOString(),
-      type: 'campaign' as const,
-    }));
+    const campaigns = localCampaigns.map((c: any) => {
+      const { _id, created_at, ...rest } = c;
+      return {
+        ...rest,
+        mongo_id: _id.toString(),
+        ...(typeof c.original_broadstreet_id === 'number' ? { broadstreet_id: c.original_broadstreet_id } : {}),
+        created_at: (created_at || new Date()).toISOString(),
+        type: 'campaign' as const,
+      };
+    });
 
-    const networks = localNetworks.map((n: any) => ({
-      ...n,
-      _id: n._id.toString(),
-      created_at: n.created_at.toISOString(),
-      type: 'network' as const,
-    }));
+    const networks = localNetworks.map((n: any) => {
+      const { _id, created_at, ...rest } = n;
+      return {
+        ...rest,
+        mongo_id: _id.toString(),
+        ...(typeof n.original_broadstreet_id === 'number' ? { broadstreet_id: n.original_broadstreet_id } : {}),
+        created_at: (created_at || new Date()).toISOString(),
+        type: 'network' as const,
+      };
+    });
 
-    const advertisements = localAdvertisements.map((ad: any) => ({
-      ...ad,
-      _id: ad._id.toString(),
-      created_at: ad.created_at.toISOString(),
-      type: 'advertisement' as const,
-    }));
+    const advertisements = localAdvertisements.map((ad: any) => {
+      const { _id, created_at, ...rest } = ad;
+      return {
+        ...rest,
+        mongo_id: _id.toString(),
+        ...(typeof ad.original_broadstreet_id === 'number' ? { broadstreet_id: ad.original_broadstreet_id } : {}),
+        created_at: (created_at || new Date()).toISOString(),
+        type: 'advertisement' as const,
+      };
+    });
 
     return NextResponse.json({
       zones,

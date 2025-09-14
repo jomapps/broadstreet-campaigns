@@ -38,7 +38,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
 
   const handleCardClick = () => {
     if (onToggleSelection) {
-      onToggleSelection(advertisement._id);
+      onToggleSelection(String(advertisement.id));
     }
   };
   
@@ -208,7 +208,7 @@ export default function AdvertisementsList({
             <AdvertisementCard 
               key={advertisement.id} 
               advertisement={advertisement}
-              isSelected={selectedAdvertisements.includes(advertisement._id)}
+              isSelected={selectedAdvertisements.includes(String(advertisement.id))}
               onToggleSelection={toggleAdvertisementSelection}
             />
           ))}

@@ -1,6 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ILocalZone extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
   network_id: number;
@@ -124,6 +126,9 @@ const LocalZoneSchema = new Schema<ILocalZone>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Indexes for performance
@@ -131,5 +136,22 @@ LocalZoneSchema.index({ network_id: 1, name: 1 }, { unique: true });
 LocalZoneSchema.index({ network_id: 1, alias: 1 }, { unique: true, sparse: true });
 LocalZoneSchema.index({ created_locally: 1 });
 LocalZoneSchema.index({ synced_with_api: 1 });
+
+// Virtual getters for IDs
+LocalZoneSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalZoneSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const leanVirtuals = require('mongoose-lean-virtuals');
+  LocalZoneSchema.plugin(leanVirtuals);
+} catch (_) {
+  // optional in dev without plugin installed
+}
 
 export default mongoose.models.LocalZone || mongoose.model<ILocalZone>('LocalZone', LocalZoneSchema);
