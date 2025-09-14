@@ -43,8 +43,8 @@ export function useSelectedEntities(): SelectedEntitiesResult {
 
   const network = useMemo(() => {
     if (!selectedNetwork) return null;
-    const bsId = (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
-    const mongoId = (selectedNetwork as any).mongo_id;
+    const bsId = (selectedNetwork as any).broadstreet_network_id ?? (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
+    const mongoId = (selectedNetwork as any).local_network_id ?? (selectedNetwork as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
     if (typeof mongoId === 'string') ids.mongo_id = mongoId;
@@ -59,8 +59,8 @@ export function useSelectedEntities(): SelectedEntitiesResult {
 
   const advertiser = useMemo(() => {
     if (!selectedAdvertiser) return null;
-    const bsId = (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
-    const mongoId = (selectedAdvertiser as any).mongo_id;
+    const bsId = (selectedAdvertiser as any).broadstreet_advertiser_id ?? (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
+    const mongoId = (selectedAdvertiser as any).local_advertiser_id ?? (selectedAdvertiser as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
     if (typeof mongoId === 'string') ids.mongo_id = mongoId;
@@ -75,8 +75,8 @@ export function useSelectedEntities(): SelectedEntitiesResult {
 
   const campaign = useMemo(() => {
     if (!selectedCampaign) return null;
-    const bsId = (selectedCampaign as any).broadstreet_id ?? (selectedCampaign as any).id;
-    const mongoId = (selectedCampaign as any).mongo_id;
+    const bsId = (selectedCampaign as any).broadstreet_campaign_id ?? (selectedCampaign as any).broadstreet_id ?? (selectedCampaign as any).id;
+    const mongoId = (selectedCampaign as any).local_campaign_id ?? (selectedCampaign as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
     if (typeof mongoId === 'string') ids.mongo_id = mongoId;

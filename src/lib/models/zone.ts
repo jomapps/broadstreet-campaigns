@@ -100,6 +100,19 @@ ZoneSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
 
+// New explicit ID naming per entity
+ZoneSchema.virtual('local_zone_id').get(function (this: any) {
+  return this._id?.toString();
+});
+ZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Relationship aliasing to explicit naming
+ZoneSchema.virtual('broadstreet_network_id').get(function (this: any) {
+  return this.network_id;
+});
+
 // Ensure virtuals are present in lean() results
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

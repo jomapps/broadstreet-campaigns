@@ -205,6 +205,9 @@ export async function GET(request: NextRequest) {
         advertisement: advertisement ? {
           broadstreet_id: (advertisement as any).id,
           mongo_id: (advertisement as any)._id?.toString?.(),
+          // explicit naming
+          broadstreet_advertisement_id: (advertisement as any).id,
+          local_advertisement_id: (advertisement as any)._id?.toString?.(),
           name: (advertisement as any).name,
           type: (advertisement as any).type,
           preview_url: (advertisement as any).preview_url,
@@ -212,6 +215,8 @@ export async function GET(request: NextRequest) {
         campaign: local ? {
           ...(typeof local.broadstreet_id === 'number' ? { broadstreet_id: local.broadstreet_id } : {}),
           mongo_id: local.mongo_id,
+          ...(typeof local.broadstreet_id === 'number' ? { broadstreet_campaign_id: local.broadstreet_id } : {}),
+          local_campaign_id: local.mongo_id,
           name: local.name,
           start_date: local.start_date,
           end_date: local.end_date,
@@ -219,6 +224,8 @@ export async function GET(request: NextRequest) {
         } : (campaign ? {
           broadstreet_id: (campaign as any).id,
           mongo_id: (campaign as any)._id?.toString?.(),
+          broadstreet_campaign_id: (campaign as any).id,
+          local_campaign_id: (campaign as any)._id?.toString?.(),
           name: (campaign as any).name,
           start_date: (campaign as any).start_date,
           end_date: (campaign as any).end_date,
@@ -227,6 +234,8 @@ export async function GET(request: NextRequest) {
         zone: zone ? {
           broadstreet_id: (zone as any).id,
           mongo_id: (zone as any)._id?.toString?.(),
+          broadstreet_zone_id: (zone as any).id,
+          local_zone_id: (zone as any)._id?.toString?.(),
           name: (zone as any).name,
           alias: (zone as any).alias,
           size_type: (zone as any).size_type,
@@ -235,11 +244,15 @@ export async function GET(request: NextRequest) {
         advertiser: advertiser ? {
           broadstreet_id: (advertiser as any).id,
           mongo_id: (advertiser as any)._id?.toString?.(),
+          broadstreet_advertiser_id: (advertiser as any).id,
+          local_advertiser_id: (advertiser as any)._id?.toString?.(),
           name: (advertiser as any).name,
         } : null,
         network: network ? {
           broadstreet_id: (network as any).id,
           mongo_id: (network as any)._id?.toString?.(),
+          broadstreet_network_id: (network as any).id,
+          local_network_id: (network as any)._id?.toString?.(),
           name: (network as any).name,
         } : null,
       };

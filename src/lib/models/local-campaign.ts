@@ -159,6 +159,14 @@ LocalCampaignSchema.virtual('broadstreet_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 
+// New explicit ID naming per entity
+LocalCampaignSchema.virtual('local_campaign_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalCampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
 // Ensure virtuals are present in lean() results
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

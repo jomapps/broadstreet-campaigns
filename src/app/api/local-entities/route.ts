@@ -29,7 +29,9 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
+        local_advertiser_id: _id.toString(),
         ...(typeof advertiser.original_broadstreet_id === 'number' ? { broadstreet_id: advertiser.original_broadstreet_id } : {}),
+        ...(typeof advertiser.original_broadstreet_id === 'number' ? { broadstreet_advertiser_id: advertiser.original_broadstreet_id } : {}),
         created_at: (advertiser.created_at || new Date()).toISOString(),
         type: 'advertiser' as const,
       };
@@ -40,9 +42,11 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
+        local_zone_id: _id.toString(),
         created_at: (created_at || new Date()).toISOString(),
         type: 'zone' as const,
         ...(typeof zone.original_broadstreet_id === 'number' ? { broadstreet_id: zone.original_broadstreet_id } : {}),
+        ...(typeof zone.original_broadstreet_id === 'number' ? { broadstreet_zone_id: zone.original_broadstreet_id } : {}),
       };
     });
 
@@ -52,7 +56,9 @@ export async function GET() {
         return {
           ...rest,
           mongo_id: _id.toString(),
+          local_advertiser_id: _id.toString(),
           ...(typeof a.original_broadstreet_id === 'number' ? { broadstreet_id: a.original_broadstreet_id } : {}),
+          ...(typeof a.original_broadstreet_id === 'number' ? { broadstreet_advertiser_id: a.original_broadstreet_id } : {}),
           created_at: (created_at || new Date()).toISOString(),
           type: 'advertiser' as const,
         };
@@ -65,7 +71,9 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
+        local_campaign_id: _id.toString(),
         ...(typeof c.original_broadstreet_id === 'number' ? { broadstreet_id: c.original_broadstreet_id } : {}),
+        ...(typeof c.original_broadstreet_id === 'number' ? { broadstreet_campaign_id: c.original_broadstreet_id } : {}),
         created_at: (created_at || new Date()).toISOString(),
         type: 'campaign' as const,
       };
@@ -76,7 +84,9 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
+        local_network_id: _id.toString(),
         ...(typeof n.original_broadstreet_id === 'number' ? { broadstreet_id: n.original_broadstreet_id } : {}),
+        ...(typeof n.original_broadstreet_id === 'number' ? { broadstreet_network_id: n.original_broadstreet_id } : {}),
         created_at: (created_at || new Date()).toISOString(),
         type: 'network' as const,
       };
@@ -87,7 +97,9 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
+        local_advertisement_id: _id.toString(),
         ...(typeof ad.original_broadstreet_id === 'number' ? { broadstreet_id: ad.original_broadstreet_id } : {}),
+        ...(typeof ad.original_broadstreet_id === 'number' ? { broadstreet_advertisement_id: ad.original_broadstreet_id } : {}),
         created_at: (created_at || new Date()).toISOString(),
         type: 'advertisement' as const,
       };

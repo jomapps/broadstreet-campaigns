@@ -107,6 +107,14 @@ LocalAdvertiserSchema.virtual('broadstreet_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 
+// New explicit ID naming per entity
+LocalAdvertiserSchema.virtual('local_advertiser_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalAdvertiserSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
 // Ensure virtuals are present in lean() results
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

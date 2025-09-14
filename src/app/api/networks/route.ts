@@ -7,7 +7,14 @@ export async function GET() {
     await connectDB();
     const networks = await Network.find({}).sort({ name: 1 }).lean();
     
-    return NextResponse.json({ networks });
+    // Shape to include explicit ID naming while keeping existing fields
+    const shaped = (networks as any[]).map((n) => ({
+      ...n,
+      broadstreet_network_id: (n as any).broadstreet_id,
+      local_network_id: (n as any)._id?.toString?.(),
+    }));
+    
+    return NextResponse.json({ networks: shaped });
   } catch (error) {
     console.error('Error fetching networks:', error);
     return NextResponse.json(

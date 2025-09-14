@@ -3,6 +3,9 @@
 export interface Network {
   broadstreet_id: number;
   mongo_id?: string;
+  // New explicit naming to avoid confusion
+  broadstreet_network_id?: number;
+  local_network_id?: string;
   name: string;
   group_id?: number | null;
   web_home_url?: string;
@@ -18,6 +21,9 @@ export interface Network {
 export interface Advertiser {
   broadstreet_id: number;
   mongo_id?: string;
+  // New explicit naming to avoid confusion
+  broadstreet_advertiser_id?: number;
+  local_advertiser_id?: string;
   name: string;
   logo?: {
     url: string;
@@ -33,6 +39,9 @@ export interface Advertiser {
 export interface Zone {
   broadstreet_id: number;
   mongo_id?: string;
+  // New explicit naming to avoid confusion
+  broadstreet_zone_id?: number;
+  local_zone_id?: string;
   name: string;
   network_id: number;
   alias?: string | null;
@@ -42,6 +51,9 @@ export interface Zone {
 export interface Campaign {
   broadstreet_id: number;
   mongo_id?: string;
+  // New explicit naming to avoid confusion
+  broadstreet_campaign_id?: number;
+  local_campaign_id?: string;
   name: string;
   advertiser_id: number;
   start_date: string;
@@ -61,6 +73,9 @@ export interface Campaign {
 export interface Advertisement {
   broadstreet_id: number;
   mongo_id?: string;
+  // New explicit naming to avoid confusion
+  broadstreet_advertisement_id?: number;
+  local_advertisement_id?: string;
   name: string;
   updated_at: string;
   type: string;

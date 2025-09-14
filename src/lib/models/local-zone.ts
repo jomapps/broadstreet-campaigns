@@ -145,6 +145,14 @@ LocalZoneSchema.virtual('broadstreet_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 
+// New explicit ID naming per entity
+LocalZoneSchema.virtual('local_zone_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
 // Ensure virtuals are present in lean() results
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
