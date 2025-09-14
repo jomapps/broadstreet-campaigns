@@ -240,7 +240,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
   
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="advertiser-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
@@ -261,6 +261,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
@@ -268,6 +269,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           type="submit"
           disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
         </Button>
@@ -283,6 +285,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           placeholder="e.g., Acme Corporation"
           className={errors.name ? 'border-red-500' : ''}
           required
+          data-testid="advertiser-name-input"
         />
         {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
       </div>
@@ -409,6 +412,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
@@ -416,6 +420,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           type="submit"
           disabled={isSubmitting || !formData.name || !entities.network}
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
         </Button>

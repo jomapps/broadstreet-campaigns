@@ -139,17 +139,21 @@ Response shape:
 - Thumbnails: render preview URL directly; no special fallback.
 
 
-## Manual Test results
-- Created zone "Leo Test Zone 51". Created success and shows properly. sync success. Removed from local-only page. Removed from zone page
-- Created Advertisers "Leo Test Advertiser 51". Created success and shows properly. sync success. Removed from local-only page. Removed from advertisers page
-- Created Campaign "Leo Test Campaign 51". Created success and shows properly. sync success. Removed from local-only page. Removed from campaign page
+## Create tests
+Do the following:
+- Create zone "Leo Test Zone 52"
+- Create Advertisers "Leo Test Advertiser 52"
+- Create Campaign "Leo Test Campaign 52"
+- Create Placement test with following values (set them as selected in filter section to ensure they work)
+  Test data that is present in the broadstreet:
+  - network id: 9396
+  - advertiser id: 199901
+  - campaign id: 842383
+  - advertisement id: 1143797
+  - Zone ids: 182864,175302, 175301
 
-## Placement Test
-Test data:
-- network id: 9396
-- advertiser id: 199901
-- campaign id: 842383
-- advertisement id: 1143797
-- Zone ids: 182864,175302, 175301
+Test methodology:
+- create the entity
+- it should appear in the entity page and also the local-only page
 
-Create placements using the local API so that you can test the creation flow end-to-end without calling Broadstreet directly. See Local API Testing below.
+Use playwright to test the frontend errors. Fix any errors and ensure result.

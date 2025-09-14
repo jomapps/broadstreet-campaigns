@@ -55,8 +55,14 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
     onDelete(campaign);
   };
   
+  const slug = campaign.name.replace(/\s+/g, '-').toLowerCase();
+
   return (
-    <div className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}>
+    <div
+      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
+      data-testid="campaign-card"
+      data-campaign-slug={slug}
+    >
       {/* Delete Button for Local Entities */}
       {isLocal && onDelete && (
         <Button
@@ -64,6 +70,7 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
           size="sm"
           className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
           onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+          data-testid="delete-button"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -77,7 +84,7 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
               className="mt-1"
             />
             <div>
-              <h3 className="card-title text-gray-900">{campaign.name}</h3>
+              <h3 className="card-title text-gray-900" data-testid="campaign-name">{campaign.name}</h3>
               {advertiserName && (
                 <p className="card-text text-gray-600 mt-1">Advertiser: {advertiserName}</p>
               )}
@@ -270,7 +277,12 @@ function CampaignsList() {
           const listRes = await fetch(`/api/campaigns?advertiser_id=${entities.advertiser.id}`, { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
-            setCampaigns(listData.campaigns || []);
+            const next = Array.isArray(listData.campaigns) ? listData.campaigns : [];
+            // Ensure deleted campaign is not present even if API is stale
+            const filtered = next.filter((c: any) => String(c.id) !== String(campaign.id));
+            setCampaigns(filtered);
+            // Give React a tick to commit state before refreshing server components
+            await new Promise((r) => setTimeout(r, 0));
           }
         }
       } catch (e) {
@@ -288,7 +300,7 @@ function CampaignsList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="campaigns-list">
       <div className="max-w-md">
         <SearchInput
           placeholder="Search campaigns..."
@@ -331,15 +343,13 @@ export default function CampaignsPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="campaign" />
+          <CreationButton />
         </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
         <CampaignsList />
       </Suspense>
-
-      <CreationButton />
     </div>
   );
 }

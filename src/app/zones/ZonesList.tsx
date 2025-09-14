@@ -64,15 +64,19 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
     }
   };
   
+  const slug = zone.name.replace(/\s+/g, '-').toLowerCase();
+
   return (
     <div 
       className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal: isLocalZone, isSelected })}`}
       onClick={handleCardClick}
+      data-testid={`zone-${slug}`}
+      data-zone-name={zone.name}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-4" data-testid="zone-card">
         <div className="flex-1">
           <div className="flex items-center space-x-2">
-            <h3 className="card-title text-gray-900">{zone.name}</h3>
+            <h3 className="card-title text-gray-900" data-testid="zone-name">{zone.name}</h3>
             {isLocalZone && (
               <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white shadow-sm">
                 🏠 Local
@@ -213,7 +217,7 @@ export default function ZonesList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="zones-list">
       <div className="max-w-md">
         <SearchInput
           placeholder="Search zones..."

@@ -69,21 +69,23 @@ export function useSelectedEntities(): SelectedEntitiesResult {
   }, [selectedCampaign]);
 
   const zones = useMemo(() => {
-    return Array.isArray(selectedZones)
-      ? selectedZones.map((zoneId) => {
-          const id = String(zoneId);
-          return { id, name: id, type: 'zone' as const };
-        })
-      : [];
+    if (!Array.isArray(selectedZones)) return [];
+    // Support legacy formats: [stringId] or [{id: string|number}]
+    return selectedZones.map((zone) => {
+      const id = typeof zone === 'string' ? zone : (zone && (zone as any).id != null ? String((zone as any).id) : '');
+      const safeId = id || '';
+      return { id: safeId, name: safeId, type: 'zone' as const };
+    }).filter(z => z.id !== '');
   }, [selectedZones]);
 
   const advertisements = useMemo(() => {
-    return Array.isArray(selectedAdvertisements)
-      ? selectedAdvertisements.map((adId) => {
-          const id = String(adId);
-          return { id, name: id, type: 'advertisement' as const };
-        })
-      : [];
+    if (!Array.isArray(selectedAdvertisements)) return [];
+    // Support legacy formats: [stringId] or [{id: string|number}]
+    return selectedAdvertisements.map((ad) => {
+      const id = typeof ad === 'string' ? ad : (ad && (ad as any).id != null ? String((ad as any).id) : '');
+      const safeId = id || '';
+      return { id: safeId, name: safeId, type: 'advertisement' as const };
+    }).filter(a => a.id !== '');
   }, [selectedAdvertisements]);
 
   return { network, advertiser, campaign, zones, advertisements };

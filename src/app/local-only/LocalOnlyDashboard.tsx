@@ -87,6 +87,9 @@ function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected 
     <Card 
       className={`relative p-4 border-2 transition-all duration-200 ${cardStateClasses({ isLocal: true, isSelected })}`}
       data-testid="entity-card"
+      {...(entity.type === 'campaign' && (entity as any).original_broadstreet_id
+        ? { 'data-testid': `local-campaign-${(entity as any).original_broadstreet_id}` } as any
+        : {})}
       onClick={handleCardClick}
     >
       {/* Delete Button */}
@@ -227,7 +230,15 @@ function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected 
             {Array.isArray((entity as any).placements) && (entity as any).placements.length > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-600">Placements:</span>
-                <Badge variant="secondary" className="text-xs">{(entity as any).placements.length}</Badge>
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs"
+                  {...((entity as any).original_broadstreet_id
+                    ? { 'data-testid': `campaign-placements-count-${(entity as any).original_broadstreet_id}` } as any
+                    : {})}
+                >
+                  {(entity as any).placements.length}
+                </Badge>
               </div>
             )}
             

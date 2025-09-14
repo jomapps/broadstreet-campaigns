@@ -292,7 +292,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
   
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="campaign-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800">
@@ -312,6 +312,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
@@ -319,6 +320,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
           type="submit"
           disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Campaign'}
         </Button>
@@ -335,6 +337,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
             placeholder="e.g., Summer Sale Campaign"
             className={errors.name ? 'border-red-500' : ''}
             required
+            data-testid="campaign-name-input"
           />
           {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
         </div>
@@ -540,6 +543,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
@@ -547,6 +551,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
           type="submit"
           disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Campaign'}
         </Button>

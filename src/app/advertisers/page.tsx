@@ -33,6 +33,7 @@ interface AdvertiserCardProps {
 
 function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: AdvertiserCardProps) {
   const isLocal = advertiser.created_locally && !advertiser.synced_with_api;
+  const slug = advertiser.name.replace(/\s+/g, '-').toLowerCase();
   
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -45,7 +46,11 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
   };
   
   return (
-    <div className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}>
+    <div
+      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
+      data-testid="advertiser-card"
+      data-advertiser-slug={slug}
+    >
       {/* Delete Button for Local Entities */}
       {isLocal && onDelete && (
         <Button
@@ -53,6 +58,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
           size="sm"
           className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
           onClick={handleDelete}
+          data-testid="delete-button"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -72,7 +78,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
                 className="w-8 h-8 rounded object-cover"
               />
             )}
-            <h3 className="card-title text-gray-900">{advertiser.name}</h3>
+            <h3 className="card-title text-gray-900" data-testid="advertiser-name">{advertiser.name}</h3>
           </div>
           
           {advertiser.web_home_url && (
@@ -266,7 +272,7 @@ function AdvertisersList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="advertisers-list">
       <div className="max-w-md">
         <SearchInput
           placeholder="Search advertisers..."
@@ -308,15 +314,13 @@ export default function AdvertisersPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="advertiser" />
+          <CreationButton />
         </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
         <AdvertisersList />
       </Suspense>
-
-      <CreationButton />
     </div>
   );
 }

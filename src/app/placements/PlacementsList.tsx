@@ -58,7 +58,11 @@ function PlacementCard({ placement }: PlacementCardProps) {
     (!endDate || endDate >= now);
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+    <div
+      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+      data-testid={`placement-card`}
+      data-placement-id={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
+    >
       {/* Thumbnail and title */}
       <div className="relative h-36 bg-gray-50 border-b border-gray-100">
         {placement.advertisement?.preview_url ? (
@@ -84,7 +88,7 @@ function PlacementCard({ placement }: PlacementCardProps) {
 
       <div className="p-4 space-y-3">
         <div className="min-w-0">
-          <h3 className="card-title text-gray-900 truncate">
+          <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
             {placement.advertisement?.name || `Ad #${placement.advertisement_id}`}
           </h3>
           <p className="card-meta text-gray-500 mt-0.5">
@@ -194,18 +198,19 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
   if (placements.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="card-text text-gray-500">No placements found for the selected filters. Try syncing data first.</p>
+        <p className="card-text text-gray-500" data-testid="no-placements-message">No placements found for the selected filters. Try syncing data first.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="max-w-md">
+      <div className="max-w-md" data-testid="search-input">
         <SearchInput
           placeholder="Search placements..."
           value={searchTerm}
           onChange={setSearchTerm}
+          className=""
         />
       </div>
       
@@ -214,7 +219,7 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
           <p className="card-text text-gray-500">No placements match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="placements-list">
           {filteredPlacements.map((placement) => (
             <PlacementCard 
               key={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`} 

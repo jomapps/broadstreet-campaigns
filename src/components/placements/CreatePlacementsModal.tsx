@@ -38,10 +38,10 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} aria-hidden="true" />
-      <Card className="relative w-full max-w-2xl mx-4 flex flex-col" style={{ maxHeight: '90vh' }}>
+      <Card className="relative w-full max-w-2xl mx-4 flex flex-col" style={{ maxHeight: '90vh' }} data-testid="create-placements-modal">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 flex-shrink-0">
           <CardTitle className="text-xl font-semibold">Create Placements</CardTitle>
-          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0">
+          <Button variant="ghost" size="sm" onClick={handleClose} className="h-8 w-8 p-0" data-testid="close-modal-button">
             <X className="h-4 w-4" />
           </Button>
         </CardHeader>
@@ -82,7 +82,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3" data-testid="placement-summary">
             <p className="text-sm text-blue-800">
               {adCount} advertisements × {zoneCount} zones = <strong>{combinationsCount}</strong> placements
             </p>
@@ -101,8 +101,8 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
           )}
 
           <div className="flex justify-end space-x-3 pt-2">
-            <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !entities.campaign || combinationsCount === 0}>
+            <Button variant="outline" onClick={handleClose} disabled={isSubmitting} data-testid="cancel-button">Cancel</Button>
+            <Button onClick={handleSubmit} disabled={isSubmitting || !entities.campaign || combinationsCount === 0} data-testid="create-placements-button">
               {isSubmitting ? 'Creating...' : 'Create Placements'}
             </Button>
           </div>

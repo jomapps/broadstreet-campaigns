@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect } from 'react';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import PlacementsList from './PlacementsList';
+import { Button } from '@/components/ui/button';
+import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 
 // Type for enriched placement data
 type PlacementLean = {
@@ -112,7 +114,7 @@ function PlacementsData() {
           }
         }
 
-        const response = await fetch(`/api/placements?${params.toString()}`);
+        const response = await fetch(`/api/placements?${params.toString()}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           // API contract: {success, placements} - verify success and use placements array
@@ -162,8 +164,18 @@ function PlacementsData() {
 }
 
 export default function PlacementsPage() {
+  const entities = useSelectedEntities();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const canCreatePlacements = Boolean(
+    entities.network &&
+    entities.campaign &&
+    entities.advertisements.length > 0 &&
+    entities.zones.length > 0
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="placements-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Placements</h1>
@@ -171,10 +183,18 @@ export default function PlacementsPage() {
             Active ad placements across campaigns, advertisements, and zones
           </p>
         </div>
-        
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={!canCreatePlacements}
+            aria-disabled={!canCreatePlacements}
+          >
+            Create Placements
+          </Button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-testid="placements-overview">
         <h2 className="card-title text-gray-900 mb-3">Placement Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 card-text">
           <div className="flex items-center space-x-2">
@@ -193,8 +213,15 @@ export default function PlacementsPage() {
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <PlacementsData />
+        <div data-testid="placements-data">
+          <PlacementsData />
+        </div>
       </Suspense>
+
+      <CreatePlacementsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }
