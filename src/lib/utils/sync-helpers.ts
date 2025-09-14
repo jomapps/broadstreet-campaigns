@@ -29,9 +29,17 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
     
     // Clear existing networks and insert new ones
     await Network.deleteMany({});
+    // Drop any legacy unique index on `id` if present to avoid duplicate null errors
+    try {
+      const indexes = await Network.collection.indexes();
+      const legacy = indexes.find((i: any) => i.name === 'id_1');
+      if (legacy) {
+        await Network.collection.dropIndex('id_1');
+      }
+    } catch (_) {}
     
     const networkDocs = networks.map(network => ({
-      id: network.id,
+      broadstreet_id: (network as any).broadstreet_id ?? (network as any).id,
       name: network.name,
       group_id: network.group_id,
       web_home_url: network.web_home_url,
