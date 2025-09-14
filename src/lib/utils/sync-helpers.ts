@@ -91,29 +91,38 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
 
     for (const network of networks) {
       try {
-        const advertisers = await broadstreetAPI.getAdvertisers(network.id);
+        // Guard against invalid network identifiers
+        if (typeof (network as any).broadstreet_id !== 'number') {
+          console.warn(`[syncAdvertisers] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
+          continue;
+        }
+
+        const advertisers = await broadstreetAPI.getAdvertisers((network as any).broadstreet_id);
         
         advertisers.forEach(advertiser => {
           // Only add if we haven't seen this advertiser ID before
-          if (!allAdvertisers.has(advertiser.id)) {
-            allAdvertisers.set(advertiser.id, {
-              id: advertiser.id,
+          const advBsId = (advertiser as any).broadstreet_id ?? (advertiser as any).id;
+          if (!allAdvertisers.has(advBsId)) {
+            allAdvertisers.set(advBsId, {
+              broadstreet_id: advBsId,
               name: advertiser.name,
               logo: advertiser.logo,
               web_home_url: advertiser.web_home_url,
               notes: advertiser.notes,
               admins: advertiser.admins,
               // Persist network context so we can derive campaign network_id when needed
-              network_id: network.id,
+              network_id: (network as any).broadstreet_id,
             });
           }
         });
       } catch (error: any) {
         // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for network ${network.id} advertisers`);
+        if (error?.code === 11000) {
+          console.log(`[syncAdvertisers] Duplicate key errors ignored for network ${(network as any).broadstreet_id} advertisers`);
+        } else if (typeof error?.status === 'number') {
+          console.warn(`[syncAdvertisers] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
         } else {
-          console.error(`Error syncing advertisers for network ${network.id}:`, error);
+          console.error(`[syncAdvertisers] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
         }
       }
     }
@@ -172,16 +181,23 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
 
     for (const network of networks) {
       try {
-        const zones = await broadstreetAPI.getZones(network.id);
+        // Guard invalid network identifiers
+        if (typeof (network as any).broadstreet_id !== 'number') {
+          console.warn(`[syncZones] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
+          continue;
+        }
+
+        const zones = await broadstreetAPI.getZones((network as any).broadstreet_id);
         
         zones.forEach(zone => {
           // Only add if we haven't seen this zone ID before
-          if (!allZones.has(zone.id)) {
+          const zoneBsId = (zone as any).broadstreet_id ?? (zone as any).id;
+          if (!allZones.has(zoneBsId)) {
             const parsed = parseZoneName(zone.name);
-            allZones.set(zone.id, {
-              id: zone.id,
+            allZones.set(zoneBsId, {
+              broadstreet_id: zoneBsId,
               name: zone.name,
-              network_id: zone.network_id,
+              network_id: (zone as any).network_id ?? (network as any).broadstreet_id,
               alias: zone.alias,
               self_serve: zone.self_serve,
               size_type: parsed.size_type,
@@ -194,10 +210,12 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
         });
       } catch (error: any) {
         // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for network ${network.id} zones`);
+        if (error?.code === 11000) {
+          console.log(`[syncZones] Duplicate key errors ignored for network ${(network as any).broadstreet_id} zones`);
+        } else if (typeof error?.status === 'number') {
+          console.warn(`[syncZones] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
         } else {
-          console.error(`Error syncing zones for network ${network.id}:`, error);
+          console.error(`[syncZones] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
         }
       }
     }
@@ -256,11 +274,18 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
 
     for (const advertiser of advertisers) {
       try {
-        const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advertiser.id);
+        const advBsId = (advertiser as any).broadstreet_id ?? (advertiser as any).id;
+        if (typeof advBsId !== 'number') {
+          console.warn(`[syncCampaigns] Skipping advertiser with invalid broadstreet_id:`, { _id: (advertiser as any)._id?.toString?.(), broadstreet_id: (advertiser as any).broadstreet_id });
+          continue;
+        }
+
+        const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advBsId);
 
         campaigns.forEach(campaign => {
           // Only add if we haven't seen this campaign ID before
-          if (!allCampaigns.has(campaign.id)) {
+          const campBsId = (campaign as any).broadstreet_id ?? (campaign as any).id;
+          if (!allCampaigns.has(campBsId)) {
             // Preserve raw payload for round-trip safety
             const raw = campaign;
 
@@ -289,10 +314,10 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
             const allowedDisplay = ['no_repeat', 'allow_repeat_campaign', 'allow_repeat_advertisement', 'force_repeat_campaign'] as const;
             const displayType = allowedDisplay.includes(displayTypeRaw as typeof allowedDisplay[number]) ? displayTypeRaw : undefined;
 
-            allCampaigns.set(campaign.id, {
-              id: campaign.id,
+            allCampaigns.set(campBsId, {
+              broadstreet_id: campBsId,
               name: campaign.name,
-              advertiser_id: campaign.advertiser_id,
+              advertiser_id: (campaign as any).advertiser_id ?? advBsId,
               start_date: startDateRaw,
               end_date: endDateRaw,
               max_impression_count: campaign.max_impression_count,
@@ -316,10 +341,12 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
         });
       } catch (error: any) {
         // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for advertiser ${advertiser.id} campaigns`);
+        if (error?.code === 11000) {
+          console.log(`[syncCampaigns] Duplicate key errors ignored for advertiser ${(advertiser as any).broadstreet_id} campaigns`);
+        } else if (typeof error?.status === 'number') {
+          console.warn(`[syncCampaigns] Skipping advertiser ${(advertiser as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
         } else {
-          console.error(`Error syncing campaigns for advertiser ${advertiser.id}:`, error);
+          console.error(`[syncCampaigns] Error for advertiser ${(advertiser as any).broadstreet_id}:`, error?.message || error);
         }
       }
     }
@@ -378,13 +405,19 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
 
     for (const network of networks) {
       try {
-        const advertisements = await broadstreetAPI.getAdvertisements({ networkId: network.id });
+        if (typeof (network as any).broadstreet_id !== 'number') {
+          console.warn(`[syncAdvertisements] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
+          continue;
+        }
+
+        const advertisements = await broadstreetAPI.getAdvertisements({ networkId: (network as any).broadstreet_id });
 
         advertisements.forEach(advertisement => {
           // Only add if we haven't seen this advertisement ID before
-          if (!allAdvertisements.has(advertisement.id)) {
-            allAdvertisements.set(advertisement.id, {
-              id: advertisement.id,
+          const adBsId = (advertisement as any).broadstreet_id ?? (advertisement as any).id;
+          if (!allAdvertisements.has(adBsId)) {
+            allAdvertisements.set(adBsId, {
+              broadstreet_id: adBsId,
               name: advertisement.name,
               updated_at: advertisement.updated_at,
               type: advertisement.type,
@@ -397,10 +430,12 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
         });
       } catch (error: any) {
         // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for network ${network.id} advertisements`);
+        if (error?.code === 11000) {
+          console.log(`[syncAdvertisements] Duplicate key errors ignored for network ${(network as any).broadstreet_id} advertisements`);
+        } else if (typeof error?.status === 'number') {
+          console.warn(`[syncAdvertisements] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
         } else {
-          console.error(`Error syncing advertisements for network ${network.id}:`, error);
+          console.error(`[syncAdvertisements] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
         }
       }
     }

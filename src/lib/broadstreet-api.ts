@@ -70,7 +70,11 @@ class BroadstreetAPI {
 
     if (!response.ok) {
       console.error('[BroadstreetAPI] Response (error):', { method, endpoint, status, statusText, body: responseText?.slice(0, 1000) });
-      throw new Error(`API request failed: ${status} ${statusText}`);
+      const error: any = new Error(`API request failed: ${status} ${statusText}`);
+      error.status = status;
+      error.statusText = statusText;
+      error.endpoint = endpoint;
+      throw error;
     }
 
     console.log('[BroadstreetAPI] Response (ok):', { method, endpoint, status, keys: json ? Object.keys(json) : undefined });
