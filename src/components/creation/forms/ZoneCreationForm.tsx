@@ -81,8 +81,6 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
     // Network selection and ID availability validation
     if (!entities.network) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
-      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
     }
 
     setErrors(newErrors);

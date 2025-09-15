@@ -132,9 +132,13 @@ const LocalZoneSchema = new Schema<ILocalZone>({
   id: false,
 });
 
-// Indexes for performance
-LocalZoneSchema.index({ network_id: 1, name: 1 }, { unique: true });
-LocalZoneSchema.index({ network_id: 1, alias: 1 }, { unique: true, sparse: true });
+// Indexes for performance (names can be duplicated per requirements)
+LocalZoneSchema.index({ network_id: 1, name: 1 }, { unique: false });
+// Only enforce alias uniqueness when alias is a defined string
+LocalZoneSchema.index(
+  { network_id: 1, alias: 1 },
+  { unique: true, partialFilterExpression: { alias: { $exists: true, $type: 'string' } } }
+);
 LocalZoneSchema.index({ created_locally: 1 });
 LocalZoneSchema.index({ synced_with_api: 1 });
 

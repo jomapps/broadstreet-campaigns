@@ -119,4 +119,10 @@ What happens
   - In-app creation: comes from the network you select in the sidebar filters; the Add Zone modal reads it automatically.
   - API usage: the numeric Broadstreet `network_id` (e.g., 85). Obtain by listing networks via API or from stored networks where `Network.id` equals the Broadstreet ID.
 
-**CRITICAL** : if a value is not required and it is not provided, it will not be included in the request body.
+**CRITICAL**
+- if a value is not required and it is not provided, it will not be included in the request body.
+- other than the id, we never rely on another id.
+- when we open a zone creation form, we DO NOT have a zone id. We also dont give it any. We do that only on save.
+- fields required by the broadstreet api that are required need to present. They are almost always in the filters section of the sidebar. e.g. network id is always required.
+- in zone duplicate names are allowed.
+
