@@ -106,13 +106,32 @@ curl -X POST http://localhost:3000/api/create/campaign \
   }'
 ```
 
+Local endpoint example (with a LOCAL advertiser)
+```bash
+curl -X POST http://localhost:3000/api/create/campaign \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Fall Promo",
+    "network_id": 85,
+    "advertiser": { "mongo_id": "68c87564d49cd5ae18663ccf" },
+    "start_date": "2025-10-01",
+    "weight": 100,
+    "pacing_type": "asap"
+  }'
+```
+
+Notes about local advertisers
+- The creation endpoint accepts either `advertiser_id` (number) or `advertiser` object with `broadstreet_id` or `mongo_id`.
+- If the advertiser is local, pass `advertiser.mongo_id`. We store `advertiser_id` internally as that string until sync.
+- The campaigns list endpoint `GET /api/campaigns?advertiser_id=...` accepts a numeric Broadstreet ID or a MongoDB `_id` string and filters accordingly.
+
 What you should see after creating locally
 - Campaigns page: the new campaign card shows a "🏠 Local" badge and uses local card styling.
 - Local Only page: the campaign appears under “Campaigns” with a "Local Only" status badge, ready to sync.
 - Data flags: item is saved with `created_locally: true` and `synced_with_api: false` until synced.
 
 Add Campaign modal data mapping
-- Required: `name`, a selected network (`network_id` from sidebar), a selected advertiser (`advertiser_id` from sidebar), `start_date`, and `weight`.
+- Required: `name`, a selected network (`network_id` from sidebar), a selected advertiser (`advertiser_id` or `advertiser.mongo_id` from sidebar), `start_date`, and `weight`.
 - Optional fields sent only if provided: `end_date`, `max_impression_count`, `display_type` (defaults to `no_repeat`), `pacing_type` (defaults to `asap`), `archived`, `paused`, `notes`.
 
 Notes
