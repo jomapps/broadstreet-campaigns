@@ -14,6 +14,7 @@ interface CreatePlacementsModalProps {
 export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlacementsModalProps) {
   const entities = useSelectedEntities();
   const {
+    adIds,
     adCount,
     zoneCount,
     combinationsCount,
@@ -55,18 +56,13 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
             <div className="space-y-1">
               <p className="text-sm text-gray-700">Selected Advertisements</p>
               <p className="font-medium">{entities.advertisements.length}</p>
-              {entities.advertisements.length > 0 && (
+              {adIds.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {entities.advertisements.slice(0, 5).map((ad) => {
-                    const idNum = typeof ad.ids.broadstreet_id === 'number' ? ad.ids.broadstreet_id : undefined;
-                    const label = typeof idNum === 'number' ? idNum : ad.id; // fallback to legacy id (mongo string)
-                    const key = typeof idNum === 'number' ? String(idNum) : String(ad.id);
-                    return (
-                      <li key={key}>Ad {String(label)}</li>
-                    );
-                  })}
-                  {entities.advertisements.length > 5 && (
-                    <li>+{entities.advertisements.length - 5} more</li>
+                  {adIds.slice(0, 5).map((id) => (
+                    <li key={String(id)}>Ad {String(id)}</li>
+                  ))}
+                  {adIds.length > 5 && (
+                    <li>+{adIds.length - 5} more</li>
                   )}
                 </ul>
               )}
