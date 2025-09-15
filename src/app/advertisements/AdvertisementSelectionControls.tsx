@@ -47,13 +47,13 @@ export default function AdvertisementSelectionControls({
   // The advertisements prop now contains the filtered advertisements from AdvertisementFiltersWrapper
   const visibleAdvertisements = advertisements;
 
-  // Get currently selected advertisements that are visible
+  // Get currently selected advertisements that are visible (use Broadstreet numeric id)
   const visibleSelectedAdvertisements = useMemo(() => {
-    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(ad._id));
+    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(ad.id)));
   }, [visibleAdvertisements, selectedAdvertisements]);
 
-  // Get all visible advertisement IDs
-  const visibleAdvertisementIds = visibleAdvertisements.map(ad => ad._id);
+  // Get all visible advertisement IDs (use Broadstreet numeric id)
+  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(ad.id));
 
   // Check if all visible advertisements are selected
   const allVisibleSelected = visibleAdvertisementIds.length > 0 && visibleAdvertisementIds.every(id => selectedAdvertisements.includes(id));

@@ -92,7 +92,11 @@ export function useSelectedEntities(): SelectedEntitiesResult {
   const zones = useMemo(() => {
     if (!Array.isArray(selectedZones)) return [];
     return selectedZones.map((zone) => {
-      const raw = typeof zone === 'string' ? zone : ((zone as any)?.id != null ? String((zone as any).id) : '');
+      const raw = typeof zone === 'string'
+        ? zone
+        : (typeof zone === 'number')
+          ? String(zone)
+          : ((zone as any)?.id != null ? String((zone as any).id) : '');
       const ids: EntityIds = {};
       const asNumber = Number(raw);
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;
@@ -105,7 +109,11 @@ export function useSelectedEntities(): SelectedEntitiesResult {
   const advertisements = useMemo(() => {
     if (!Array.isArray(selectedAdvertisements)) return [];
     return selectedAdvertisements.map((ad) => {
-      const raw = typeof ad === 'string' ? ad : ((ad as any)?.id != null ? String((ad as any).id) : '');
+      const raw = typeof ad === 'string'
+        ? ad
+        : (typeof ad === 'number')
+          ? String(ad)
+          : ((ad as any)?.id != null ? String((ad as any).id) : '');
       const ids: EntityIds = {};
       const asNumber = Number(raw);
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;

@@ -57,9 +57,14 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
               <p className="font-medium">{entities.advertisements.length}</p>
               {entities.advertisements.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {entities.advertisements.slice(0, 5).map((ad) => (
-                    <li key={ad.id}>Ad {ad.id}</li>
-                  ))}
+                  {entities.advertisements.slice(0, 5).map((ad) => {
+                    const idNum = typeof ad.ids.broadstreet_id === 'number' ? ad.ids.broadstreet_id : undefined;
+                    const label = typeof idNum === 'number' ? idNum : ad.id; // fallback to legacy id (mongo string)
+                    const key = typeof idNum === 'number' ? String(idNum) : String(ad.id);
+                    return (
+                      <li key={key}>Ad {String(label)}</li>
+                    );
+                  })}
                   {entities.advertisements.length > 5 && (
                     <li>+{entities.advertisements.length - 5} more</li>
                   )}

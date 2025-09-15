@@ -44,7 +44,7 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
       adsToFilter = advertisements.filter(ad => ad.advertiser === advertiserName);
     }
     
-    const types = [...new Set(adsToFilter.map(ad => ad.type))];
+    const types = [...new Set(adsToFilter.map(ad => ad.type).filter(Boolean))];
     return types.sort();
   }, [advertisements, entities.advertiser?.name]);
 
@@ -79,12 +79,13 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     
     // 5. Apply search filter (lowest priority)
     if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(ad =>
-        ad.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ad.advertiser.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ad.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ad.id.toString().includes(searchTerm) ||
-        ad._id.includes(searchTerm)
+        (ad.name?.toLowerCase?.().includes(term) ?? false) ||
+        (ad.advertiser?.toLowerCase?.().includes(term) ?? false) ||
+        (ad.type?.toLowerCase?.().includes(term) ?? false) ||
+        String((ad as any).id ?? '').includes(searchTerm) ||
+        String((ad as any)._id ?? '').includes(searchTerm)
       );
     }
     
