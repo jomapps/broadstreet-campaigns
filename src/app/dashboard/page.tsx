@@ -76,7 +76,7 @@ function StatsCard({ title, count, href, description }: StatsCardProps) {
                 <CardDescription className="card-text">{description}</CardDescription>
               </div>
             </div>
-            <Badge variant="secondary" className="card-text font-bold px-2 py-1">
+            <Badge variant="secondary" className="card-text font-bold px-2 py-1" data-testid="stats-count">
               {count.toLocaleString()}
             </Badge>
           </div>

@@ -68,7 +68,7 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
 
   return (
     <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal: isLocalZone, isSelected })}`}
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal: !!isLocalZone, isSelected: !!isSelected })}`}
       onClick={handleCardClick}
       data-testid={`zone-${slug}`}
       data-zone-name={zone.name}

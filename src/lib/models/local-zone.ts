@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalZone extends Document {
   mongo_id: string;
@@ -154,12 +155,6 @@ LocalZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  LocalZoneSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+LocalZoneSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalZone || mongoose.model<ILocalZone>('LocalZone', LocalZoneSchema);

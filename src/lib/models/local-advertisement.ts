@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalAdvertisement extends Document {
   mongo_id: string;
@@ -125,12 +126,6 @@ LocalAdvertisementSchema.virtual('broadstreet_advertisement_id').get(function (t
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  LocalAdvertisementSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+LocalAdvertisementSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalAdvertisement || mongoose.model<ILocalAdvertisement>('LocalAdvertisement', LocalAdvertisementSchema);

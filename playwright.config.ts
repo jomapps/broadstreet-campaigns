@@ -30,6 +30,9 @@ export default defineConfig({
     video: 'retain-on-failure',
   },
 
+  globalSetup: './tests/setup/global-setup.ts',
+  globalTeardown: './tests/setup/global-teardown.ts',
+
   /* Configure projects for major browsers */
   projects: [
     {

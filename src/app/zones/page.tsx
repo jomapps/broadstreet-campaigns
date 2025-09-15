@@ -23,8 +23,8 @@ type ZoneLean = {
   // LocalZone specific fields
   created_locally?: boolean;
   synced_with_api?: boolean;
-  created_at?: Date;
-  synced_at?: Date;
+  created_at?: string;
+  synced_at?: string;
   original_broadstreet_id?: number;
   sync_errors?: string[];
   // Additional LocalZone fields
@@ -40,8 +40,8 @@ type ZoneLean = {
   height?: number;
   rss_shuffle?: boolean;
   style?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 };
 
 
@@ -82,11 +82,13 @@ async function ZonesData() {
     await connectDB();
     
     // Fetch zones from both models
-    const [apiZones, localZones] = await Promise.all([
-      Zone.find({}).sort({ name: 1 }).lean() as ZoneLean[],
+    const [apiZonesRaw, localZonesRaw] = await Promise.all([
+      Zone.find({}).sort({ name: 1 }).lean(),
       // Show only truly local, not-yet-synced zones
-      LocalZone.find({ synced_with_api: false }).sort({ name: 1 }).lean() as ZoneLean[]
+      LocalZone.find({ synced_with_api: false }).sort({ name: 1 }).lean()
     ]);
+    const apiZones = apiZonesRaw as unknown as ZoneLean[];
+    const localZones = localZonesRaw as unknown as ZoneLean[];
     
     // Combine zones from both sources
     const allZones = [
@@ -100,8 +102,8 @@ async function ZonesData() {
     const networkMap = new Map(networks.map(n => [n.id, n.name]));
 
     // Serialize the data to plain objects
-    const serializedZones = allZones.map(zone => ({
-      _id: zone._id.toString(),
+    const serializedZones = allZones.map((zone: any) => ({
+      _id: (zone as any)._id?.toString?.(),
       __v: zone.__v,
       id: zone.id,
       name: zone.name,
@@ -116,8 +118,8 @@ async function ZonesData() {
       // LocalZone specific fields
       created_locally: zone.created_locally,
       synced_with_api: zone.synced_with_api,
-      created_at: zone.created_at,
-      synced_at: zone.synced_at,
+      created_at: (zone as any).created_at?.toISOString?.(),
+      synced_at: (zone as any).synced_at?.toISOString?.(),
       original_broadstreet_id: zone.original_broadstreet_id,
       sync_errors: zone.sync_errors,
       // Additional LocalZone fields
@@ -134,8 +136,8 @@ async function ZonesData() {
       rss_shuffle: zone.rss_shuffle,
       style: zone.style,
       source: zone.source,
-      createdAt: zone.createdAt.toISOString(),
-      updatedAt: zone.updatedAt.toISOString(),
+      createdAt: (zone as any).createdAt?.toISOString?.(),
+      updatedAt: (zone as any).updatedAt?.toISOString?.(),
     }));
 
     return <ZoneFiltersWrapper zones={serializedZones} networkMap={networkMap} />;
@@ -161,7 +163,7 @@ export default function ZonesPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="zone" />
+          <CreationButton />
         </Suspense>
       </div>
 

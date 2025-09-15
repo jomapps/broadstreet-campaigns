@@ -81,8 +81,8 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         }
         
         // Handle regular size type filters
-        const regularSizes = selectedSizes.filter(size => size !== 'CS');
-        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type)) {
+        const regularSizes = selectedSizes.filter((size): size is 'SQ' | 'PT' | 'LS' => size !== 'CS');
+        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS')) {
           return true;
         }
         
@@ -93,7 +93,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         
         // If only regular sizes are selected, filter by them
         if (regularSizes.length > 0 && !selectedSizes.includes('CS')) {
-          return zone.size_type && regularSizes.includes(zone.size_type);
+          return zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS');
         }
         
         return false;

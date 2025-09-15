@@ -20,7 +20,7 @@ export interface SyncResult<T = any> {
   localEntity: ILocalAdvertiser | ILocalCampaign | ILocalZone;
   syncedAt?: Date;
   error?: string;
-  code?: 'DUPLICATE' | 'DEPENDENCY' | 'NETWORK' | 'VALIDATION';
+  code?: 'DUPLICATE' | 'DEPENDENCY' | 'NETWORK' | 'VALIDATION' | 'LINKED_DUPLICATE';
   details?: any;
 }
 
@@ -222,9 +222,9 @@ class SyncService {
       
       if (exists) {
         // Try to find the existing advertiser and link it
-        const existing = await broadstreetAPI.findAdvertiserByName(localAdvertiser.network_id, localAdvertiser.name);
-        if (existing && existing.id) {
-          localAdvertiser.original_broadstreet_id = existing.id;
+        const existing: any = await broadstreetAPI.findAdvertiserByName(localAdvertiser.network_id, localAdvertiser.name);
+        if (existing && (existing as any).id) {
+          localAdvertiser.original_broadstreet_id = (existing as any).id;
           localAdvertiser.synced_with_api = true;
           localAdvertiser.synced_at = new Date();
           localAdvertiser.sync_errors = [];
@@ -241,7 +241,7 @@ class SyncService {
       }
 
       // Create advertiser in Broadstreet
-      const broadstreetAdvertiser = await broadstreetAPI.createAdvertiser({
+      const broadstreetAdvertiser: any = await broadstreetAPI.createAdvertiser({
         name: localAdvertiser.name,
         network_id: localAdvertiser.network_id,
         logo: localAdvertiser.logo,
@@ -251,7 +251,7 @@ class SyncService {
       });
 
       // Update local advertiser with Broadstreet ID
-      localAdvertiser.original_broadstreet_id = broadstreetAdvertiser.id;
+      localAdvertiser.original_broadstreet_id = (broadstreetAdvertiser as any).id;
       localAdvertiser.synced_with_api = true;
       localAdvertiser.synced_at = new Date();
       localAdvertiser.sync_errors = [];
@@ -309,7 +309,7 @@ class SyncService {
       const broadstreetZone = await broadstreetAPI.createZone(payload);
 
       // Update local zone with Broadstreet ID
-      localZone.original_broadstreet_id = broadstreetZone.id;
+      localZone.original_broadstreet_id = (broadstreetZone as any).id;
       localZone.synced_with_api = true;
       localZone.synced_at = new Date();
       localZone.sync_errors = [];
@@ -373,8 +373,8 @@ class SyncService {
       if (exists) {
         // Link to existing campaign rather than failing
         const existing = await broadstreetAPI.findCampaignByName(advertiserBroadstreetId, localCampaign.name);
-        if (existing && existing.id) {
-          localCampaign.original_broadstreet_id = existing.id;
+        if (existing && (existing as any).id) {
+          localCampaign.original_broadstreet_id = (existing as any).id;
           localCampaign.synced_with_api = true;
           localCampaign.synced_at = new Date();
           localCampaign.sync_errors = [];
@@ -427,7 +427,7 @@ class SyncService {
       const broadstreetCampaign = await broadstreetAPI.createCampaign(payload);
 
       // Update local campaign with Broadstreet ID
-      localCampaign.original_broadstreet_id = broadstreetCampaign.id;
+      localCampaign.original_broadstreet_id = (broadstreetCampaign as any).id;
       localCampaign.synced_with_api = true;
       localCampaign.synced_at = new Date();
       localCampaign.sync_errors = [];

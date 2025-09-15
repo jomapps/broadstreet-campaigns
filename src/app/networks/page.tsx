@@ -169,7 +169,7 @@ export default function NetworksPage() {
           </div>
           
           <Suspense fallback={<div className="bg-muted animate-pulse h-10 w-32 rounded-lg"></div>}>
-            <CreationButton entityType="network" />
+            <CreationButton />
           </Suspense>
         </div>
       </div>

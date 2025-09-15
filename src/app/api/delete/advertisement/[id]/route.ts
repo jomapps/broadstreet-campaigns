@@ -4,12 +4,12 @@ import LocalAdvertisement from '@/lib/models/local-advertisement';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await context.params;
 
     // Find and delete the local advertisement
     const deletedAdvertisement = await LocalAdvertisement.findByIdAndDelete(id);

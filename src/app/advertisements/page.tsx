@@ -91,7 +91,7 @@ export default function AdvertisementsPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="advertisement" />
+          <CreationButton />
         </Suspense>
       </div>
 

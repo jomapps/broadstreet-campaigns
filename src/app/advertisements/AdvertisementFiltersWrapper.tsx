@@ -39,13 +39,14 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     let adsToFilter = advertisements;
     
     // Only include ads from the selected advertiser
-    if (entities.advertiser) {
-      adsToFilter = advertisements.filter(ad => ad.advertiser === entities.advertiser.name);
+    const advertiserName = entities.advertiser?.name;
+    if (advertiserName) {
+      adsToFilter = advertisements.filter(ad => ad.advertiser === advertiserName);
     }
     
     const types = [...new Set(adsToFilter.map(ad => ad.type))];
     return types.sort();
-  }, [advertisements, entities.advertiser]);
+  }, [advertisements, entities.advertiser?.name]);
 
   // Apply all filters to get the currently visible advertisements
   const filteredAdvertisements = useMemo(() => {
@@ -56,8 +57,9 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     let filtered = advertisements;
     
     // 1. Filter by selected advertiser (highest priority)
-    if (entities.advertiser) {
-      filtered = filtered.filter(ad => ad.advertiser === entities.advertiser.name);
+    const advertiserName = entities.advertiser?.name;
+    if (advertiserName) {
+      filtered = filtered.filter(ad => ad.advertiser === advertiserName);
     }
     
     // 2. Apply "Only Selected" filter
@@ -87,7 +89,7 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
     }
     
     return filtered;
-  }, [advertisements, searchTerm, selectedTypes, showActiveOnly, selectedAdvertisements, showOnlySelectedAds, entities.advertiser]);
+  }, [advertisements, searchTerm, selectedTypes, showActiveOnly, selectedAdvertisements, showOnlySelectedAds, entities.advertiser?.name]);
 
   // Check if network and advertiser are selected
   if (!entities.network || !entities.advertiser) {

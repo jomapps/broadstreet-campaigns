@@ -247,12 +247,12 @@ class BroadstreetAPI {
     const response = await this.request<any[]>(`/placements?campaign_id=${campaignId}`);
     
     // API returns array of placement objects directly
-    // Need to add campaign_id since it's not in the API response
+    // Normalize field names to internal schema (advertisement_id, zone_id)
     if (Array.isArray(response)) {
       return response.map((placement: any) => ({
-        advertisement_broadstreet_id: placement.advertisement_id,
-        zone_broadstreet_id: placement.zone_id,
-        campaign_broadstreet_id: campaignId,
+        advertisement_id: placement.advertisement_id,
+        zone_id: placement.zone_id,
+        campaign_id: campaignId,
         restrictions: placement.restrictions || [],
       }));
     }
@@ -273,11 +273,11 @@ class BroadstreetAPI {
     });
     const p: any = response.placement as any;
     return {
-      advertisement_broadstreet_id: p.advertisement_id,
-      zone_broadstreet_id: p.zone_id,
-      campaign_broadstreet_id: placement.campaign_id,
+      advertisement_id: p.advertisement_id,
+      zone_id: p.zone_id,
+      campaign_id: placement.campaign_id,
       restrictions: p.restrictions || [],
-    } as Placement;
+    } as unknown as Placement;
   }
 
   async deletePlacement(params: {

@@ -4,12 +4,12 @@ import LocalNetwork from '@/lib/models/local-network';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await context.params;
 
     // Find and delete the local network
     const deletedNetwork = await LocalNetwork.findByIdAndDelete(id);

@@ -27,8 +27,7 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
 
     const networks = await broadstreetAPI.getNetworks();
     
-    // Clear existing networks and insert new ones
-    await Network.deleteMany({});
+    // Upsert networks for idempotent sync
     // Drop any legacy unique index on `id` if present to avoid duplicate null errors
     try {
       const indexes = await Network.collection.indexes();
@@ -50,7 +49,17 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
       zone_count: network.zone_count,
     }));
 
-    await Network.insertMany(networkDocs);
+    if (networkDocs.length) {
+      await Network.bulkWrite(
+        networkDocs.map((doc) => ({
+          updateOne: {
+            filter: { broadstreet_id: doc.broadstreet_id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
+    }
 
     // Update sync log
     syncLog.status = 'success';
@@ -82,9 +91,6 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
 
     // Get all networks first
     const networks = await Network.find({});
-
-    // Clear existing advertisers
-    await Advertiser.deleteMany({});
 
     // Collect all unique advertisers
     const allAdvertisers = new Map<number, any>();
@@ -127,19 +133,18 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
       }
     }
 
-    // Insert all unique advertisers
+    // Upsert all unique advertisers
     const advertiserDocs = Array.from(allAdvertisers.values());
     if (advertiserDocs.length > 0) {
-      try {
-        await Advertiser.insertMany(advertiserDocs);
-      } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for advertisers (${advertiserDocs.length} records)`);
-        } else {
-          throw error; // Re-throw non-duplicate errors
-        }
-      }
+      await Advertiser.bulkWrite(
+        advertiserDocs.map((doc) => ({
+          updateOne: {
+            filter: { broadstreet_id: doc.broadstreet_id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
     }
 
     // Update sync log
@@ -172,9 +177,6 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
 
     // Get all networks first
     const networks = await Network.find({});
-
-    // Clear existing zones
-    await Zone.deleteMany({});
 
     // Collect all unique zones
     const allZones = new Map<number, any>();
@@ -220,19 +222,18 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
       }
     }
 
-    // Insert all unique zones
+    // Upsert all unique zones
     const zoneDocs = Array.from(allZones.values());
     if (zoneDocs.length > 0) {
-      try {
-        await Zone.insertMany(zoneDocs);
-      } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for zones (${zoneDocs.length} records)`);
-        } else {
-          throw error; // Re-throw non-duplicate errors
-        }
-      }
+      await Zone.bulkWrite(
+        zoneDocs.map((doc) => ({
+          updateOne: {
+            filter: { broadstreet_id: doc.broadstreet_id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
     }
 
     // Update sync log
@@ -265,9 +266,6 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
 
     // Get all advertisers first
     const advertisers = await Advertiser.find({});
-
-    // Clear existing campaigns
-    await Campaign.deleteMany({});
 
     // Collect all unique campaigns
     const allCampaigns = new Map<number, any>();
@@ -351,19 +349,18 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
       }
     }
 
-    // Insert all unique campaigns
+    // Upsert all unique campaigns
     const campaignDocs = Array.from(allCampaigns.values());
     if (campaignDocs.length > 0) {
-      try {
-        await Campaign.insertMany(campaignDocs);
-      } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for campaigns (${campaignDocs.length} records)`);
-        } else {
-          throw error; // Re-throw non-duplicate errors
-        }
-      }
+      await Campaign.bulkWrite(
+        campaignDocs.map((doc) => ({
+          updateOne: {
+            filter: { broadstreet_id: doc.broadstreet_id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
     }
 
     // Update sync log
@@ -396,9 +393,6 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
 
     // Get all networks first
     const networks = await Network.find({});
-
-    // Clear existing advertisements
-    await Advertisement.deleteMany({});
 
     // Collect all unique advertisements
     const allAdvertisements = new Map<number, any>();
@@ -440,19 +434,18 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
       }
     }
 
-    // Insert all unique advertisements
+    // Upsert all unique advertisements
     const advertisementDocs = Array.from(allAdvertisements.values());
     if (advertisementDocs.length > 0) {
-      try {
-        await Advertisement.insertMany(advertisementDocs);
-      } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for advertisements (${advertisementDocs.length} records)`);
-        } else {
-          throw error; // Re-throw non-duplicate errors
-        }
-      }
+      await Advertisement.bulkWrite(
+        advertisementDocs.map((doc) => ({
+          updateOne: {
+            filter: { broadstreet_id: doc.broadstreet_id },
+            update: { $set: doc },
+            upsert: true,
+          },
+        }))
+      );
     }
 
     // Update sync log
@@ -498,30 +491,53 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
 
     for (const campaign of campaigns) {
       try {
-        const apiPlacements = await broadstreetAPI.getPlacements(campaign.id);
+        // Use Broadstreet campaign identifier, not Mongo _id
+        const campBsId = (campaign as any).broadstreet_id;
+        if (typeof campBsId !== 'number') {
+          console.warn(`[syncPlacements] Skipping campaign with invalid broadstreet_id`, { _id: (campaign as any)._id?.toString?.(), broadstreet_id: campBsId });
+          continue;
+        }
+        const apiPlacements = await broadstreetAPI.getPlacements(campBsId);
         
         if (apiPlacements.length > 0) {
           // Update the campaign with placements using MongoDB _id
+          const coerced = apiPlacements
+            .map((placement: any) => {
+              const adId = Number((placement as any).advertisement_id ?? (placement as any).advertisement_broadstreet_id);
+              const zoneId = Number((placement as any).zone_id ?? (placement as any).zone_broadstreet_id);
+              if (!Number.isFinite(adId) || !Number.isFinite(zoneId)) {
+                return null;
+              }
+              return {
+                advertisement_id: adId,
+                zone_id: zoneId,
+                restrictions: (placement as any).restrictions || [],
+              };
+            })
+            .filter(Boolean) as Array<{ advertisement_id: number; zone_id: number; restrictions: string[] }>; 
+
           const updateResult = await Campaign.updateOne(
             { _id: campaign._id },
             { 
-              placements: apiPlacements.map(placement => ({
-                advertisement_id: placement.advertisement_id,
-                zone_id: placement.zone_id,
-                restrictions: placement.restrictions || [],
-              }))
+              placements: coerced
             }
           );
-          console.log(`Campaign ${campaign.id}: Updated ${updateResult.modifiedCount} document(s), matched ${updateResult.matchedCount} document(s)`);
+          console.log(`Campaign ${(campaign as any).broadstreet_id}: embedded ${apiPlacements.length} placement(s). Updated ${updateResult.modifiedCount}, matched ${updateResult.matchedCount}.`);
+        } else {
+          // Ensure placements is an empty array if none returned
+          await Campaign.updateOne(
+            { _id: campaign._id },
+            { placements: [] }
+          );
         }
         
         totalPlacements += apiPlacements.length;
       } catch (error: any) {
         // Handle duplicate key errors gracefully
         if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for campaign ${campaign.id} placements`);
+          console.log(`Duplicate key errors ignored for campaign ${(campaign as any).broadstreet_id} placements`);
         } else {
-          console.error(`Error syncing placements for campaign ${campaign.id}:`, error);
+          console.error(`Error syncing placements for campaign ${(campaign as any).broadstreet_id}:`, error);
         }
       }
     }
@@ -532,6 +548,8 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
     syncLog.endTime = new Date();
     await syncLog.save();
 
+    // Normalize schema: ensure placements array exists on all campaigns
+    await Campaign.updateMany({ placements: { $exists: false } }, { $set: { placements: [] } });
     return { success: true, count: totalPlacements };
   } catch (error) {
     syncLog.status = 'error';
@@ -543,8 +561,15 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
   }
 }
 
-export async function syncAll(): Promise<{ success: boolean; results: Record<string, SyncResult> }> {
-  const results: Record<string, SyncResult> = {};
+export async function syncAll(): Promise<{ success: boolean; results: Record<string, SyncResult>; error?: string }> {
+  const results: Record<string, SyncResult> = {
+    networks: { success: false, count: 0 },
+    advertisers: { success: false, count: 0 },
+    zones: { success: false, count: 0 },
+    campaigns: { success: false, count: 0 },
+    advertisements: { success: false, count: 0 },
+    placements: { success: false, count: 0 },
+  };
 
   try {
     console.log('Starting full sync...');
@@ -561,17 +586,9 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
 
     return { success: allSuccessful, results };
   } catch (error) {
-    return {
-      success: false,
-      results: {
-        ...results,
-        error: {
-          success: false,
-          count: 0,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      }
-    };
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('syncAll failed:', message);
+    return { success: false, results, error: message };
   }
 }
 

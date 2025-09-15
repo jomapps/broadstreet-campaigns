@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     }
 
     // If mirror exists, return it
-    const existing = await LocalCampaign.findOne({ original_broadstreet_id: campaign_id }).lean();
+    const existing = (await LocalCampaign.findOne({ original_broadstreet_id: campaign_id }).lean()) as any;
     if (existing) {
-      return NextResponse.json({ message: 'Mirror exists', campaign: { _id: existing._id.toString() } }, { status: 200 });
+      return NextResponse.json({ message: 'Mirror exists', campaign: { _id: (existing as any)._id?.toString?.() } }, { status: 200 });
     }
 
     // Find source campaign

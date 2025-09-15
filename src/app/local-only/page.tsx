@@ -103,8 +103,8 @@ async function LocalOnlyDataWrapper() {
     }).select('-id').sort({ created_at: -1 }).lean();
     
     // Convert main advertisers to LocalEntity format for display
-    const convertedMainAdvertisers = mainLocalAdvertisers.map(advertiser => ({
-      _id: advertiser._id.toString(),
+    const convertedMainAdvertisers = mainLocalAdvertisers.map((advertiser: any) => ({
+      _id: (advertiser as any)._id?.toString?.(),
       name: advertiser.name,
       network_id: advertiser.network_id,
       web_home_url: advertiser.web_home_url,
@@ -148,34 +148,34 @@ async function LocalOnlyDataWrapper() {
 
     // Serialize the data properly
     const serializedData = {
-      zones: localZones.map(zone => ({
+      zones: localZones.map((zone: any) => ({
         ...zone,
-        _id: zone._id.toString(),
-        created_at: zone.created_at.toISOString(),
+        _id: (zone as any)._id?.toString?.(),
+        created_at: (zone as any).created_at?.toISOString?.(),
         type: 'zone' as const,
       })),
-      advertisers: allLocalAdvertisers.map(advertiser => ({
+      advertisers: allLocalAdvertisers.map((advertiser: any) => ({
         ...advertiser,
-        _id: advertiser._id.toString(),
-        created_at: advertiser.created_at.toISOString(),
+        _id: (advertiser as any)._id?.toString?.(),
+        created_at: (advertiser as any).created_at?.toISOString?.(),
         type: 'advertiser' as const,
       })),
-      campaigns: localCampaigns.map(campaign => ({
+      campaigns: localCampaigns.map((campaign: any) => ({
         ...campaign,
-        _id: campaign._id.toString(),
-        created_at: campaign.created_at.toISOString(),
+        _id: (campaign as any)._id?.toString?.(),
+        created_at: (campaign as any).created_at?.toISOString?.(),
         type: 'campaign' as const,
       })),
-      networks: localNetworks.map(network => ({
+      networks: localNetworks.map((network: any) => ({
         ...network,
-        _id: network._id.toString(),
-        created_at: network.created_at.toISOString(),
+        _id: (network as any)._id?.toString?.(),
+        created_at: (network as any).created_at?.toISOString?.(),
         type: 'network' as const,
       })),
-      advertisements: localAdvertisements.map(advertisement => ({
+      advertisements: localAdvertisements.map((advertisement: any) => ({
         ...advertisement,
-        _id: advertisement._id.toString(),
-        created_at: advertisement.created_at.toISOString(),
+        _id: (advertisement as any)._id?.toString?.(),
+        created_at: (advertisement as any).created_at?.toISOString?.(),
         type: 'advertisement' as const,
       })),
     };

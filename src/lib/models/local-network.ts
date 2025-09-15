@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalNetwork extends Document {
   mongo_id: string;
@@ -119,12 +120,6 @@ LocalNetworkSchema.virtual('broadstreet_network_id').get(function (this: any) {
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  LocalNetworkSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+LocalNetworkSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalNetwork || mongoose.model<ILocalNetwork>('LocalNetwork', LocalNetworkSchema);

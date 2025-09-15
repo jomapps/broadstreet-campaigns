@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface ICampaign extends Document {
@@ -177,13 +178,7 @@ CampaignSchema.virtual('broadstreet_network_id').get(function (this: any) {
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  CampaignSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+CampaignSchema.plugin(leanVirtuals);
 
 // Temporary static to safely map API payloads
 CampaignSchema.statics.fromApi = function fromApi(payload: any) {

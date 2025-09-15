@@ -172,8 +172,9 @@ export async function GET(request: NextRequest) {
     // Batch advertiser and network lookups
     const advertiserIds = Array.from(new Set(
       filtered.map(p => {
-        const c = campaignMap.get(p.campaign_id);
-        return c ? c.advertiser_id : p._localCampaign?.advertiser_id;
+        const cid = typeof (p as any).campaign_id === 'number' ? (p as any).campaign_id : undefined;
+        const c = cid != null ? campaignMap.get(cid) : undefined;
+        return c ? (c as any).advertiser_id : (p as any)._localCampaign?.advertiser_id;
       }).filter((v): v is number => typeof v === 'number')
     ));
     const networkIds = Array.from(new Set(

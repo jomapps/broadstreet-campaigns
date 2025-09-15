@@ -28,9 +28,9 @@ interface FilterContextType {
   showOnlySelectedAds: boolean;
   
   // Setters
-  setSelectedNetwork: (network: Network | null) => void;
-  setSelectedAdvertiser: (advertiser: Advertiser | null) => void;
-  setSelectedCampaign: (campaign: Campaign | null) => void;
+  setSelectedNetwork: (network: any | null) => void;
+  setSelectedAdvertiser: (advertiser: any | null) => void;
+  setSelectedCampaign: (campaign: any | null) => void;
   setSelectedZones: (zones: string[]) => void;
   setShowOnlySelected: (show: boolean) => void;
   setSelectedAdvertisements: (advertisements: string[]) => void;
@@ -374,7 +374,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 }
 
 // Dev-only deprecation warnings when directly accessing selected entities via useFilters
-let __warnedKeys: Record<string, boolean> = { selectedNetwork: false, selectedAdvertiser: false, selectedCampaign: false };
+const __warnedKeys: Record<string, boolean> = { selectedNetwork: false, selectedAdvertiser: false, selectedCampaign: false };
 
 export function useFilters() {
   const context = useContext(FilterContext);

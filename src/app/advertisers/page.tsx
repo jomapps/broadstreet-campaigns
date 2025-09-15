@@ -16,7 +16,8 @@ import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for advertiser data from filter context
 type AdvertiserLean = {
-  ids: { broadstreet_id?: number; mongo_id?: string };
+  broadstreet_id?: number;
+  mongo_id?: string;
   name: string;
   logo?: { url: string };
   web_home_url?: string;
@@ -107,8 +108,8 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
             </Badge>
           )}
           <EntityIdBadge
-            broadstreet_id={advertiser.ids?.broadstreet_id}
-            mongo_id={advertiser.ids?.mongo_id}
+            broadstreet_id={advertiser.broadstreet_id}
+            mongo_id={advertiser.mongo_id}
           />
         </div>
       </div>
@@ -242,9 +243,9 @@ function AdvertisersList() {
   }
 
   const handleAdvertiserSelect = (advertiser: AdvertiserLean) => {
-    const currentId = getEntityId(selectedAdvertiser as any);
-    const nextId = getEntityId(advertiser as any);
-    if (String(currentId) === String(nextId)) {
+    const currentId = (selectedAdvertiser as any)?.broadstreet_id ?? (selectedAdvertiser as any)?.mongo_id ?? (selectedAdvertiser as any)?.name;
+    const nextId = advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name;
+    if (String(currentId ?? '') === String(nextId ?? '')) {
       setSelectedAdvertiser(null);
     } else {
       setSelectedAdvertiser(advertiser);
@@ -252,7 +253,7 @@ function AdvertisersList() {
   };
 
   const handleDelete = async (advertiser: AdvertiserLean) => {
-    const advId = getEntityId(advertiser as any);
+    const advId = advertiser.broadstreet_id ?? advertiser.mongo_id;
     if (advId == null) {
       alert('Missing advertiser ID. Cannot delete.');
       return;
@@ -309,10 +310,10 @@ function AdvertisersList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAdvertisers.map((advertiser) => (
             <AdvertiserCard 
-              key={String(getEntityId(advertiser as any))}
+              key={String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)}
               advertiser={advertiser}
               isSelected={
-                String(getEntityId(selectedAdvertiser as any)) === String(getEntityId(advertiser as any))
+                String(getEntityId(selectedAdvertiser as any)) === String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)
               }
               onSelect={handleAdvertiserSelect}
               onDelete={handleDelete}

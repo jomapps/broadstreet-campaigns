@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalCampaign extends Document {
   mongo_id: string;
@@ -168,12 +169,6 @@ LocalCampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) 
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  LocalCampaignSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+LocalCampaignSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalCampaign || mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);

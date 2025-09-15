@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface IZone extends Document {
@@ -114,13 +115,7 @@ ZoneSchema.virtual('broadstreet_network_id').get(function (this: any) {
 });
 
 // Ensure virtuals are present in lean() results
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const leanVirtuals = require('mongoose-lean-virtuals');
-  ZoneSchema.plugin(leanVirtuals);
-} catch (_) {
-  // optional in dev without plugin installed
-}
+ZoneSchema.plugin(leanVirtuals);
 
 // Temporary static to safely map API payloads
 ZoneSchema.statics.fromApi = function fromApi(payload: any) {

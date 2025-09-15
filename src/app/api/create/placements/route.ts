@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
       }
       // Ensure required LocalCampaign fields exist; derive network_id from Advertiser if missing
       const advertiser = (source as any).advertiser_id
-        ? await Advertiser.findOne({ id: (source as any).advertiser_id }).lean()
+        ? (await Advertiser.findOne({ id: (source as any).advertiser_id }).lean()) as any
         : null;
-      let resolvedNetworkId = (source as any).network_id ?? advertiser?.network_id;
+      let resolvedNetworkId = (source as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
       if (typeof resolvedNetworkId !== 'number') {
         // Fallback: derive network_id from the first selected zone
         const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
       const sourceByMongo = await Campaign.findById(campaign_mongo_id).lean();
       if (sourceByMongo) {
         const advertiser = (sourceByMongo as any).advertiser_id
-          ? await Advertiser.findOne({ id: (sourceByMongo as any).advertiser_id }).lean()
+          ? (await Advertiser.findOne({ id: (sourceByMongo as any).advertiser_id }).lean()) as any
           : null;
-        let resolvedNetworkId = (sourceByMongo as any).network_id ?? advertiser?.network_id;
+        let resolvedNetworkId = (sourceByMongo as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
         if (typeof resolvedNetworkId !== 'number') {
           // Fallback: derive network_id from the first selected zone
           const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
@@ -215,7 +215,8 @@ export async function POST(request: NextRequest) {
     // Compute existing and toInsert for accurate created count and dedupe by ad+zone regardless of restrictions
     // CURRENT BEHAVIOR: If a placement already exists (same ad+zone), restrictions are NOT updated
     // This prevents accidental overwrites but may require manual cleanup if restrictions need to change
-    const before = (await LocalCampaign.findById(campaign._id).lean())?.placements ?? [];
+    const beforeDoc = await LocalCampaign.findById((campaign as any)._id).lean();
+    const before: any[] = (beforeDoc as any)?.placements ?? [];
     const existingKeys = new Set(before.map((p: any) => `${p.advertisement_id}-${p.zone_id}`));
     const toInsert = combinations
       .filter((c) => !existingKeys.has(`${c.advertisement_id}-${c.zone_id}`))
@@ -227,7 +228,7 @@ export async function POST(request: NextRequest) {
 
     if (toInsert.length > 0) {
       await LocalCampaign.updateOne(
-        { _id: campaign._id },
+        { _id: (campaign as any)._id },
         { $addToSet: { placements: { $each: toInsert } } }
       );
     }

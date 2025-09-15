@@ -16,7 +16,8 @@ import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for campaign data from filter context
 type CampaignLean = {
-  ids: { broadstreet_id?: number; mongo_id?: string };
+  broadstreet_id?: number;
+  mongo_id?: string;
   name: string;
   advertiser_id: number | string;
   start_date: string;
@@ -113,8 +114,8 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
             {isActive ? 'Active' : 'Inactive'}
           </span>
           <EntityIdBadge
-            broadstreet_id={campaign.ids?.broadstreet_id}
-            mongo_id={campaign.ids?.mongo_id}
+            broadstreet_id={campaign.broadstreet_id}
+            mongo_id={campaign.mongo_id}
           />
         </div>
       </div>
@@ -203,7 +204,7 @@ function CampaignsList() {
       const term = searchTerm.toLowerCase();
       const nameMatch = campaign.name.toLowerCase().includes(term);
       const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
-      const idStr = String(campaign.ids?.broadstreet_id ?? campaign.ids?.mongo_id ?? '');
+      const idStr = String(campaign.broadstreet_id ?? campaign.mongo_id ?? '');
       const idMatch = idStr.toLowerCase().includes(term);
       return nameMatch || notesMatch || idMatch;
     });
