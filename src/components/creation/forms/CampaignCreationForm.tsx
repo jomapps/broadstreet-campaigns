@@ -209,6 +209,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         name: formData.name.trim(),
         // Send numeric IDs when available for current API expectations
         ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        // Include numeric advertiser_id when present; otherwise include explicit advertiser object with mongo_id
         ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
         // Also include explicit ID objects to avoid ambiguity downstream
         network: {

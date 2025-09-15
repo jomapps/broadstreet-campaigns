@@ -17,14 +17,19 @@ export async function GET(request: NextRequest) {
     // Get all campaigns for the selected advertiser from local collections only
     const [syncedCampaigns, localCampaigns] = await Promise.all([
       // Get previously synced campaigns stored locally (no live API calls)
+      // For synced campaigns, advertiser_id is numeric Broadstreet ID
       Campaign.find({ 
-        advertiser_id: parseInt(advertiserId)
+        advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : -99999999
       }).sort({ start_date: -1 }).lean(),
       
       // Get all local campaigns for this advertiser
       // Include local campaigns regardless of sync state; use original_broadstreet_id when present
+      // For local campaigns, advertiser_id may be number or string (mongo _id)
       LocalCampaign.find({ 
-        advertiser_id: parseInt(advertiserId)
+        $or: [
+          { advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : undefined },
+          { advertiser_id: advertiserId }
+        ].filter((q: any) => q.advertiser_id !== undefined)
       }).sort({ start_date: -1 }).lean()
     ]);
     
@@ -56,12 +61,21 @@ export async function GET(request: NextRequest) {
       return shaped;
     });
     
-    // Combine both collections with explicit IDs only
-    const campaigns = [...shapedSyncedCampaigns, ...convertedLocalCampaigns].sort((a: any, b: any) => {
-      const aTime = a?.start_date ? new Date(a.start_date).getTime() : -Infinity;
-      const bTime = b?.start_date ? new Date(b.start_date).getTime() : -Infinity;
-      return bTime - aTime;
-    });
+    // Combine both collections with explicit IDs only and filter by advertiser id (supports string or number)
+    const allCampaigns = [...shapedSyncedCampaigns, ...convertedLocalCampaigns];
+    const campaigns = allCampaigns
+      .filter((c: any) => {
+        const adv = c?.advertiser_id;
+        if (Number.isFinite(Number(advertiserId))) {
+          return adv === parseInt(advertiserId);
+        }
+        return String(adv) === advertiserId;
+      })
+      .sort((a: any, b: any) => {
+        const aTime = a?.start_date ? new Date(a.start_date).getTime() : -Infinity;
+        const bTime = b?.start_date ? new Date(b.start_date).getTime() : -Infinity;
+        return bTime - aTime;
+      });
     
     return NextResponse.json({ campaigns });
   } catch (error) {

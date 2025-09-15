@@ -7,7 +7,7 @@ export interface ILocalCampaign extends Document {
   // Core Broadstreet API fields
   name: string;
   network_id: number;
-  advertiser_id?: number;
+  advertiser_id?: number | string;
   start_date?: string;
   end_date?: string;
   max_impression_count?: number;
@@ -51,7 +51,7 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
     required: true,
   },
   advertiser_id: {
-    type: Number,
+    type: Schema.Types.Mixed,
     required: true,
   },
   start_date: {
@@ -171,4 +171,20 @@ LocalCampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) 
 // Ensure virtuals are present in lean() results
 LocalCampaignSchema.plugin(leanVirtuals);
 
-export default mongoose.models.LocalCampaign || mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+// In dev, Next.js hot-reloads can retain an older compiled model with stale path types.
+// Ensure the model uses the current schema (notably Mixed for advertiser_id) before exporting.
+let LocalCampaignModel: mongoose.Model<ILocalCampaign>;
+try {
+  LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign');
+  const existingPath = (LocalCampaignModel as any).schema?.path('advertiser_id');
+  const isMixed = existingPath && existingPath.instance === 'Mixed';
+  if (!isMixed) {
+    // Recompile with updated schema when type drift is detected
+    delete (mongoose.connection as any).models['LocalCampaign'];
+    LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+  }
+} catch {
+  LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+}
+
+export default LocalCampaignModel;
