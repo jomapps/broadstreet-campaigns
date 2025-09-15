@@ -60,6 +60,14 @@ export async function POST(request: NextRequest) {
     ]);
 
     // 3) Insert fresh copies with normalized IDs
+    //    Drop any legacy unique index on `id` to avoid dup key on null
+    try {
+      const indexes = await Advertiser.collection.indexes();
+      const legacy = indexes.find((i: any) => i.name === 'id_1');
+      if (legacy) {
+        await Advertiser.collection.dropIndex('id_1');
+      }
+    } catch (_) {}
     const advertiserDocs = (remoteAdvertisers as any[]).map((a) => ({
       broadstreet_id: (a as any).broadstreet_id ?? (a as any).id,
       name: (a as any).name,
@@ -130,6 +138,24 @@ export async function POST(request: NextRequest) {
       preview_url: (a as any).preview_url,
       network_id: networkId,
     }));
+
+    // Drop legacy unique indexes on `id` where present to avoid dup key on null
+    try {
+      const [zIdx, cIdx, aIdx] = await Promise.all([
+        Zone.collection.indexes().catch(() => []),
+        Campaign.collection.indexes().catch(() => []),
+        Advertisement.collection.indexes().catch(() => []),
+      ]);
+      if (Array.isArray(zIdx) && zIdx.find((i: any) => i.name === 'id_1')) {
+        await Zone.collection.dropIndex('id_1');
+      }
+      if (Array.isArray(cIdx) && cIdx.find((i: any) => i.name === 'id_1')) {
+        await Campaign.collection.dropIndex('id_1');
+      }
+      if (Array.isArray(aIdx) && aIdx.find((i: any) => i.name === 'id_1')) {
+        await Advertisement.collection.dropIndex('id_1');
+      }
+    } catch (_) {}
 
     // Bulk insert with duplicate handling
     if (advertiserDocs.length) await Advertiser.insertMany(advertiserDocs, { ordered: false }).catch(() => {});

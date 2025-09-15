@@ -136,6 +136,15 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
     // Upsert all unique advertisers
     const advertiserDocs = Array.from(allAdvertisers.values());
     if (advertiserDocs.length > 0) {
+      // Drop any legacy unique index on `id` if present to avoid duplicate null errors
+      try {
+        const indexes = await Advertiser.collection.indexes();
+        const legacy = indexes.find((i: any) => i.name === 'id_1');
+        if (legacy) {
+          await Advertiser.collection.dropIndex('id_1');
+        }
+      } catch (_) {}
+
       await Advertiser.bulkWrite(
         advertiserDocs.map((doc) => ({
           updateOne: {
@@ -225,6 +234,15 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
     // Upsert all unique zones
     const zoneDocs = Array.from(allZones.values());
     if (zoneDocs.length > 0) {
+      // Drop legacy unique index on `id` if present to avoid dup key on null
+      try {
+        const indexes = await Zone.collection.indexes();
+        const legacy = indexes.find((i: any) => i.name === 'id_1');
+        if (legacy) {
+          await Zone.collection.dropIndex('id_1');
+        }
+      } catch (_) {}
+
       await Zone.bulkWrite(
         zoneDocs.map((doc) => ({
           updateOne: {
@@ -352,6 +370,15 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
     // Upsert all unique campaigns
     const campaignDocs = Array.from(allCampaigns.values());
     if (campaignDocs.length > 0) {
+      // Drop legacy unique index on `id` if present to avoid dup key on null
+      try {
+        const indexes = await Campaign.collection.indexes();
+        const legacy = indexes.find((i: any) => i.name === 'id_1');
+        if (legacy) {
+          await Campaign.collection.dropIndex('id_1');
+        }
+      } catch (_) {}
+
       await Campaign.bulkWrite(
         campaignDocs.map((doc) => ({
           updateOne: {
@@ -437,6 +464,15 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
     // Upsert all unique advertisements
     const advertisementDocs = Array.from(allAdvertisements.values());
     if (advertisementDocs.length > 0) {
+      // Drop legacy unique index on `id` if present to avoid dup key on null
+      try {
+        const indexes = await Advertisement.collection.indexes();
+        const legacy = indexes.find((i: any) => i.name === 'id_1');
+        if (legacy) {
+          await Advertisement.collection.dropIndex('id_1');
+        }
+      } catch (_) {}
+
       await Advertisement.bulkWrite(
         advertisementDocs.map((doc) => ({
           updateOne: {
