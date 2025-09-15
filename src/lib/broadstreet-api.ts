@@ -120,6 +120,23 @@ class BroadstreetAPI {
     return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
 
+  async updateAdvertiser(id: number, advertiser: {
+    name?: string;
+    web_home_url?: string;
+    notes?: string;
+  }): Promise<Advertiser> {
+    const body: any = {};
+    if (typeof advertiser.name === 'string' && advertiser.name.trim()) body.name = advertiser.name.trim();
+    if (typeof advertiser.web_home_url === 'string' && advertiser.web_home_url.trim()) body.web_home_url = advertiser.web_home_url.trim();
+    if (typeof advertiser.notes === 'string') body.notes = advertiser.notes.trim();
+
+    const response = await this.request<{ advertiser: any }>(`/advertisers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
+  }
+
   async createAdvertiser(advertiser: {
     name: string;
     network_id: number;
@@ -128,9 +145,16 @@ class BroadstreetAPI {
     notes?: string;
     admins?: Array<{ name: string; email: string }>;
   }): Promise<Advertiser> {
-    const response = await this.request<{ advertiser: any }>('/advertisers', {
+    // Per API spec, network_id must be sent as a query parameter; body includes only allowed fields
+    const { network_id, name, web_home_url, notes } = advertiser;
+    const endpoint = `/advertisers?network_id=${encodeURIComponent(network_id)}`;
+    const body: any = { name };
+    if (web_home_url) body.web_home_url = web_home_url;
+    if (typeof notes === 'string' && notes.trim()) body.notes = notes.trim();
+
+    const response = await this.request<{ advertiser: any }>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(advertiser),
+      body: JSON.stringify(body),
     });
     return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
