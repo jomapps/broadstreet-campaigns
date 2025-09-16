@@ -23,6 +23,20 @@ Advertisements are children of Advertisers.
 - we may create local advertisers. they will not have an id, being local. so we just use the mongodb _id. later the sync will update the id.
 - we may create local campaigns. they will not have an id, being local. so we just use the mongodb _id. later the sync will update the id.
 
+**CRITICAL: LOCAL-ONLY ENTITIES AND MONGODB IDS**
+- **Local-only entities are NOT synced back to Broadstreet** until explicitly uploaded via "Local-Only > Upload to Broadstreet"
+- **Local entities use MongoDB ObjectIds** instead of Broadstreet numeric IDs:
+  - Local campaigns: `campaign_mongo_id` (string) instead of `campaign_id` (number)
+  - Local zones: `zone_mongo_id` (string) instead of `zone_id` (number)
+  - Local advertisers: `advertiser_mongo_id` (string) instead of `advertiser_id` (number)
+- **Placements in local campaigns** may reference:
+  - `advertisement_id` (number) - Always Broadstreet ID (advertisements are never created locally)
+  - `zone_id` (number) - Broadstreet ID for synced zones
+  - `zone_mongo_id` (string) - MongoDB ObjectId for local-only zones
+  - `campaign_mongo_id` (string) - MongoDB ObjectId of parent local campaign
+- **During sync/upload**: Local MongoDB IDs are resolved to Broadstreet numeric IDs
+- **API filtering**: The `/api/placements` endpoint handles both ID types for proper network filtering
+
 
 ## How to create a placement
 
@@ -177,6 +191,44 @@ await broadstreetAPI.deletePlacement({
   zone_id: 24680,
 });
 ```
+
+## Data Storage Architecture
+
+**Placements are stored as embedded documents within campaigns**, not as standalone collections:
+
+```typescript
+// Campaign document structure
+{
+  _id: ObjectId("68c87250699c8c01f302ee77"),
+  name: "Leo API Campaign 51",
+  network_id: 9396,
+  placements: [  // ← Embedded placement array
+    {
+      advertisement_id: 1143797,        // Always Broadstreet ID
+      zone_id: 175043,                  // Broadstreet ID (if synced zone)
+      zone_mongo_id: "68c123...",       // MongoDB ID (if local zone)
+      restrictions: ["desktop_only"]
+    }
+  ]
+}
+```
+
+**Key Points:**
+- Placements are **attachments to campaigns**, not independent entities
+- The `/api/placements` endpoint extracts placements from all campaign documents
+- Network filtering works by traversing: `placement → zone → network` or `placement → campaign → advertiser → network`
+
+## Troubleshooting Common Issues
+
+**"No placements found" when placements exist:**
+1. **Check zone references**: Placements must have either `zone_id` (number) or `zone_mongo_id` (string)
+2. **Verify network relationships**: Zones must be properly associated with the selected network
+3. **Local vs synced data**: Local zones use `zone_mongo_id`, synced zones use `zone_id`
+
+**Placement filtering fails:**
+- Ensure related entities (zones, campaigns, advertisers) exist and have proper network associations
+- Check that local campaigns have `network_id` set correctly
+- Verify zone lookup maps are populated during API processing
 
 ## Notes
 - Access token must be passed as a query parameter to Broadstreet endpoints.

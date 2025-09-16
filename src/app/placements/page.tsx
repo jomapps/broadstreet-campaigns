@@ -158,7 +158,7 @@ function PlacementsData() {
     );
   }
 
-  return <PlacementsList placements={placements as any} />;
+  return <PlacementsList placements={placements as any} entities={entities} />;
 }
 
 export default function PlacementsPage() {

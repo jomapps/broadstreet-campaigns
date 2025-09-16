@@ -58,6 +58,21 @@ export async function GET(request: NextRequest) {
     if (networkId) (localQuery as any).network_id = parseInt(networkId);
     const localCampaigns = await LocalCampaign.find(localQuery).lean();
 
+    // Debug logging
+    console.log(`[Placements API] Network ID: ${networkId}`);
+    console.log(`[Placements API] Campaign query:`, campaignQuery);
+    console.log(`[Placements API] Found ${campaigns.length} synced campaigns`);
+    console.log(`[Placements API] Local query:`, localQuery);
+    console.log(`[Placements API] Found ${localCampaigns.length} local campaigns`);
+
+    // Log campaign details
+    campaigns.forEach((c: any, i) => {
+      console.log(`[Placements API] Synced Campaign ${i}: ID=${c.id}, name="${c.name}", placements=${c.placements?.length || 0}`);
+    });
+    localCampaigns.forEach((c: any, i) => {
+      console.log(`[Placements API] Local Campaign ${i}: ID=${c._id}, name="${c.name}", placements=${c.placements?.length || 0}`);
+    });
+
     // Additionally, if filtering by network, include all campaigns whose advertiser belongs to that network
     if (networkId) {
       const nid = parseInt(networkId);
@@ -109,10 +124,11 @@ export async function GET(request: NextRequest) {
     // From local campaigns (embedded placements)
     for (const lc of localCampaigns) {
       if (lc.placements && lc.placements.length > 0) {
+        console.log(`[Placements API] Processing local campaign "${lc.name}" with ${lc.placements.length} placements`);
         for (const placement of lc.placements as any[]) {
           const numericId = (lc as any).original_broadstreet_id;
           const mongoId = (lc as any)._id.toString();
-          allPlacements.push({
+          const placementData = {
             advertisement_id: (placement as any).advertisement_id,
             zone_id: (placement as any).zone_id,
             ...(typeof (placement as any).zone_mongo_id === 'string' ? { zone_mongo_id: (placement as any).zone_mongo_id } : {}),
@@ -128,10 +144,14 @@ export async function GET(request: NextRequest) {
               active: (lc as any).active,
               advertiser_id: (lc as any).advertiser_id,
             },
-          });
+          };
+          console.log(`[Placements API] Adding placement:`, placementData);
+          allPlacements.push(placementData);
         }
       }
     }
+
+    console.log(`[Placements API] Total placements collected: ${allPlacements.length}`);
     
     // Deduplicate across synced/local to avoid duplicates. Prefer numeric campaign_id when present; fall back to campaign_mongo_id.
     const seen = new Set<string>();
@@ -144,6 +164,8 @@ export async function GET(request: NextRequest) {
       const key = `${compositeCampaign}-${p.advertisement_id}-${zoneKey}`;
       if (!seen.has(key)) { seen.add(key); deduped.push(p); }
     }
+
+    console.log(`[Placements API] After deduplication: ${deduped.length} placements`);
     
     // Build unique id sets for batch fetching
     const adIds = Array.from(new Set(deduped.map(p => p.advertisement_id)));
@@ -159,14 +181,14 @@ export async function GET(request: NextRequest) {
     
     // Fetch related entities in batches
     const [ads, zones, localZones, campaignsById] = await Promise.all([
-      Advertisement.find({ id: { $in: adIds } }).lean(),
+      Advertisement.find({ broadstreet_id: { $in: adIds } }).lean(),
       Zone.find({ id: { $in: zoneIds } }).lean(),
       (await import('@/lib/models/local-zone')).default.find({ _id: { $in: zoneMongoIds } }).lean(),
       Campaign.find({ id: { $in: campaignIds } }).lean(),
     ]);
-    
+
     // Build lookup maps
-    const adMap = new Map<number, any>(ads.map((a: any) => [a.id, a]));
+    const adMap = new Map<number, any>(ads.map((a: any) => [a.broadstreet_id, a]));
     const zoneMap = new Map<number, any>(zones.map((z: any) => [z.id, z]));
     const zoneLocalMap = new Map<string, any>(localZones.map((z: any) => [z._id?.toString?.(), z]));
     const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.id, c]));
@@ -211,23 +233,42 @@ export async function GET(request: NextRequest) {
     const advertiserMap = new Map<number, any>(advertisers.map((a: any) => [a.id, a]));
     const networkMap = new Map<number, any>(networks.map((n: any) => [n.id, n]));
 
+
+
     // Optional filter by networkId using all available maps (after maps are built)
     if (networkId) {
       const nid = parseInt(networkId);
+
+
       filtered = filtered.filter((p: any) => {
         const z = typeof p.zone_id === 'number' ? zoneMap.get(p.zone_id) : undefined;
         const zl = p.zone_mongo_id ? zoneLocalMap.get(String(p.zone_mongo_id)) : undefined;
         const c = typeof p.campaign_id === 'number' ? campaignMap.get(p.campaign_id) : undefined;
         const adv = c && typeof (c as any).advertiser_id === 'number' ? advertiserMap.get((c as any).advertiser_id) : undefined;
+
+        // Get local campaign network if available
+        const localCampaignNetwork = p._localCampaign?.network_id;
+
+        // FIX: If local campaign has network_id undefined but we're filtering by network_id,
+        // and the campaign was found by network_id query, then it should match
+        if (p._localCampaign && p._localCampaign.network_id === undefined && networkId) {
+          p._localCampaign.network_id = parseInt(networkId);
+        }
+
         const networkFromSynced = z?.network_id;
         const networkFromLocal = zl?.network_id;
         const networkFromCampaign = c?.network_id;
         const networkFromAdvertiser = adv?.network_id;
+        // Use the corrected network_id from local campaign
+        const correctedLocalCampaignNetwork = p._localCampaign?.network_id;
+        const networkFromLocalCampaign = typeof correctedLocalCampaignNetwork === 'number' ? correctedLocalCampaignNetwork : undefined;
+
         return (
           (typeof networkFromSynced === 'number' && networkFromSynced === nid) ||
           (typeof networkFromLocal === 'number' && networkFromLocal === nid) ||
           (typeof networkFromCampaign === 'number' && networkFromCampaign === nid) ||
-          (typeof networkFromAdvertiser === 'number' && networkFromAdvertiser === nid)
+          (typeof networkFromAdvertiser === 'number' && networkFromAdvertiser === nid) ||
+          (typeof networkFromLocalCampaign === 'number' && networkFromLocalCampaign === nid)
         );
       });
     }

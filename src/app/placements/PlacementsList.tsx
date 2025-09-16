@@ -4,6 +4,16 @@ import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+
+// Client-side version of isLocalEntity to avoid server-side imports
+function isLocalEntity(entity: any): boolean {
+  if (!entity || typeof entity !== 'object') return false;
+  if (entity.created_locally === true) return true;
+  const hasMongoId = typeof entity.mongo_id === 'string' || typeof entity._id === 'string';
+  const hasBroadstreetId = typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number';
+  return hasMongoId && !hasBroadstreetId;
+}
 
 // Type for enriched placement data
 type PlacementLean = {
@@ -16,31 +26,36 @@ type PlacementLean = {
   createdAt: string;
   updatedAt: string;
   advertisement?: {
-    ids: { broadstreet_id?: number; mongo_id?: string };
+    broadstreet_id: number;  // Always present - synced entity
+    mongo_id: string;        // Also has mongo_id from local DB storage
     name: string;
     type: string;
-    preview_url: string;
+    preview_url: string;     // Always present - 100% have image
   } | null;
   campaign?: {
-    ids: { broadstreet_id?: number; mongo_id?: string };
+    broadstreet_id?: number;
+    mongo_id?: string;
     name: string;
     start_date: string;
     end_date?: string;
     active: boolean;
   } | null;
   zone?: {
-    ids: { broadstreet_id?: number; mongo_id?: string };
+    broadstreet_id?: number;
+    mongo_id?: string;
     name: string;
     alias?: string | null;
     size_type?: 'SQ' | 'PT' | 'LS' | null;
     size_number?: number | null;
   } | null;
   advertiser?: {
-    ids: { broadstreet_id?: number; mongo_id?: string };
+    broadstreet_id?: number;
+    mongo_id?: string;
     name: string;
   } | null;
   network?: {
-    ids: { broadstreet_id?: number; mongo_id?: string };
+    broadstreet_id: number;  // Always present - synced entity
+    mongo_id: string;        // Also has mongo_id from local DB storage
     name: string;
   } | null;
 };
@@ -57,24 +72,39 @@ function PlacementCard({ placement }: PlacementCardProps) {
   const isActive = placement.campaign?.active &&
     startDate && startDate <= now &&
     (!endDate || endDate >= now);
-  
+
+  // Determine if any of the related entities are local
+  // NOTE: Advertisements and Networks are NEVER local-only - they're always synced entities
+  const isLocalCampaign = placement.campaign ? isLocalEntity(placement.campaign) : false;
+  const isLocalZone = placement.zone ? isLocalEntity(placement.zone) : false;
+  const isLocalAdvertiser = placement.advertiser ? isLocalEntity(placement.advertiser) : false;
+
+  // Consider the placement "local" if any of its key entities are local
+  // (excluding advertisements and networks which are never local-only)
+  const isLocal = isLocalCampaign || isLocalZone;
+
   return (
     <div
-      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+      className={`rounded-lg shadow-sm border-2 overflow-hidden hover:shadow-md transition-all duration-200 ${cardStateClasses({ isLocal, isSelected: false })}`}
       data-testid={`placement-card`}
       data-placement-id={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
     >
       {/* Thumbnail and title */}
       <div className="relative h-36 bg-gray-50 border-b border-gray-100">
-        {placement.advertisement?.preview_url ? (
+        {placement.advertisement?.preview_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={placement.advertisement.preview_url}
             alt={`Preview of ${placement.advertisement.name}`}
             className="w-full h-full object-cover"
           />
-        ) : null}
-        <div className="absolute top-2 right-2">
+        )}
+        <div className="absolute top-2 right-2 flex flex-col gap-1">
+          {isLocal && (
+            <Badge className="text-xs bg-orange-500 text-white px-2 py-0.5">
+              🏠 Local
+            </Badge>
+          )}
           {isActive ? (
             <Badge variant="default" className="text-xs bg-green-100 text-green-800 px-2 py-0.5">
               Active
@@ -90,33 +120,46 @@ function PlacementCard({ placement }: PlacementCardProps) {
       <div className="p-4 space-y-3">
         <div className="min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
-              {placement.advertisement?.name || `Advertisement`}
-            </h3>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
+                {placement.advertisement?.name || `Advertisement ${placement.advertisement_id}`}
+              </h3>
+              {/* Advertisements are never local-only - always synced entities */}
+            </div>
             {placement.advertisement && (
               <EntityIdBadge
-                broadstreet_id={placement.advertisement.ids?.broadstreet_id}
-                mongo_id={placement.advertisement.ids?.mongo_id}
+                broadstreet_id={placement.advertisement.broadstreet_id}
+                mongo_id={placement.advertisement.mongo_id}
               />
             )}
           </div>
           <p className="card-meta text-gray-500 mt-0.5">
             <span className="inline-flex items-center gap-1">
               {placement.advertiser?.name || 'Advertiser'}
+              {isLocalAdvertiser && (
+                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
+                  Local
+                </Badge>
+              )}
               {placement.advertiser && (
                 <EntityIdBadge
-                  broadstreet_id={placement.advertiser.ids?.broadstreet_id}
-                  mongo_id={placement.advertiser.ids?.mongo_id}
+                  broadstreet_id={placement.advertiser.broadstreet_id}
+                  mongo_id={placement.advertiser.mongo_id}
                 />
               )}
             </span>
             {' • '}
             <span className="inline-flex items-center gap-1">
-              {placement.campaign?.name || 'Campaign'}
+              {placement.campaign?.name || `Campaign ${placement.campaign_id}`}
+              {isLocalCampaign && (
+                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
+                  Local
+                </Badge>
+              )}
               {placement.campaign && (
                 <EntityIdBadge
-                  broadstreet_id={placement.campaign.ids?.broadstreet_id}
-                  mongo_id={placement.campaign.ids?.mongo_id}
+                  broadstreet_id={placement.campaign.broadstreet_id}
+                  mongo_id={placement.campaign.mongo_id}
                 />
               )}
             </span>
@@ -127,11 +170,16 @@ function PlacementCard({ placement }: PlacementCardProps) {
           <div className="flex items-center justify-between card-text">
             <span className="text-gray-500">Zone</span>
             <span className="font-medium text-gray-900 inline-flex items-center gap-2">
-              {placement.zone?.name || 'Zone'}
+              {placement.zone?.name || `Zone ${placement.zone_id}`}
+              {isLocalZone && (
+                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
+                  Local
+                </Badge>
+              )}
               {placement.zone && (
                 <EntityIdBadge
-                  broadstreet_id={placement.zone.ids?.broadstreet_id}
-                  mongo_id={placement.zone.ids?.mongo_id}
+                  broadstreet_id={placement.zone.broadstreet_id}
+                  mongo_id={placement.zone.mongo_id}
                 />
               )}
               {placement.zone?.alias && (
@@ -196,8 +244,8 @@ function PlacementCard({ placement }: PlacementCardProps) {
             {placement.network?.name || 'Network'}
             {placement.network && (
               <EntityIdBadge
-                broadstreet_id={placement.network.ids?.broadstreet_id}
-                mongo_id={placement.network.ids?.mongo_id}
+                broadstreet_id={placement.network.broadstreet_id}
+                mongo_id={placement.network.mongo_id}
               />
             )}
           </span>
@@ -212,9 +260,16 @@ function PlacementCard({ placement }: PlacementCardProps) {
 
 interface PlacementsListProps {
   placements: PlacementLean[];
+  entities?: {
+    network: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
+    advertiser: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
+    campaign: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
+    zones: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string }>;
+    advertisements: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string }>;
+  };
 }
 
-export default function PlacementsList({ placements }: PlacementsListProps) {
+export default function PlacementsList({ placements, entities }: PlacementsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredPlacements = useMemo(() => {
@@ -238,9 +293,49 @@ export default function PlacementsList({ placements }: PlacementsListProps) {
   }, [placements, searchTerm]);
 
   if (placements.length === 0) {
+    const filterDetails = [];
+
+    if (entities?.network) {
+      filterDetails.push(`Network: ${entities.network.name} (ID: ${entities.network.ids.broadstreet_id || entities.network.ids.mongo_id})`);
+    }
+
+    if (entities?.advertiser) {
+      filterDetails.push(`Advertiser: ${entities.advertiser.name} (ID: ${entities.advertiser.ids.broadstreet_id || entities.advertiser.ids.mongo_id})`);
+    }
+
+    if (entities?.campaign) {
+      filterDetails.push(`Campaign: ${entities.campaign.name} (ID: ${entities.campaign.ids.broadstreet_id || entities.campaign.ids.mongo_id})`);
+    }
+
+    if (entities?.zones && entities.zones.length > 0) {
+      filterDetails.push(`Zones: ${entities.zones.length} selected`);
+    }
+
+    if (entities?.advertisements && entities.advertisements.length > 0) {
+      filterDetails.push(`Advertisements: ${entities.advertisements.length} selected`);
+    }
+
     return (
       <div className="text-center py-12">
-        <p className="card-text text-gray-500" data-testid="no-placements-message">No placements found for the selected filters. Try syncing data first.</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+          <h3 className="card-title text-blue-800 mb-3">No Placements Found</h3>
+          <p className="card-text text-blue-700 mb-4">
+            No placements match the current filter criteria.
+          </p>
+          {filterDetails.length > 0 && (
+            <div className="text-left">
+              <p className="card-text text-blue-600 font-medium mb-2">Current Filters:</p>
+              <ul className="card-text text-blue-600 space-y-1">
+                {filterDetails.map((detail, index) => (
+                  <li key={index} className="text-sm">• {detail}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="card-text text-blue-500 text-sm mt-4">
+            Try adjusting your filters or check if placements exist for these criteria.
+          </p>
+        </div>
       </div>
     );
   }
