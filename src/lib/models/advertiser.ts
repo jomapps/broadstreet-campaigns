@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface IAdvertiser extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
   name: string;
   logo?: {
     url: string;
@@ -23,7 +26,7 @@ export interface IAdvertiser extends Document {
 }
 
 const AdvertiserSchema = new Schema<IAdvertiser>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
@@ -72,8 +75,38 @@ const AdvertiserSchema = new Schema<IAdvertiser>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
-// Note: id field already has unique: true which creates an index
+// Virtual getters for IDs
+AdvertiserSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// New explicit ID naming per entity
+AdvertiserSchema.virtual('local_advertiser_id').get(function (this: any) {
+  return this._id?.toString();
+});
+AdvertiserSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Relationship aliasing to explicit naming
+AdvertiserSchema.virtual('broadstreet_network_id').get(function (this: any) {
+  return this.network_id;
+});
+
+// Ensure virtuals are present in lean() results
+AdvertiserSchema.plugin(leanVirtuals);
+
+// Temporary static to safely map API payloads
+AdvertiserSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
+
+// Note: broadstreet_id field already has unique: true which creates an index
 
 export default mongoose.models.Advertiser || mongoose.model<IAdvertiser>('Advertiser', AdvertiserSchema);

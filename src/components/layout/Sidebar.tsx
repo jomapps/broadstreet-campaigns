@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import FiltersCard from './FiltersCard';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isCreatePlacementsOpen, setIsCreatePlacementsOpen] = useState(false);
-  const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilters();
+  const entities = useSelectedEntities();
 
-  const canCreatePlacements = !!selectedCampaign && selectedZones.length > 0 && selectedAdvertisements.length > 0;
+  const canCreatePlacements = !!entities.campaign && entities.zones.length > 0 && entities.advertisements.length > 0;
 
   const utilities = useMemo(() => {
     return [
@@ -22,16 +22,16 @@ export default function Sidebar() {
         description: 'Requires: Campaign, Zones, Advertisement',
         action: 'create-placements',
         enabled: canCreatePlacements,
-        disabledReason: !selectedCampaign
+        disabledReason: !entities.campaign
           ? 'Select a campaign'
-          : selectedZones.length === 0
+          : entities.zones.length === 0
           ? 'Select at least one zone'
-          : selectedAdvertisements.length === 0
+          : entities.advertisements.length === 0
           ? 'Select at least one advertisement'
           : undefined,
       },
     ];
-  }, [canCreatePlacements, selectedCampaign, selectedZones.length, selectedAdvertisements.length]);
+  }, [canCreatePlacements, entities.campaign, entities.zones.length, entities.advertisements.length]);
 
   const handleUtilityAction = (action: string) => {
     if (action === 'create-placements') {

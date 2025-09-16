@@ -5,10 +5,11 @@ import { useFilters } from '@/contexts/FilterContext';
 import CreationButton from '@/components/creation/CreationButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for network data from filter context
 type NetworkLean = {
-  id: number;
+  broadstreet_id: number;
   name: string;
   group_id?: number | null;
   web_home_url?: string;
@@ -21,11 +22,16 @@ type NetworkLean = {
 
 interface NetworkCardProps {
   network: NetworkLean;
+  isSelected: boolean;
+  onSelect: (network: NetworkLean) => void;
 }
 
-function NetworkCard({ network }: NetworkCardProps) {
+function NetworkCard({ network, isSelected, onSelect }: NetworkCardProps) {
   return (
-    <Card className="h-full transition-all duration-200 hover:shadow-lg hover:shadow-primary/5 hover:border-primary/20 group-hover:scale-[1.02]">
+    <Card
+      className={`h-full transition-all duration-200 cursor-pointer border-2 ${cardStateClasses({ isLocal: false, isSelected })}`}
+      onClick={() => onSelect(network)}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -42,7 +48,7 @@ function NetworkCard({ network }: NetworkCardProps) {
             )}
             <div>
               <CardTitle className="card-title">{network.name}</CardTitle>
-              <CardDescription className="card-meta">ID: {network.id}</CardDescription>
+              <CardDescription className="card-meta">BS ID: {network.broadstreet_id}</CardDescription>
             </div>
           </div>
           
@@ -115,7 +121,7 @@ function LoadingSkeleton() {
 }
 
 function NetworksList() {
-  const { networks, isLoadingNetworks } = useFilters();
+  const { networks, isLoadingNetworks, selectedNetwork, setSelectedNetwork } = useFilters();
 
   if (isLoadingNetworks) {
     return <LoadingSkeleton />;
@@ -132,7 +138,18 @@ function NetworksList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {networks.map((network) => (
-        <NetworkCard key={network.id} network={network} />
+        <NetworkCard
+          key={network.broadstreet_id}
+          network={network}
+          isSelected={(selectedNetwork as any)?.broadstreet_id === network.broadstreet_id}
+          onSelect={(n) => {
+            if ((selectedNetwork as any)?.broadstreet_id === (n as any).broadstreet_id) {
+              setSelectedNetwork(null);
+            } else {
+              setSelectedNetwork(n as any);
+            }
+          }}
+        />
       ))}
     </div>
   );
@@ -152,7 +169,7 @@ export default function NetworksPage() {
           </div>
           
           <Suspense fallback={<div className="bg-muted animate-pulse h-10 w-32 rounded-lg"></div>}>
-            <CreationButton entityType="network" />
+            <CreationButton />
           </Suspense>
         </div>
       </div>

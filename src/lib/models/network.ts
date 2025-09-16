@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface INetwork extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
   name: string;
   group_id?: number | null;
   web_home_url?: string;
@@ -23,7 +26,7 @@ export interface INetwork extends Document {
 }
 
 const NetworkSchema = new Schema<INetwork>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
@@ -78,8 +81,33 @@ const NetworkSchema = new Schema<INetwork>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
-// Note: id field already has unique: true which creates an index
+// Note: broadstreet_id field already has unique: true which creates an index
+
+// Virtual getters for IDs
+NetworkSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// New explicit ID naming per entity
+NetworkSchema.virtual('local_network_id').get(function (this: any) {
+  return this._id?.toString();
+});
+NetworkSchema.virtual('broadstreet_network_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Ensure virtuals are present in lean() results
+NetworkSchema.plugin(leanVirtuals);
+
+// Temporary static to safely map API payloads
+NetworkSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
 
 export default mongoose.models.Network || mongoose.model<INetwork>('Network', NetworkSchema);

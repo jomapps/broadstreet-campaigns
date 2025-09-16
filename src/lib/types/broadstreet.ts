@@ -1,7 +1,8 @@
 // Broadstreet API Types based on API specification
 
 export interface Network {
-  id: number;
+  broadstreet_id: number;
+  mongo_id?: string;
   name: string;
   group_id?: number | null;
   web_home_url?: string;
@@ -15,7 +16,8 @@ export interface Network {
 }
 
 export interface Advertiser {
-  id: number;
+  broadstreet_id: number;
+  mongo_id?: string;
   name: string;
   logo?: {
     url: string;
@@ -29,7 +31,8 @@ export interface Advertiser {
 }
 
 export interface Zone {
-  id: number;
+  broadstreet_id: number;
+  mongo_id?: string;
   name: string;
   network_id: number;
   alias?: string | null;
@@ -37,7 +40,8 @@ export interface Zone {
 }
 
 export interface Campaign {
-  id: number;
+  broadstreet_id: number;
+  mongo_id?: string;
   name: string;
   advertiser_id: number;
   start_date: string;
@@ -55,7 +59,8 @@ export interface Campaign {
 }
 
 export interface Advertisement {
-  id: number;
+  broadstreet_id: number;
+  mongo_id?: string;
   name: string;
   updated_at: string;
   type: string;
@@ -76,27 +81,27 @@ export interface Placement {
 
 // API Response Types
 export interface NetworksResponse {
-  networks: Network[];
+  networks: any[];
 }
 
 export interface AdvertisersResponse {
-  advertisers: Advertiser[];
+  advertisers: any[];
 }
 
 export interface ZonesResponse {
-  zones: Zone[];
+  zones: any[];
 }
 
 export interface CampaignsResponse {
-  campaigns: Campaign[];
+  campaigns: any[];
 }
 
 export interface AdvertisementsResponse {
-  advertisements: Advertisement[];
+  advertisements: any[];
 }
 
 export interface PlacementsResponse {
-  placement: Placement;
+  placement: any;
 }
 
 // Zone Size Types

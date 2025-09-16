@@ -16,10 +16,9 @@ export default function QuickActions() {
 
   const handleSyncComplete = (success: boolean) => {
     if (success) {
-      // Reload the page to show updated data
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
+      // Refresh server components so stats update immediately
+      router.refresh();
+      setShowSyncProgress(false);
     }
   };
 

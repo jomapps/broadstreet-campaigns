@@ -27,11 +27,6 @@ export async function POST(request: NextRequest) {
 
     // Perform dry run first
     const dryRun = await syncService.dryRunSync(networkId);
-    console.log('[local-all] Dry run result:', {
-      valid: (dryRun as any)?.valid,
-      warnings: (dryRun as any)?.warnings?.length || 0,
-      errors: (dryRun as any)?.errors?.length || 0,
-    });
     
     if (!dryRun.valid) {
       return NextResponse.json({
@@ -47,29 +42,24 @@ export async function POST(request: NextRequest) {
       LocalZone.countDocuments({ network_id: networkId, synced_with_api: false }),
       LocalCampaign.countDocuments({ network_id: networkId, synced_with_api: false }),
     ]);
-    console.log('[local-all] Direct unsynced counts:', {
-      advertisers: unsyncedAdvCount,
-      zones: unsyncedZoneCount,
-      campaigns: unsyncedCampCount,
-    });
-
     // Perform full sync
-    console.log('[local-all] Starting full sync for networkId:', networkId);
     let syncReport = await syncService.syncAllEntities(networkId);
-    console.log('[local-all] Finished full sync');
 
-    // Fallback: if report shows 0 but we detected unsynced zones, run zone-only sync to surface POST logs
-    if (syncReport.totalEntities === 0 && unsyncedZoneCount > 0) {
-      console.warn('[local-all] Sync report had 0 entities but zones are unsynced; running zone-only sync fallback');
-      const zoneResults = await syncService.syncZones(networkId);
-      const successful = zoneResults.filter(r => r.success).length;
-      const failed = zoneResults.length - successful;
+
+      if (unsyncedCampCount > 0) {
+        console.warn('[local-all] Running campaign-only sync fallback');
+        const campResults = await syncService.syncCampaigns(networkId);
+        fallbackResults.push(...campResults);
+      }
+
+      const successful = fallbackResults.filter(r => r.success).length;
+      const failed = fallbackResults.length - successful;
       syncReport = {
         ...syncReport,
-        totalEntities: zoneResults.length,
+        totalEntities: fallbackResults.length,
         successfulSyncs: syncReport.successfulSyncs + successful,
         failedSyncs: syncReport.failedSyncs + failed,
-        results: [...syncReport.results, ...zoneResults],
+        results: [...syncReport.results, ...fallbackResults],
         success: failed === 0 && syncReport.failedSyncs === 0,
       };
     }
@@ -131,11 +121,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Dry run error:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error' 
+        error: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );

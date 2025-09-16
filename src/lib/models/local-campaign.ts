@@ -1,10 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalCampaign extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
   network_id: number;
-  advertiser_id?: number;
+  advertiser_id?: number | string;
   start_date?: string;
   end_date?: string;
   max_impression_count?: number;
@@ -48,7 +51,7 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
     required: true,
   },
   advertiser_id: {
-    type: Number,
+    type: Schema.Types.Mixed,
     required: true,
   },
   start_date: {
@@ -106,7 +109,12 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
     },
     zone_id: {
       type: Number,
-      required: true,
+      required: false,
+    },
+    // Allow referencing an unsynced local zone via Mongo _id until sync assigns a Broadstreet ID
+    zone_mongo_id: {
+      type: String,
+      required: false,
     },
     restrictions: [{
       type: String,
@@ -138,6 +146,9 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Indexes for performance
@@ -146,4 +157,39 @@ LocalCampaignSchema.index({ advertiser_id: 1 });
 LocalCampaignSchema.index({ created_locally: 1 });
 LocalCampaignSchema.index({ synced_with_api: 1 });
 
-export default mongoose.models.LocalCampaign || mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+// Virtual getters for IDs
+LocalCampaignSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalCampaignSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// New explicit ID naming per entity
+LocalCampaignSchema.virtual('local_campaign_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalCampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+LocalCampaignSchema.plugin(leanVirtuals);
+
+// In dev, Next.js hot-reloads can retain an older compiled model with stale path types.
+// Ensure the model uses the current schema (notably Mixed for advertiser_id) before exporting.
+let LocalCampaignModel: mongoose.Model<ILocalCampaign>;
+try {
+  LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign');
+  const existingPath = (LocalCampaignModel as any).schema?.path('advertiser_id');
+  const isMixed = existingPath && existingPath.instance === 'Mixed';
+  if (!isMixed) {
+    // Recompile with updated schema when type drift is detected
+    delete (mongoose.connection as any).models['LocalCampaign'];
+    LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+  }
+} catch {
+  LocalCampaignModel = mongoose.model<ILocalCampaign>('LocalCampaign', LocalCampaignSchema);
+}
+
+export default LocalCampaignModel;

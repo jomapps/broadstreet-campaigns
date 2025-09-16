@@ -1,6 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalAdvertiser extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
   network_id: number;
@@ -87,11 +90,33 @@ const LocalAdvertiserSchema = new Schema<ILocalAdvertiser>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Indexes for performance
 LocalAdvertiserSchema.index({ network_id: 1, name: 1 }, { unique: true });
 LocalAdvertiserSchema.index({ created_locally: 1 });
 LocalAdvertiserSchema.index({ synced_with_api: 1 });
+
+// Virtual getters for IDs
+LocalAdvertiserSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalAdvertiserSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// New explicit ID naming per entity
+LocalAdvertiserSchema.virtual('local_advertiser_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalAdvertiserSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+LocalAdvertiserSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalAdvertiser || mongoose.model<ILocalAdvertiser>('LocalAdvertiser', LocalAdvertiserSchema);

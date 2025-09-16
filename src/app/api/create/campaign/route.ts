@@ -11,29 +11,52 @@ export async function POST(request: NextRequest) {
       name,
       network_id,
       advertiser_id,
+      advertiser, // optional { broadstreet_id?: number; mongo_id?: string }
       start_date,
       end_date,
       weight,
       max_impression_count,
       display_type,
       pacing_type,
-      notes
+      impression_max_type,
+      path,
+      notes,
+      active,
+      archived,
+      paused,
     } = body;
 
     // Validate required fields
     if (!name || network_id === undefined || network_id === null || 
-        advertiser_id === undefined || advertiser_id === null || 
+        (advertiser_id === undefined && !advertiser) || 
         !start_date || weight === undefined || weight === null) {
       return NextResponse.json(
-        { message: 'Name, network_id, advertiser_id, start_date, and weight are required' },
+        { message: 'Name, network_id, advertiser (id or object), start_date, and weight are required' },
         { status: 400 }
       );
     }
 
-    // Check if campaign with same name already exists for this advertiser
+    // Resolve normalized advertiser identifier for local storage and duplicate checks
+    const normalizedAdvertiserId: number | string | undefined =
+      typeof advertiser_id === 'number'
+        ? advertiser_id
+        : (advertiser && typeof advertiser.broadstreet_id === 'number')
+          ? advertiser.broadstreet_id
+          : (advertiser && typeof advertiser.mongo_id === 'string')
+            ? advertiser.mongo_id
+            : undefined;
+
+    if (normalizedAdvertiserId === undefined) {
+      return NextResponse.json(
+        { message: 'Unable to resolve advertiser identifier (expected broadstreet_id number or mongo_id string)' },
+        { status: 400 }
+      );
+    }
+
+    // Check if campaign with same name already exists for this advertiser (local duplicate check)
     const existingCampaign = await LocalCampaign.findOne({
       name: name.trim(),
-      advertiser_id: advertiser_id
+      advertiser_id: normalizedAdvertiserId
     });
 
     if (existingCampaign) {
@@ -47,17 +70,19 @@ export async function POST(request: NextRequest) {
     const newCampaign = new LocalCampaign({
       name: name.trim(),
       network_id,
-      advertiser_id,
-      start_date: start_date, // Keep as string for LocalCampaign model
+      advertiser_id: normalizedAdvertiserId,
+      start_date: start_date,
       end_date: end_date || undefined,
       weight,
       max_impression_count: max_impression_count || undefined,
       display_type: display_type || 'no_repeat',
       pacing_type: pacing_type || 'asap',
+      impression_max_type: impression_max_type || undefined,
+      path: path || undefined,
       notes: notes || undefined,
-      active: true,
-      paused: false,
-      archived: false,
+      active: active !== undefined ? !!active : true,
+      paused: paused !== undefined ? !!paused : false,
+      archived: archived !== undefined ? !!archived : false,
       placements: [], // Start with empty placements
       created_locally: true,
       synced_with_api: false,
@@ -80,8 +105,12 @@ export async function POST(request: NextRequest) {
         max_impression_count: newCampaign.max_impression_count,
         display_type: newCampaign.display_type,
         pacing_type: newCampaign.pacing_type,
+        impression_max_type: newCampaign.impression_max_type,
+        path: newCampaign.path,
         notes: newCampaign.notes,
         active: newCampaign.active,
+        archived: newCampaign.archived,
+        paused: newCampaign.paused,
         created_locally: newCampaign.created_locally,
         synced_with_api: newCampaign.synced_with_api,
       }

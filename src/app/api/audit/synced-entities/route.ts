@@ -104,8 +104,8 @@ export async function GET(request: NextRequest) {
         campaigns: totalCampaigns,
         zones: totalZones
       },
-      recent_syncs: allEntities.slice(0, 5).map(entity => ({
-        name: entity.name,
+      recent_syncs: allEntities.slice(0, 5).map((entity: any) => ({
+        name: entity?.name ?? '(unnamed)',
         type: entity.type,
         synced_at: entity.synced_at,
         broadstreet_id: entity.broadstreet_id

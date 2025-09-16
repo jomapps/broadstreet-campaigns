@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface ZoneCreationFormProps {
   onClose: () => void;
@@ -17,12 +19,11 @@ interface ZoneCreationFormProps {
 }
 
 export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreationFormProps) {
-  const { selectedNetwork } = useFilters();
+  const entities = useSelectedEntities();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0, // Will be validated in form submission
     
     // Optional fields - empty by default
     advertisement_count: '',
@@ -75,6 +76,11 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
 
     if (formData.concurrent_campaigns && (isNaN(parseInt(formData.concurrent_campaigns)) || parseInt(formData.concurrent_campaigns) < 0)) {
       newErrors.concurrent_campaigns = 'Concurrent campaigns must be a non-negative number';
+    }
+
+    // Network selection and ID availability validation
+    if (!entities.network) {
+      newErrors.network = 'Network selection is required';
     }
 
     setErrors(newErrors);
@@ -146,19 +152,19 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
       return;
     }
 
-    if (!selectedNetwork) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
       // Build payload with only non-empty optional fields
+      const networkIdValue = getEntityId(entities.network);
       const payload: any = {
         name: formData.name.trim(),
-        network_id: selectedNetwork.id,
+        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network: {
+          broadstreet_id: entities.network?.ids.broadstreet_id,
+          mongo_id: entities.network?.ids.mongo_id,
+        },
       };
 
       // Only add optional fields if they have values
@@ -249,29 +255,22 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
     }
   };
 
-  if (!selectedNetwork) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
-        <p className="text-gray-600 mb-4">
-          Please select a network from the sidebar filters before creating a zone.
-        </p>
-        <Button onClick={onClose} variant="outline">
-          Close
-        </Button>
-      </div>
-    );
-  }
+  
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="zone-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {selectedNetwork.name}
+        <p className="text-sm text-blue-800 flex items-center gap-2">
+          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
         </p>
       </div>
+
+      {errors.network && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-red-600">{errors.network}</p>
+        </div>
+      )}
 
       {/* Top Submit Button */}
       <div className="flex justify-end space-x-3 mb-6">
@@ -280,13 +279,20 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Zone'}
         </Button>
@@ -302,6 +308,7 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
           placeholder="e.g., Top Banner 500x250"
           className={errors.name ? 'border-red-500' : ''}
           required
+          data-testid="zone-name-input"
         />
         {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
       </div>
@@ -533,13 +540,20 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Zone'}
         </Button>

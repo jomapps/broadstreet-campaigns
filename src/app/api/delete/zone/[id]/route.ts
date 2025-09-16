@@ -5,12 +5,12 @@ import Zone from '@/lib/models/zone';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await context.params;
 
     let deletedZone = null;
     let zoneType = '';

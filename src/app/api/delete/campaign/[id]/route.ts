@@ -4,12 +4,12 @@ import LocalCampaign from '@/lib/models/local-campaign';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
 
-    const { id } = params;
+    const { id } = await context.params;
 
     // Find and delete the local campaign
     const deletedCampaign = await LocalCampaign.findByIdAndDelete(id);

@@ -1,8 +1,10 @@
 'use client';
 
 import { Suspense, useState, useEffect } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import PlacementsList from './PlacementsList';
+import { Button } from '@/components/ui/button';
+import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 
 // Type for enriched placement data
 type PlacementLean = {
@@ -83,35 +85,34 @@ function LoadingSkeleton() {
 }
 
 function PlacementsData() {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign } = useFilters();
+  const entities = useSelectedEntities();
   const [placements, setPlacements] = useState<PlacementLean[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchPlacements = async () => {
-      if (!selectedNetwork) {
-        setPlacements([]);
-        return;
-      }
-
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        params.append('network_id', selectedNetwork.id.toString());
-        
-        if (selectedAdvertiser) {
-          params.append('advertiser_id', selectedAdvertiser.id.toString());
+        // If network is selected, prefer narrowing by network; otherwise, fetch with a hard limit
+        if (entities.network?.ids.broadstreet_id != null) {
+          params.append('network_id', String(entities.network.ids.broadstreet_id));
+        } else {
+          params.append('limit', '200');
         }
         
-        if (selectedCampaign) {
-          if (typeof (selectedCampaign as any).id === 'number') {
-            params.append('campaign_id', (selectedCampaign as any).id.toString());
-          } else if ((selectedCampaign as any)._id) {
-            params.append('campaign_mongo_id', (selectedCampaign as any)._id);
-          }
+        if (entities.advertiser?.ids.broadstreet_id != null) {
+          params.append('advertiser_id', String(entities.advertiser.ids.broadstreet_id));
+        }
+        
+        if (entities.campaign) {
+          const mongoId = entities.campaign.ids.mongo_id;
+          const bsId = entities.campaign.ids.broadstreet_id;
+          if (mongoId) params.append('campaign_mongo_id', mongoId);
+          else if (bsId != null) params.append('campaign_id', String(bsId));
         }
 
-        const response = await fetch(`/api/placements?${params.toString()}`);
+        const response = await fetch(`/api/placements?${params.toString()}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           // API contract: {success, placements} - verify success and use placements array
@@ -134,14 +135,14 @@ function PlacementsData() {
     };
 
     fetchPlacements();
-  }, [selectedNetwork, selectedAdvertiser, selectedCampaign]);
+  }, [entities.network, entities.advertiser, entities.campaign]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
   }
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -157,12 +158,22 @@ function PlacementsData() {
     );
   }
 
-  return <PlacementsList placements={placements as any} />;
+  return <PlacementsList placements={placements as any} entities={entities} />;
 }
 
 export default function PlacementsPage() {
+  const entities = useSelectedEntities();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const canCreatePlacements = Boolean(
+    entities.network &&
+    entities.campaign &&
+    entities.advertisements.length > 0 &&
+    entities.zones.length > 0
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="placements-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Placements</h1>
@@ -170,10 +181,18 @@ export default function PlacementsPage() {
             Active ad placements across campaigns, advertisements, and zones
           </p>
         </div>
-        
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            disabled={!canCreatePlacements}
+            aria-disabled={!canCreatePlacements}
+          >
+            Create Placements
+          </Button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-testid="placements-overview">
         <h2 className="card-title text-gray-900 mb-3">Placement Overview</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 card-text">
           <div className="flex items-center space-x-2">
@@ -192,8 +211,15 @@ export default function PlacementsPage() {
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <PlacementsData />
+        <div data-testid="placements-data">
+          <PlacementsData />
+        </div>
       </Suspense>
+
+      <CreatePlacementsModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+      />
     </div>
   );
 }

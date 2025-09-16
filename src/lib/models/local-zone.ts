@@ -1,6 +1,9 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface ILocalZone extends Document {
+  mongo_id: string;
+  broadstreet_id?: number;
   // Core Broadstreet API fields
   name: string;
   network_id: number;
@@ -124,12 +127,38 @@ const LocalZoneSchema = new Schema<ILocalZone>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
-// Indexes for performance
-LocalZoneSchema.index({ network_id: 1, name: 1 }, { unique: true });
-LocalZoneSchema.index({ network_id: 1, alias: 1 }, { unique: true, sparse: true });
+// Indexes for performance (names can be duplicated per requirements)
+LocalZoneSchema.index({ network_id: 1, name: 1 }, { unique: false });
+// Only enforce alias uniqueness when alias is a defined string
+LocalZoneSchema.index(
+  { network_id: 1, alias: 1 },
+  { unique: true, partialFilterExpression: { alias: { $exists: true, $type: 'string' } } }
+);
 LocalZoneSchema.index({ created_locally: 1 });
 LocalZoneSchema.index({ synced_with_api: 1 });
+
+// Virtual getters for IDs
+LocalZoneSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalZoneSchema.virtual('broadstreet_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// New explicit ID naming per entity
+LocalZoneSchema.virtual('local_zone_id').get(function (this: any) {
+  return this._id?.toString();
+});
+LocalZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
+  return this.original_broadstreet_id ?? undefined;
+});
+
+// Ensure virtuals are present in lean() results
+LocalZoneSchema.plugin(leanVirtuals);
 
 export default mongoose.models.LocalZone || mongoose.model<ILocalZone>('LocalZone', LocalZoneSchema);

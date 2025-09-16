@@ -2,7 +2,9 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for serialized advertisement data (plain object without Mongoose methods)
 type AdvertisementLean = {
@@ -20,6 +22,8 @@ type AdvertisementLean = {
   preview_url: string;
   createdAt: string;
   updatedAt: string;
+  created_locally?: boolean;
+  synced_with_api?: boolean;
 };
 
 interface AdvertisementCardProps {
@@ -30,20 +34,17 @@ interface AdvertisementCardProps {
 
 function AdvertisementCard({ advertisement, isSelected = false, onToggleSelection }: AdvertisementCardProps) {
   const updatedDate = new Date(advertisement.updated_at);
+  const isLocal = (advertisement as any).created_locally && !(advertisement as any).synced_with_api;
 
   const handleCardClick = () => {
     if (onToggleSelection) {
-      onToggleSelection(advertisement._id);
+      onToggleSelection(String(advertisement.id));
     }
   };
   
   return (
     <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${
-        isSelected
-          ? 'border-blue-400 bg-blue-50 shadow-blue-200 hover:shadow-blue-300'
-          : 'border-gray-200 bg-white hover:shadow-gray-300'
-      }`}
+      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal, isSelected })}`}
       onClick={handleCardClick}
     >
       <div className="flex items-start justify-between mb-4">
@@ -56,6 +57,11 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           {isSelected && (
             <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
               ✓ Selected
+            </span>
+          )}
+          {isLocal && (
+            <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 font-semibold">
+              Local
             </span>
           )}
           <span className={`px-2 py-1 text-xs rounded-full ${
@@ -102,6 +108,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded card-text font-medium transition-colors duration-200"
+          onClick={(e) => e.stopPropagation()}
         >
           Preview
         </a>
@@ -127,7 +134,8 @@ export default function AdvertisementsList({
   onSearchChange,
   filteredAdvertisements
 }: AdvertisementsListProps) {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, toggleAdvertisementSelection } = useFilters();
+  const entities = useSelectedEntities();
+  const { toggleAdvertisementSelection } = useFilters();
   const [localSearchTerm, setLocalSearchTerm] = useState('');
 
   // Use provided search term or local one
@@ -138,7 +146,7 @@ export default function AdvertisementsList({
   const displayAdvertisements = filteredAdvertisements || advertisements;
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -155,7 +163,7 @@ export default function AdvertisementsList({
   }
 
   // Check if advertiser is selected
-  if (!selectedAdvertiser) {
+  if (!entities.advertiser) {
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
@@ -196,14 +204,17 @@ export default function AdvertisementsList({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayAdvertisements.map((advertisement) => (
-            <AdvertisementCard 
-              key={advertisement.id} 
-              advertisement={advertisement}
-              isSelected={selectedAdvertisements.includes(advertisement._id)}
-              onToggleSelection={toggleAdvertisementSelection}
-            />
-          ))}
+          {displayAdvertisements.map((advertisement) => {
+            const selectionId = String((advertisement as any).id ?? (advertisement as any)._id);
+            return (
+              <AdvertisementCard 
+                key={advertisement._id || String(advertisement.id)} 
+                advertisement={advertisement}
+                isSelected={selectedAdvertisements.includes(selectionId)}
+                onToggleSelection={() => toggleAdvertisementSelection(selectionId)}
+              />
+            );
+          })}
         </div>
       )}
     </div>

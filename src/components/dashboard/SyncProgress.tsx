@@ -28,6 +28,16 @@ const SYNC_STEPS: Omit<SyncStep, 'status' | 'progress' | 'count' | 'error'>[] = 
   { name: 'Placements' },
 ];
 
+// Explicit mapping from displayed step names to response keys
+const STEP_KEY_BY_NAME: Record<string, string> = {
+  Networks: 'networks',
+  Advertisers: 'advertisers',
+  Zones: 'zones',
+  Campaigns: 'campaigns',
+  Advertisements: 'advertisements',
+  Placements: 'placements',
+};
+
 export default function SyncProgress({ onComplete, onClose }: SyncProgressProps) {
   const [steps, setSteps] = useState<SyncStep[]>(
     SYNC_STEPS.map(step => ({
@@ -89,61 +99,74 @@ export default function SyncProgress({ onComplete, onClose }: SyncProgressProps)
     setOverallProgress(0);
 
     try {
-      // Start the sync process - this is where the 20s delay happens
-      const response = await fetch('/api/sync/all', { method: 'POST' });
-      const result = await response.json();
+      // Use full sync endpoint (no network selection required)
+      const response = await fetch('/api/sync/all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      // Robust body parsing: prefer JSON, fallback to raw text
+      const rawText = await response.text();
+      let result: any = null;
+      try {
+        result = rawText ? JSON.parse(rawText) : null;
+      } catch (_) {
+        result = null;
+      }
       
       // Hide spinner once we get the API response
       setIsInitializing(false);
 
-      if (result.success) {
-        // Simulate progress for each step
-        for (let i = 0; i < steps.length; i++) {
-          const stepName = steps[i].name.toLowerCase();
-          const stepResult = result.results[stepName];
-          
-          // Mark step as in progress
-          setSteps(prev => prev.map((step, index) => 
-            index === i ? { ...step, status: 'in_progress', progress: 0 } : step
-          ));
+      const success = response.ok && !!(result && result.success === true);
 
-          // Simulate progress animation
-          for (let progress = 0; progress <= 100; progress += 20) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            setSteps(prev => prev.map((step, index) => 
-              index === i ? { ...step, progress } : step
-            ));
-          }
+      if (success) {
+        // Map counts from full sync response
+        const countsByStep: Record<string, number> = {
+          networks: Number(result?.results?.networks?.count) || 0,
+          advertisers: Number(result?.results?.advertisers?.count) || 0,
+          zones: Number(result?.results?.zones?.count) || 0,
+          campaigns: Number(result?.results?.campaigns?.count) || 0,
+          advertisements: Number(result?.results?.advertisements?.count) || 0,
+          placements: Number(result?.results?.placements?.count) || 0,
+        };
 
-          // Mark step as completed
-          setSteps(prev => prev.map((step, index) => 
-            index === i ? {
-              ...step,
-              status: 'completed',
-              progress: 100,
-              count: stepResult?.count || 0,
-            } : step
-          ));
-        }
-        
-        setOverallProgress(100);
-        onComplete(true);
-      } else {
-        // Mark failed steps as error
+        // Use API results per step directly
         setSteps(prev => prev.map(step => {
-          const stepResult = result.results[step.name.toLowerCase()];
+          const key = STEP_KEY_BY_NAME[step.name];
+          const entity = (result?.results || {})[key] || {};
+          const entitySuccess = !!entity.success;
           return {
             ...step,
-            status: stepResult?.success ? 'completed' : 'error',
-            progress: stepResult?.success ? 100 : 0,
-            count: stepResult?.count || 0,
-            error: stepResult?.error,
+            status: entitySuccess ? 'completed' : 'error',
+            progress: entitySuccess ? 100 : 0,
+            count: countsByStep[key] ?? 0,
+            error: entitySuccess ? undefined : (entity?.error as string | undefined),
+          };
+        }));
+
+        setOverallProgress(result?.overallSuccess === false ? 0 : 100);
+        onComplete(result?.overallSuccess !== false);
+      } else {
+        // Handle error shape for full sync: report per-entity failures when available
+        const syncResults = (result && result.results) ? result.results : {};
+        setSteps(prev => prev.map(step => {
+          const stepKey = STEP_KEY_BY_NAME[step.name] || '';
+          const entityResult = (syncResults as any)?.[stepKey];
+          const entitySucceeded = entityResult?.success === true;
+          const entityFailed = entityResult?.success === false;
+          const entityCount = Number(entityResult?.count) || 0;
+          return {
+            ...step,
+            status: entitySucceeded ? 'completed' : (entityFailed ? 'error' : 'pending'),
+            progress: entitySucceeded ? 100 : 0,
+            error: entityFailed ? ((entityResult?.error as string) || (result?.message as string) || rawText || 'Sync failed') : undefined,
+            count: entityCount,
           };
         }));
         onComplete(false);
       }
     } catch (error) {
       // Mark all steps as error
+      setIsInitializing(false);
       setSteps(prev => prev.map(step => ({
         ...step,
         status: 'error',

@@ -2,18 +2,18 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 
 export default function PlacementActions() {
-  const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilters();
+  const entities = useSelectedEntities();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const handleOpenCreate = () => {
     setIsCreateOpen(true);
   };
 
-  const canCreate = !!selectedCampaign && selectedZones.length > 0 && selectedAdvertisements.length > 0;
+  const canCreate = !!entities.campaign && entities.zones.length > 0 && entities.advertisements.length > 0;
 
   return (
     <div className="flex space-x-3">

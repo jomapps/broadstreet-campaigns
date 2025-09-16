@@ -1,7 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface IAdvertisement extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
+  network_id?: number;
   name: string;
   updated_at: string;
   type: string;
@@ -22,10 +26,13 @@ export interface IAdvertisement extends Document {
 }
 
 const AdvertisementSchema = new Schema<IAdvertisement>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
+  },
+  network_id: {
+    type: Number,
   },
   name: {
     type: String,
@@ -77,12 +84,44 @@ const AdvertisementSchema = new Schema<IAdvertisement>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Create indexes for faster queries
-// Note: id field already has unique: true which creates an index
+// Note: broadstreet_id field already has unique: true which creates an index
 AdvertisementSchema.index({ advertiser: 1 });
 AdvertisementSchema.index({ type: 1 });
 AdvertisementSchema.index({ active_placement: 1 });
+AdvertisementSchema.index({ network_id: 1 });
+
+// Virtual getters for IDs
+AdvertisementSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// New explicit ID naming per entity
+AdvertisementSchema.virtual('local_advertisement_id').get(function (this: any) {
+  return this._id?.toString();
+});
+AdvertisementSchema.virtual('broadstreet_advertisement_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Relationship aliasing to explicit naming
+AdvertisementSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
+  // The advertisement model has advertiser as string field; no numeric relation stored.
+  return undefined;
+});
+
+// Ensure virtuals are present in lean() results
+AdvertisementSchema.plugin(leanVirtuals);
+
+// Temporary static to safely map API payloads
+AdvertisementSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
 
 export default mongoose.models.Advertisement || mongoose.model<IAdvertisement>('Advertisement', AdvertisementSchema);

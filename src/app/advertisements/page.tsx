@@ -64,7 +64,8 @@ async function AdvertisementsData() {
   const serializedAdvertisements = advertisements.map(advertisement => ({
     _id: advertisement._id.toString(),
     __v: advertisement.__v,
-    id: advertisement.id,
+    // Ensure UI uses Broadstreet numeric ID
+    id: (advertisement as any).broadstreet_id,
     name: advertisement.name,
     updated_at: advertisement.updated_at,
     type: advertisement.type,
@@ -91,7 +92,7 @@ export default function AdvertisementsPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="advertisement" />
+          <CreationButton />
         </Suspense>
       </div>
 

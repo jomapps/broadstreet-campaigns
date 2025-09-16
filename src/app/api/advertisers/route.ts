@@ -28,29 +28,43 @@ export async function GET(request: NextRequest) {
       }).sort({ name: 1 }).lean(),
       
       // Get all local advertisers for this network
+      // Include local advertisers regardless of sync state; rely on original_broadstreet_id when present
       LocalAdvertiser.find({ 
-        network_id: parseInt(networkId),
-        synced_with_api: false 
+        network_id: parseInt(networkId)
       }).sort({ name: 1 }).lean()
     ]);
     
-    // Convert local advertisers to the same format as main advertisers for display
-    const convertedLocalAdvertisers = localAdvertisers.map(local => ({
-      id: local._id.toString(), // Use _id as id for local advertisers
-      name: local.name,
-      network_id: local.network_id,
-      web_home_url: local.web_home_url,
-      notes: local.notes,
-      admins: local.admins,
-      created_locally: local.created_locally,
-      synced_with_api: local.synced_with_api,
-      created_at: local.created_at,
-      _id: local._id,
-      sync_errors: local.sync_errors,
-    }));
+    // Shape synced advertisers to expose explicit ID fields
+    const shapedSyncedAdvertisers = (syncedAdvertisers as any[]).map((adv: any) => {
+      const { id: broadstreetId, _id, ...rest } = adv;
+      return {
+        ...rest,
+        ...(typeof broadstreetId === 'number' ? { broadstreet_id: broadstreetId } : {}),
+        mongo_id: _id?.toString?.() ?? String(_id),
+        // Explicit names
+        ...(typeof broadstreetId === 'number' ? { broadstreet_advertiser_id: broadstreetId } : {}),
+        local_advertiser_id: _id?.toString?.() ?? String(_id),
+      };
+    });
+
+    // Convert local advertisers and expose mongo_id (and optional broadstreet_id if synced previously)
+    const convertedLocalAdvertisers = (localAdvertisers as any[]).map((local: any) => {
+      const { _id, original_broadstreet_id, ...rest } = local;
+      const shaped: any = {
+        ...rest,
+        mongo_id: _id?.toString?.() ?? String(_id),
+        local_advertiser_id: _id?.toString?.() ?? String(_id),
+      };
+      if (typeof original_broadstreet_id === 'number') {
+        shaped.broadstreet_id = original_broadstreet_id;
+        shaped.broadstreet_advertiser_id = original_broadstreet_id;
+      }
+      return shaped;
+    });
     
-    // Combine both collections
-    const advertisers = [...syncedAdvertisers, ...convertedLocalAdvertisers].sort((a, b) => a.name.localeCompare(b.name));
+    // Combine both collections with explicit IDs only
+    const advertisers = [...shapedSyncedAdvertisers, ...convertedLocalAdvertisers]
+      .sort((a: any, b: any) => a.name.localeCompare(b.name));
     
     return NextResponse.json({ advertisers });
   } catch (error) {

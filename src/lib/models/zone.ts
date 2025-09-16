@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface IZone extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
   name: string;
   network_id: number;
   alias?: string | null;
@@ -22,7 +25,7 @@ export interface IZone extends Document {
 }
 
 const ZoneSchema = new Schema<IZone>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
@@ -82,12 +85,42 @@ const ZoneSchema = new Schema<IZone>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Create indexes for faster queries
-// Note: id field already has unique: true which creates an index
+// Note: broadstreet_id field already has unique: true which creates an index
 ZoneSchema.index({ network_id: 1 });
 ZoneSchema.index({ size_type: 1 });
 ZoneSchema.index({ category: 1 });
+
+// Virtual getters for IDs
+ZoneSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// New explicit ID naming per entity
+ZoneSchema.virtual('local_zone_id').get(function (this: any) {
+  return this._id?.toString();
+});
+ZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Relationship aliasing to explicit naming
+ZoneSchema.virtual('broadstreet_network_id').get(function (this: any) {
+  return this.network_id;
+});
+
+// Ensure virtuals are present in lean() results
+ZoneSchema.plugin(leanVirtuals);
+
+// Temporary static to safely map API payloads
+ZoneSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
 
 export default mongoose.models.Zone || mongoose.model<IZone>('Zone', ZoneSchema);

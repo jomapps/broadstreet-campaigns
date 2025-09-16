@@ -12,14 +12,12 @@ import {
   AdvertisementsResponse,
   PlacementsResponse,
 } from './types/broadstreet';
+import { mapApiIds } from './types/mapApiIds';
 
 const API_BASE_URL = process.env.BROADSTREET_API_BASE_URL || 'https://api.broadstreetads.com/api/1';
 const API_TOKEN = process.env.BROADSTREET_API_TOKEN || '';
 
-// Only warn in runtime, not during build
-if (typeof window !== 'undefined' && (!API_BASE_URL || !API_TOKEN)) {
-  console.warn('Missing Broadstreet API configuration. API calls will fail.');
-}
+// Configuration validation removed for production
 
 class BroadstreetAPI {
   private baseURL: string;
@@ -32,20 +30,8 @@ class BroadstreetAPI {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${this.token}`;
-    const sanitizedUrl = this.token ? url.replace(this.token, '***') : url;
 
-    // Parse body for logging (if any)
-    let parsedBody: any = undefined;
-    try {
-      if (options.body && typeof options.body === 'string') {
-        parsedBody = JSON.parse(options.body as string);
-      }
-    } catch (_) {
-      parsedBody = options.body;
-    }
 
-    const method = (options.method || 'GET').toUpperCase();
-    console.log('[BroadstreetAPI] Request:', { method, endpoint, url: sanitizedUrl, body: parsedBody });
 
     const response = await fetch(url, {
       ...options,
@@ -59,32 +45,38 @@ class BroadstreetAPI {
     const statusText = response.statusText;
     const responseText = await response.text();
 
+
+
     // Try to parse JSON safely
     let json: any = undefined;
     try {
       json = responseText ? JSON.parse(responseText) : undefined;
-    } catch (_) {
+    } catch (parseError) {
       json = undefined;
     }
 
     if (!response.ok) {
-      console.error('[BroadstreetAPI] Response (error):', { method, endpoint, status, statusText, body: responseText?.slice(0, 1000) });
-      throw new Error(`API request failed: ${status} ${statusText}`);
+      const error: any = new Error(`API request failed: ${status} ${statusText}`);
+      error.status = status;
+      error.statusText = statusText;
+      error.endpoint = endpoint;
+      error.responseText = responseText;
+      throw error;
     }
 
-    console.log('[BroadstreetAPI] Response (ok):', { method, endpoint, status, keys: json ? Object.keys(json) : undefined });
     return json as T;
   }
 
   // Networks
   async getNetworks(): Promise<Network[]> {
     const response = await this.request<NetworksResponse>('/networks');
-    return response.networks;
+    // Map legacy id -> broadstreet_id but keep legacy id for compatibility
+    return response.networks.map((n: any) => mapApiIds(n, { stripId: false })) as unknown as Network[];
   }
 
   async getNetwork(id: number): Promise<Network> {
-    const response = await this.request<{ network: Network }>(`/networks/${id}`);
-    return response.network;
+    const response = await this.request<{ network: any }>(`/networks/${id}`);
+    return mapApiIds(response.network, { stripId: false }) as unknown as Network;
   }
 
   async createNetwork(network: {
@@ -96,22 +88,39 @@ class BroadstreetAPI {
     path?: string;
     notes?: string;
   }): Promise<Network> {
-    const response = await this.request<{ network: Network }>('/networks', {
+    const response = await this.request<{ network: any }>('/networks', {
       method: 'POST',
       body: JSON.stringify(network),
     });
-    return response.network;
+    return mapApiIds(response.network, { stripId: false }) as unknown as Network;
   }
 
   // Advertisers
   async getAdvertisers(networkId: number): Promise<Advertiser[]> {
     const response = await this.request<AdvertisersResponse>(`/advertisers?network_id=${networkId}`);
-    return response.advertisers;
+    return response.advertisers.map((a: any) => mapApiIds(a, { stripId: false })) as unknown as Advertiser[];
   }
 
   async getAdvertiser(id: number): Promise<Advertiser> {
-    const response = await this.request<{ advertiser: Advertiser }>(`/advertisers/${id}`);
-    return response.advertiser;
+    const response = await this.request<{ advertiser: any }>(`/advertisers/${id}`);
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
+  }
+
+  async updateAdvertiser(id: number, advertiser: {
+    name?: string;
+    web_home_url?: string;
+    notes?: string;
+  }): Promise<Advertiser> {
+    const body: any = {};
+    if (typeof advertiser.name === 'string' && advertiser.name.trim()) body.name = advertiser.name.trim();
+    if (typeof advertiser.web_home_url === 'string' && advertiser.web_home_url.trim()) body.web_home_url = advertiser.web_home_url.trim();
+    if (typeof advertiser.notes === 'string') body.notes = advertiser.notes.trim();
+
+    const response = await this.request<{ advertiser: any }>(`/advertisers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
 
   async createAdvertiser(advertiser: {
@@ -122,22 +131,29 @@ class BroadstreetAPI {
     notes?: string;
     admins?: Array<{ name: string; email: string }>;
   }): Promise<Advertiser> {
-    const response = await this.request<{ advertiser: Advertiser }>('/advertisers', {
+    // Per API spec, network_id must be sent as a query parameter; body includes only allowed fields
+    const { network_id, name, web_home_url, notes } = advertiser;
+    const endpoint = `/advertisers?network_id=${encodeURIComponent(network_id)}`;
+    const body: any = { name };
+    if (web_home_url) body.web_home_url = web_home_url;
+    if (typeof notes === 'string' && notes.trim()) body.notes = notes.trim();
+
+    const response = await this.request<{ advertiser: any }>(endpoint, {
       method: 'POST',
-      body: JSON.stringify(advertiser),
+      body: JSON.stringify(body),
     });
-    return response.advertiser;
+    return mapApiIds(response.advertiser, { stripId: false }) as unknown as Advertiser;
   }
 
   // Zones
   async getZones(networkId: number): Promise<Zone[]> {
     const response = await this.request<ZonesResponse>(`/zones?network_id=${networkId}`);
-    return response.zones;
+    return response.zones.map((z: any) => mapApiIds(z, { stripId: false })) as unknown as Zone[];
   }
 
   async getZone(id: number): Promise<Zone> {
-    const response = await this.request<{ zone: Zone }>(`/zones/${id}`);
-    return response.zone;
+    const response = await this.request<{ zone: any }>(`/zones/${id}`);
+    return mapApiIds(response.zone, { stripId: false }) as unknown as Zone;
   }
 
   async createZone(zone: {
@@ -158,27 +174,27 @@ class BroadstreetAPI {
     rss_shuffle?: boolean;
     style?: string;
   }): Promise<Zone> {
-    const response = await this.request<{ zone: Zone }>('/zones', {
+    const response = await this.request<{ zone: any }>('/zones', {
       method: 'POST',
       body: JSON.stringify(zone),
     });
-    return response.zone;
+    return mapApiIds(response.zone, { stripId: false }) as unknown as Zone;
   }
 
   // Campaigns
   async getCampaignsByAdvertiser(advertiserId: number): Promise<Campaign[]> {
     const response = await this.request<CampaignsResponse>(`/campaigns?advertiser_id=${advertiserId}`);
-    return response.campaigns;
+    return response.campaigns.map((c: any) => mapApiIds(c, { stripId: false })) as unknown as Campaign[];
   }
 
   async getCampaignsByZone(zoneId: number): Promise<Campaign[]> {
     const response = await this.request<CampaignsResponse>(`/campaigns?zone_id=${zoneId}`);
-    return response.campaigns;
+    return response.campaigns.map((c: any) => mapApiIds(c, { stripId: false })) as unknown as Campaign[];
   }
 
   async getCampaign(id: number): Promise<Campaign> {
-    const response = await this.request<{ campaign: Campaign }>(`/campaigns/${id}`);
-    return response.campaign;
+    const response = await this.request<{ campaign: any }>(`/campaigns/${id}`);
+    return mapApiIds(response.campaign, { stripId: false }) as unknown as Campaign;
   }
 
   async createCampaign(campaign: {
@@ -197,11 +213,11 @@ class BroadstreetAPI {
     paused?: boolean;
     notes?: string;
   }): Promise<Campaign> {
-    const response = await this.request<{ campaign: Campaign }>('/campaigns', {
+    const response = await this.request<{ campaign: any }>('/campaigns', {
       method: 'POST',
       body: JSON.stringify(campaign),
     });
-    return response.campaign;
+    return mapApiIds(response.campaign, { stripId: false }) as unknown as Campaign;
   }
 
   // Advertisements
@@ -215,7 +231,7 @@ class BroadstreetAPI {
     if (params.advertiserId) query += `&advertiser_id=${params.advertiserId}`;
     
     const response = await this.request<AdvertisementsResponse>(`/advertisements?${query}`);
-    return response.advertisements;
+    return response.advertisements.map((a: any) => mapApiIds(a, { stripId: false })) as unknown as Advertisement[];
   }
 
   async createAdvertisement(advertisement: {
@@ -229,23 +245,25 @@ class BroadstreetAPI {
     preview_url?: string;
     notes?: string;
   }): Promise<Advertisement> {
-    const response = await this.request<{ advertisement: Advertisement }>('/advertisements', {
+    const response = await this.request<{ advertisement: any }>('/advertisements', {
       method: 'POST',
       body: JSON.stringify(advertisement),
     });
-    return response.advertisement;
+    return mapApiIds(response.advertisement, { stripId: false }) as unknown as Advertisement;
   }
 
   // Placements
-  async getPlacements(campaignId: number): Promise<Placement[]> {
-    const response = await this.request<Placement[]>(`/placements?campaign_id=${campaignId}`);
+  async getPlacements(campaignId: number): Promise<any[]> {
+    const response = await this.request<any[]>(`/placements?campaign_id=${campaignId}`);
     
     // API returns array of placement objects directly
-    // Need to add campaign_id since it's not in the API response
+    // Normalize field names to internal schema (advertisement_id, zone_id)
     if (Array.isArray(response)) {
-      return response.map(placement => ({
-        ...placement,
-        campaign_id: campaignId
+      return response.map((placement: any) => ({
+        advertisement_id: placement.advertisement_id,
+        zone_id: placement.zone_id,
+        campaign_id: campaignId,
+        restrictions: placement.restrictions || [],
       }));
     }
     
@@ -257,13 +275,40 @@ class BroadstreetAPI {
     campaign_id: number;
     advertisement_id: number;
     zone_id: number;
-    restrictions?: string;
+    restrictions?: string[];
   }): Promise<Placement> {
     const response = await this.request<PlacementsResponse>('/placements', {
       method: 'POST',
       body: JSON.stringify(placement),
     });
-    return response.placement;
+
+    // Handle Broadstreet API behavior: 201 Created with empty response body
+    // This means the placement was created successfully, but no data is returned
+    if (response === undefined || response === null) {
+      // Return the placement data based on the request since API doesn't return it
+      return {
+        advertisement_id: placement.advertisement_id,
+        zone_id: placement.zone_id,
+        campaign_id: placement.campaign_id,
+        restrictions: placement.restrictions || [],
+      } as unknown as Placement;
+    }
+
+    // Handle normal response with placement data
+    let placementData: any;
+    if (response && typeof response === 'object') {
+      // Try different possible response structures
+      placementData = response.placement || response.data || response;
+    } else {
+      throw new Error(`Invalid API response structure: ${typeof response}`);
+    }
+
+    return {
+      advertisement_id: placementData.advertisement_id || placement.advertisement_id,
+      zone_id: placementData.zone_id || placement.zone_id,
+      campaign_id: placement.campaign_id,
+      restrictions: placementData.restrictions || placement.restrictions || [],
+    } as unknown as Placement;
   }
 
   async deletePlacement(params: {
@@ -285,8 +330,21 @@ class BroadstreetAPI {
         advertiser.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing advertiser:', error);
       return false; // Assume no conflict if we can't check
+    }
+  }
+
+  /**
+   * Find an existing advertiser by name for a given network. Returns the remote advertiser or null.
+   */
+  async findAdvertiserByName(networkId: number, name: string): Promise<Advertiser | null> {
+    try {
+      const response = await this.request<{ advertisers: Advertiser[] }>(`/advertisers?network_id=${networkId}`);
+      const normalized = name.toLowerCase().trim();
+      const match = response.advertisers.find(a => a.name.toLowerCase().trim() === normalized);
+      return match || null;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -297,8 +355,18 @@ class BroadstreetAPI {
         campaign.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing campaign:', error);
       return false; // Assume no conflict if we can't check
+    }
+  }
+
+  async findCampaignByName(advertiserId: number, name: string): Promise<Campaign | null> {
+    try {
+      const response = await this.request<{ campaigns: Campaign[] }>(`/campaigns?advertiser_id=${advertiserId}`);
+      const normalized = name.toLowerCase().trim();
+      const match = response.campaigns.find(c => c.name.toLowerCase().trim() === normalized);
+      return match || null;
+    } catch (error) {
+      return null;
     }
   }
 
@@ -309,7 +377,6 @@ class BroadstreetAPI {
         zone.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing zone:', error);
       return false; // Assume no conflict if we can't check
     }
   }
@@ -321,7 +388,6 @@ class BroadstreetAPI {
         advertisement.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing advertisement:', error);
       return false; // Assume no conflict if we can't check
     }
   }

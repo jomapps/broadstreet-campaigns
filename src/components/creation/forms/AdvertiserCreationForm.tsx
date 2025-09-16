@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Plus, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface AdvertiserCreationFormProps {
   onClose: () => void;
@@ -21,12 +24,12 @@ interface AdminContact {
 }
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
-  const { selectedNetwork } = useFilters();
+  const entities = useSelectedEntities();
+  const { setAdvertisers } = useFilters();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
     name: '',
-    network_id: selectedNetwork?.id || 0,
     
     // Optional fields - empty by default
     web_home_url: '',
@@ -60,6 +63,13 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         newErrors[`admin_${index}_email`] = 'Please enter a valid email address';
       }
     });
+
+    // Network selection and ID availability validation
+    if (!entities.network) {
+      newErrors.network = 'Network selection is required';
+    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
+      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -163,19 +173,19 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       return;
     }
 
-    if (!selectedNetwork) {
-      setErrors({ network: 'Please select a network first' });
-      return;
-    }
-
     setIsSubmitting(true);
     setIsLoading(true);
 
     try {
       // Build payload with only non-empty optional fields
+      const networkIdValue = getEntityId(entities.network);
       const payload: any = {
         name: formData.name.trim(),
-        network_id: selectedNetwork.id,
+        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network: {
+          broadstreet_id: entities.network?.ids.broadstreet_id,
+          mongo_id: entities.network?.ids.mongo_id,
+        },
       };
 
       // Only add optional fields if they have values
@@ -205,11 +215,26 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       }
 
       const result = await response.json();
-      
+
       // Show success message
       alert(`Advertiser "${result.advertiser.name}" created successfully!`);
+
+      // Immediately reload advertisers for the current network so the list updates without a full reload
+      try {
+        if (entities.network) {
+          const networkId = getEntityId(entities.network);
+          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String(networkId ?? ''))}` , { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setAdvertisers(listData.advertisers || []);
+          }
+        }
+      } catch (e) {
+        // Non-fatal: fallback to a soft refresh
+        console.info('Post-create advertisers reload failed; falling back to refresh');
+      }
       
-      // Refresh the page to show the new advertiser
+      // Soft refresh for any server components
       router.refresh();
       
       onClose();
@@ -222,29 +247,22 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     }
   };
 
-  if (!selectedNetwork) {
-    return (
-      <div className="text-center py-8">
-        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Network Required</h3>
-        <p className="text-gray-600 mb-4">
-          Please select a network from the sidebar filters before creating an advertiser.
-        </p>
-        <Button onClick={onClose} variant="outline">
-          Close
-        </Button>
-      </div>
-    );
-  }
+  
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+    <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="advertiser-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800">
-          <strong>Network:</strong> {selectedNetwork.name}
+        <p className="text-sm text-blue-800 flex items-center gap-2">
+          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
         </p>
       </div>
+
+      {errors.network && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-red-600">{errors.network}</p>
+        </div>
+      )}
 
       {/* Top Submit Button */}
       <div className="flex justify-end space-x-3 mb-6">
@@ -253,13 +271,20 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
         </Button>
@@ -275,6 +300,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           placeholder="e.g., Acme Corporation"
           className={errors.name ? 'border-red-500' : ''}
           required
+          data-testid="advertiser-name-input"
         />
         {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
       </div>
@@ -401,13 +427,20 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           variant="outline"
           onClick={onClose}
           disabled={isSubmitting}
+          data-testid="cancel-button"
         >
           Cancel
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name}
+          disabled={
+            isSubmitting ||
+            !formData.name ||
+            !entities.network ||
+            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+          }
           className="min-w-[120px]"
+          data-testid="submit-button"
         >
           {isSubmitting ? 'Creating...' : 'Create Advertiser'}
         </Button>

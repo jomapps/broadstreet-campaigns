@@ -5,7 +5,7 @@ import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 export async function POST() {
   try {
     // Clear zone selections before syncing
-    clearAllZoneSelections();
+    await Promise.resolve().then(() => clearAllZoneSelections());
     
     const result = await syncAll();
     
@@ -14,12 +14,14 @@ export async function POST() {
         success: true,
         message: 'All data synced successfully',
         results: result.results,
+        overallSuccess: result.success,
       });
     } else {
       return NextResponse.json({
         success: false,
         message: 'Some sync operations failed',
         results: result.results,
+        overallSuccess: false,
       }, { status: 500 });
     }
   } catch (error) {
@@ -30,4 +32,8 @@ export async function POST() {
       error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 500 });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ success: false, message: 'Method Not Allowed' }, { status: 405 });
 }

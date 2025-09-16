@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -39,21 +40,20 @@ export default function AdvertisementSelectionControls({
   const { 
     selectAdvertisements, 
     deselectAdvertisements, 
-    setShowOnlySelectedAds, 
-    selectedNetwork,
-    selectedAdvertiser
+    setShowOnlySelectedAds 
   } = useFilters();
+  const entities = useSelectedEntities();
 
   // The advertisements prop now contains the filtered advertisements from AdvertisementFiltersWrapper
   const visibleAdvertisements = advertisements;
 
-  // Get currently selected advertisements that are visible
+  // Get currently selected advertisements that are visible (use Broadstreet numeric id)
   const visibleSelectedAdvertisements = useMemo(() => {
-    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(ad._id));
+    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(ad.id)));
   }, [visibleAdvertisements, selectedAdvertisements]);
 
-  // Get all visible advertisement IDs
-  const visibleAdvertisementIds = visibleAdvertisements.map(ad => ad._id);
+  // Get all visible advertisement IDs (use Broadstreet numeric id)
+  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(ad.id));
 
   // Check if all visible advertisements are selected
   const allVisibleSelected = visibleAdvertisementIds.length > 0 && visibleAdvertisementIds.every(id => selectedAdvertisements.includes(id));
@@ -75,7 +75,7 @@ export default function AdvertisementSelectionControls({
 
   // Only show selection controls when both network and advertiser are selected
   // We can't cross-select ads from different advertisers
-  if (!selectedNetwork || !selectedAdvertiser) {
+  if (!entities.network || !entities.advertiser) {
     return null;
   }
 

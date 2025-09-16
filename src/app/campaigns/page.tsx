@@ -3,18 +3,23 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for campaign data from filter context
 type CampaignLean = {
-  id: number | string;
+  broadstreet_id?: number;
+  mongo_id?: string;
   name: string;
-  advertiser_id: number;
+  advertiser_id: number | string;
   start_date: string;
   end_date?: string;
   active: boolean;
@@ -53,21 +58,22 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
     onDelete(campaign);
   };
   
+  const slug = campaign.name.replace(/\s+/g, '-').toLowerCase();
+
   return (
-    <div className={`relative rounded-lg shadow-sm border p-6 transition-all duration-200 ${
-      isLocal 
-        ? 'border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
-        : isSelected 
-          ? 'bg-white border-primary shadow-md shadow-primary/10' 
-          : 'bg-white border-gray-200 hover:border-gray-300'
-    }`}>
+    <div
+      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
+      data-testid="campaign-card"
+      data-campaign-slug={slug}
+    >
       {/* Delete Button for Local Entities */}
       {isLocal && onDelete && (
         <Button
           variant="ghost"
           size="sm"
           className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={handleDelete}
+          onClick={(e) => { e.stopPropagation(); handleDelete(); }}
+          data-testid="delete-button"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -81,7 +87,7 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
               className="mt-1"
             />
             <div>
-              <h3 className="card-title text-gray-900">{campaign.name}</h3>
+              <h3 className="card-title text-gray-900" data-testid="campaign-name">{campaign.name}</h3>
               {advertiserName && (
                 <p className="card-text text-gray-600 mt-1">Advertiser: {advertiserName}</p>
               )}
@@ -107,9 +113,10 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
           }`}>
             {isActive ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">
-            ID: {typeof campaign.id === 'string' ? campaign.id.slice(-8) : campaign.id}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={campaign.broadstreet_id}
+            mongo_id={campaign.mongo_id}
+          />
         </div>
       </div>
       
@@ -182,7 +189,8 @@ function LoadingSkeleton() {
 }
 
 function CampaignsList() {
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedCampaign, setSelectedCampaign, campaigns, isLoadingCampaigns, setCampaigns } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -192,11 +200,14 @@ function CampaignsList() {
       return campaigns;
     }
     
-    return campaigns.filter(campaign =>
-      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (campaign.notes && campaign.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      campaign.id.toString().includes(searchTerm)
-    );
+    return campaigns.filter(campaign => {
+      const term = searchTerm.toLowerCase();
+      const nameMatch = campaign.name.toLowerCase().includes(term);
+      const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
+      const idStr = String(campaign.broadstreet_id ?? campaign.mongo_id ?? '');
+      const idMatch = idStr.toLowerCase().includes(term);
+      return nameMatch || notesMatch || idMatch;
+    });
   }, [campaigns, searchTerm]);
 
   if (isLoadingCampaigns) {
@@ -204,7 +215,7 @@ function CampaignsList() {
   }
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -221,7 +232,7 @@ function CampaignsList() {
   }
 
   // Check if advertiser is selected
-  if (!selectedAdvertiser) {
+  if (!entities.advertiser) {
     return (
       <div className="text-center py-12">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
@@ -246,7 +257,9 @@ function CampaignsList() {
   }
 
   const handleCampaignSelect = (campaign: CampaignLean) => {
-    if (selectedCampaign?.id === campaign.id) {
+    const currentId = getEntityId(selectedCampaign as any);
+    const nextId = getEntityId(campaign as any);
+    if (String(currentId) === String(nextId)) {
       setSelectedCampaign(null);
     } else {
       setSelectedCampaign(campaign);
@@ -254,9 +267,14 @@ function CampaignsList() {
   };
 
   const handleDelete = async (campaign: CampaignLean) => {
-    setIsDeleting(campaign.id.toString());
+    const campId = getEntityId(campaign as any);
+    if (campId == null) {
+      alert('Missing campaign ID. Cannot delete.');
+      return;
+    }
+    setIsDeleting(String(campId));
     try {
-      const response = await fetch(`/api/delete/campaign/${campaign.id}`, {
+      const response = await fetch(`/api/delete/campaign/${campId}`, {
         method: 'DELETE',
       });
 
@@ -264,7 +282,29 @@ function CampaignsList() {
         throw new Error('Failed to delete campaign');
       }
 
-      // Refresh the page to show updated data
+      // Clear selection if the deleted campaign was selected
+      if (String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any))) setSelectedCampaign(null);
+
+      // Reload campaigns for the current advertiser so the list updates immediately
+      try {
+        if (entities.advertiser) {
+          const advId = getEntityId(entities.advertiser as any);
+          const listRes = await fetch(`/api/campaigns?advertiser_id=${advId}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const next = Array.isArray(listData.campaigns) ? listData.campaigns : [];
+            // Ensure deleted campaign is not present even if API is stale
+            const filtered = next.filter((c: any) => String(getEntityId(c)) !== String(getEntityId(campaign as any)));
+            setCampaigns(filtered);
+            // Give React a tick to commit state before refreshing server components
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+      } catch (e) {
+        console.info('Post-delete campaigns reload failed; falling back to refresh');
+      }
+      
+      // Soft refresh for any server components
       router.refresh();
     } catch (error) {
       console.error('Error deleting campaign:', error);
@@ -275,7 +315,7 @@ function CampaignsList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="campaigns-list">
       <div className="max-w-md">
         <SearchInput
           placeholder="Search campaigns..."
@@ -292,10 +332,12 @@ function CampaignsList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map((campaign) => (
             <CampaignCard 
-              key={campaign.id} 
+              key={String(getEntityId(campaign as any))}
               campaign={campaign}
-              advertiserName={selectedAdvertiser?.name}
-              isSelected={selectedCampaign?.id === campaign.id}
+              advertiserName={entities.advertiser?.name}
+              isSelected={
+                String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any))
+              }
               onSelect={handleCampaignSelect}
               onDelete={handleDelete}
             />
@@ -318,15 +360,13 @@ export default function CampaignsPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="campaign" />
+          <CreationButton />
         </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
         <CampaignsList />
       </Suspense>
-
-      <CreationButton />
     </div>
   );
 }

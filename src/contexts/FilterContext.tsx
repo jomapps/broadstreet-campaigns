@@ -1,8 +1,18 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Network, Advertiser, Campaign } from '@/lib/types/broadstreet';
 
+/**
+ * FilterContext
+ *
+ * Guidance:
+ * - For reading selected entities (network/advertiser/campaign/zones/advertisements), prefer
+ *   useSelectedEntities from `src/lib/hooks/use-selected-entities` which normalizes structure
+ *   and reduces re-renders.
+ * - Use useFilters ONLY when you need setters (e.g., setSelectedCampaign), arrays, or loading flags.
+ * - clearAllFilters is the primary clear method. Individual clear methods are deprecated and removed.
+ */
 interface FilterContextType {
   // Selected filters
   selectedNetwork: Network | null;
@@ -18,9 +28,9 @@ interface FilterContextType {
   showOnlySelectedAds: boolean;
   
   // Setters
-  setSelectedNetwork: (network: Network | null) => void;
-  setSelectedAdvertiser: (advertiser: Advertiser | null) => void;
-  setSelectedCampaign: (campaign: Campaign | null) => void;
+  setSelectedNetwork: (network: any | null) => void;
+  setSelectedAdvertiser: (advertiser: any | null) => void;
+  setSelectedCampaign: (campaign: any | null) => void;
   setSelectedZones: (zones: string[]) => void;
   setShowOnlySelected: (show: boolean) => void;
   setSelectedAdvertisements: (advertisements: string[]) => void;
@@ -48,10 +58,6 @@ interface FilterContextType {
   
   // Clear filters
   clearAllFilters: () => void;
-  clearAdvertiserFilter: () => void;
-  clearCampaignFilter: () => void;
-  clearZoneSelection: () => void;
-  clearAdvertisementSelection: () => void;
   
   // Zone selection actions
   selectZones: (zoneIds: string[]) => void;
@@ -169,7 +175,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingAdvertisers(true);
       try {
-        const response = await fetch(`/api/advertisers?network_id=${selectedNetwork.id}`);
+        const nid = (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
+        const response = await fetch(`/api/advertisers?network_id=${nid}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
           setAdvertisers(data.advertisers || []);
@@ -194,7 +201,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingCampaigns(true);
       try {
-        const response = await fetch(`/api/campaigns?advertiser_id=${selectedAdvertiser.id}`);
+        const aid = (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
+        const response = await fetch(`/api/campaigns?advertiser_id=${aid}`);
         if (response.ok) {
           const data = await response.json();
           setCampaigns(data.campaigns || []);
@@ -268,32 +276,6 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
   };
 
-  const clearAdvertiserFilter = () => {
-    setSelectedAdvertiser(null);
-    setSelectedCampaign(null);
-    localStorage.removeItem(STORAGE_KEYS.ADVERTISER);
-    localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
-  };
-
-  const clearCampaignFilter = () => {
-    setSelectedCampaign(null);
-    localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
-  };
-
-  const clearZoneSelection = () => {
-    setSelectedZones([]);
-    setShowOnlySelected(false);
-    localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
-    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
-  };
-
-  const clearAdvertisementSelection = () => {
-    setSelectedAdvertisements([]);
-    setShowOnlySelectedAds(false);
-    localStorage.removeItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
-    localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
-  };
-
   // Zone selection actions
   const selectZones = (zoneIds: string[]) => {
     setSelectedZones(prev => {
@@ -334,57 +316,87 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const value = useMemo<FilterContextType>(() => ({
+    selectedNetwork,
+    selectedAdvertiser,
+    selectedCampaign,
+    selectedZones,
+    showOnlySelected,
+    selectedAdvertisements,
+    showOnlySelectedAds,
+    setSelectedNetwork,
+    setSelectedAdvertiser,
+    setSelectedCampaign,
+    setSelectedZones,
+    setShowOnlySelected,
+    setSelectedAdvertisements,
+    setShowOnlySelectedAds,
+    networks,
+    advertisers,
+    campaigns,
+    setNetworks,
+    setAdvertisers,
+    setCampaigns,
+    isLoadingNetworks,
+    isLoadingAdvertisers,
+    isLoadingCampaigns,
+    setIsLoadingNetworks,
+    setIsLoadingAdvertisers,
+    setIsLoadingCampaigns,
+    clearAllFilters,
+    selectZones,
+    deselectZones,
+    toggleZoneSelection,
+    selectAdvertisements,
+    deselectAdvertisements,
+    toggleAdvertisementSelection,
+  }), [
+    selectedNetwork,
+    selectedAdvertiser,
+    selectedCampaign,
+    selectedZones,
+    showOnlySelected,
+    selectedAdvertisements,
+    showOnlySelectedAds,
+    networks,
+    advertisers,
+    campaigns,
+    isLoadingNetworks,
+    isLoadingAdvertisers,
+    isLoadingCampaigns,
+  ]);
+
   return (
-    <FilterContext.Provider
-      value={{
-        selectedNetwork,
-        selectedAdvertiser,
-        selectedCampaign,
-        selectedZones,
-        showOnlySelected,
-        selectedAdvertisements,
-        showOnlySelectedAds,
-        setSelectedNetwork,
-        setSelectedAdvertiser,
-        setSelectedCampaign,
-        setSelectedZones,
-        setShowOnlySelected,
-        setSelectedAdvertisements,
-        setShowOnlySelectedAds,
-        networks,
-        advertisers,
-        campaigns,
-        setNetworks,
-        setAdvertisers,
-        setCampaigns,
-        isLoadingNetworks,
-        isLoadingAdvertisers,
-        isLoadingCampaigns,
-        setIsLoadingNetworks,
-        setIsLoadingAdvertisers,
-        setIsLoadingCampaigns,
-        clearAllFilters,
-        clearAdvertiserFilter,
-        clearCampaignFilter,
-        clearZoneSelection,
-        clearAdvertisementSelection,
-        selectZones,
-        deselectZones,
-        toggleZoneSelection,
-        selectAdvertisements,
-        deselectAdvertisements,
-        toggleAdvertisementSelection,
-      }}
-    >
+    <FilterContext.Provider value={value}>
       {children}
     </FilterContext.Provider>
   );
 }
+
+// Dev-only deprecation warnings when directly accessing selected entities via useFilters
+const __warnedKeys: Record<string, boolean> = { selectedNetwork: false, selectedAdvertiser: false, selectedCampaign: false };
 
 export function useFilters() {
   const context = useContext(FilterContext);
   if (context === undefined) {
     throw new Error('useFilters must be used within a FilterProvider');
   }
+
+  if (process.env.NODE_ENV === 'development') {
+    const handler: ProxyHandler<FilterContextType> = {
+      get(target, prop, receiver) {
+        if (
+          (prop === 'selectedNetwork' || prop === 'selectedAdvertiser' || prop === 'selectedCampaign') &&
+          !__warnedKeys[String(prop)]
+        ) {
+          __warnedKeys[String(prop)] = true;
+          // Deprecated access warning removed for production
+        }
+        return Reflect.get(target, prop, receiver);
+      },
+    };
+    return new Proxy(context, handler) as FilterContextType;
+  }
+
   return context;
 }

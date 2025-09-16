@@ -34,20 +34,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if zone with same name already exists in this network
-    const existingZone = await LocalZone.findOne({
-      name: name.trim(),
-      network_id: parseInt(network_id)
-    });
+    // Duplicate names are allowed. Do not block on same name in a network.
 
-    if (existingZone) {
-      return NextResponse.json(
-        { message: 'A zone with this name already exists in this network' },
-        { status: 409 }
-      );
-    }
-
-    // Check if alias is unique if provided
+    // Check if alias is unique if provided (we only enforce when alias is specified)
     if (alias) {
       const existingAlias = await LocalZone.findOne({
         alias: alias.trim(),

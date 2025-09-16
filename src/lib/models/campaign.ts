@@ -1,7 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import leanVirtuals from 'mongoose-lean-virtuals';
+import { mapApiIds } from '@/lib/types/mapApiIds';
 
 export interface ICampaign extends Document {
-  id: number;
+  broadstreet_id: number;
+  mongo_id: string;
   name: string;
   advertiser_id: number;
   start_date?: string;
@@ -38,7 +41,7 @@ export interface ICampaign extends Document {
 }
 
 const CampaignSchema = new Schema<ICampaign>({
-  id: {
+  broadstreet_id: {
     type: Number,
     required: true,
     unique: true,
@@ -143,11 +146,44 @@ const CampaignSchema = new Schema<ICampaign>({
   },
 }, {
   timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  id: false,
 });
 
 // Create indexes for faster queries
-// Note: id field already has unique: true which creates an index
+// Note: broadstreet_id field already has unique: true which creates an index
 CampaignSchema.index({ advertiser_id: 1 });
 CampaignSchema.index({ active: 1 });
+
+// Virtual getters for IDs
+CampaignSchema.virtual('mongo_id').get(function (this: any) {
+  return this._id?.toString();
+});
+
+// New explicit ID naming per entity
+CampaignSchema.virtual('local_campaign_id').get(function (this: any) {
+  return this._id?.toString();
+});
+CampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) {
+  return this.broadstreet_id;
+});
+
+// Relationship aliasing to explicit naming
+CampaignSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
+  return this.advertiser_id;
+});
+CampaignSchema.virtual('broadstreet_network_id').get(function (this: any) {
+  return this.network_id;
+});
+
+// Ensure virtuals are present in lean() results
+CampaignSchema.plugin(leanVirtuals);
+
+// Temporary static to safely map API payloads
+CampaignSchema.statics.fromApi = function fromApi(payload: any) {
+  const mapped = mapApiIds(payload, { stripId: false });
+  return mapped;
+};
 
 export default mongoose.models.Campaign || mongoose.model<ICampaign>('Campaign', CampaignSchema);

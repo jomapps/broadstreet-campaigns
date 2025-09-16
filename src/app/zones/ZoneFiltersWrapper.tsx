@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import ZoneSizeFilters from './ZoneSizeFilters';
 import ZonesList from './ZonesList';
 import ZoneSelectionControls from './ZoneSelectionControls';
@@ -53,7 +54,8 @@ interface ZoneFiltersWrapperProps {
 export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWrapperProps) {
   const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS' | 'CS')[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const { selectedZones, showOnlySelected, selectedNetwork } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedZones, showOnlySelected } = useFilters();
 
   // Apply all filters to get the currently visible zones
   const filteredZones = useMemo(() => {
@@ -79,8 +81,8 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         }
         
         // Handle regular size type filters
-        const regularSizes = selectedSizes.filter(size => size !== 'CS');
-        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type)) {
+        const regularSizes = selectedSizes.filter((size): size is 'SQ' | 'PT' | 'LS' => size !== 'CS');
+        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS')) {
           return true;
         }
         
@@ -91,7 +93,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         
         // If only regular sizes are selected, filter by them
         if (regularSizes.length > 0 && !selectedSizes.includes('CS')) {
-          return zone.size_type && regularSizes.includes(zone.size_type);
+          return zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS');
         }
         
         return false;
@@ -122,6 +124,10 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         onSizeFilterChange={setSelectedSizes}
       />
       
+      {/**
+       * Note: Network gating is intentionally handled inside `ZonesList` to avoid duplicating gate logic here.
+       * This keeps the wrapper focused on size/search filters and selection state.
+       */}
       <ZoneSelectionControls 
         zones={filteredZones}
         selectedZones={selectedZones}

@@ -1,18 +1,23 @@
 'use client';
 
-import { Suspense, useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
+import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 
 // Type for advertiser data from filter context
 type AdvertiserLean = {
-  id: number | string;
+  broadstreet_id?: number;
+  mongo_id?: string;
   name: string;
   logo?: { url: string };
   web_home_url?: string;
@@ -31,6 +36,7 @@ interface AdvertiserCardProps {
 
 function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: AdvertiserCardProps) {
   const isLocal = advertiser.created_locally && !advertiser.synced_with_api;
+  const slug = advertiser.name.replace(/\s+/g, '-').toLowerCase();
   
   const handleDelete = async () => {
     if (!onDelete) return;
@@ -43,13 +49,11 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
   };
   
   return (
-    <div className={`relative rounded-lg shadow-sm border p-6 transition-all duration-200 ${
-      isLocal 
-        ? 'border-2 border-orange-400 bg-gradient-to-br from-orange-50 to-orange-100 shadow-orange-200 hover:shadow-orange-300 hover:scale-[1.02]' 
-        : isSelected 
-          ? 'bg-white border-primary shadow-md shadow-primary/10' 
-          : 'bg-white border-gray-200 hover:border-gray-300'
-    }`}>
+    <div
+      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
+      data-testid="advertiser-card"
+      data-advertiser-slug={slug}
+    >
       {/* Delete Button for Local Entities */}
       {isLocal && onDelete && (
         <Button
@@ -57,6 +61,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
           size="sm"
           className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
           onClick={handleDelete}
+          data-testid="delete-button"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -76,7 +81,7 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
                 className="w-8 h-8 rounded object-cover"
               />
             )}
-            <h3 className="card-title text-gray-900">{advertiser.name}</h3>
+            <h3 className="card-title text-gray-900" data-testid="advertiser-name">{advertiser.name}</h3>
           </div>
           
           {advertiser.web_home_url && (
@@ -102,9 +107,10 @@ function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: Advertis
               Local
             </Badge>
           )}
-          <span className="card-meta text-gray-500">
-            ID: {typeof advertiser.id === 'string' ? advertiser.id.slice(-8) : advertiser.id}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={advertiser.broadstreet_id}
+            mongo_id={advertiser.mongo_id}
+          />
         </div>
       </div>
       
@@ -161,10 +167,35 @@ function LoadingSkeleton() {
 }
 
 function AdvertisersList() {
-  const { selectedNetwork, selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers } = useFilters();
+  const entities = useSelectedEntities();
+  const { selectedAdvertiser, setSelectedAdvertiser, advertisers, isLoadingAdvertisers, setAdvertisers } = useFilters();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
+
+  // Ensure fresh data on mount to avoid stale cached list after sync
+  const selectedNetworkId = useMemo(() => getEntityId(entities.network as any), [entities.network]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = async () => {
+      if (selectedNetworkId == null) return;
+      try {
+        const listRes = await fetch(`/api/advertisers?network_id=${selectedNetworkId}`, { cache: 'no-store', signal: controller.signal });
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setAdvertisers(listData.advertisers || []);
+        }
+      } catch (e: any) {
+        if (e?.name !== 'AbortError') {
+          // Swallow non-critical errors; user can retry manually
+          console.info('Advertisers refresh aborted or failed');
+        }
+      }
+    };
+    refresh();
+    return () => controller.abort();
+  }, [selectedNetworkId]);
 
   const filteredAdvertisers = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -187,7 +218,7 @@ function AdvertisersList() {
   }
 
   // Check if network is selected
-  if (!selectedNetwork) {
+  if (!entities.network) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
@@ -212,7 +243,9 @@ function AdvertisersList() {
   }
 
   const handleAdvertiserSelect = (advertiser: AdvertiserLean) => {
-    if (selectedAdvertiser?.id === advertiser.id) {
+    const currentId = (selectedAdvertiser as any)?.broadstreet_id ?? (selectedAdvertiser as any)?.mongo_id ?? (selectedAdvertiser as any)?.name;
+    const nextId = advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name;
+    if (String(currentId ?? '') === String(nextId ?? '')) {
       setSelectedAdvertiser(null);
     } else {
       setSelectedAdvertiser(advertiser);
@@ -220,9 +253,14 @@ function AdvertisersList() {
   };
 
   const handleDelete = async (advertiser: AdvertiserLean) => {
-    setIsDeleting(advertiser.id.toString());
+    const advId = advertiser.broadstreet_id ?? advertiser.mongo_id;
+    if (advId == null) {
+      alert('Missing advertiser ID. Cannot delete.');
+      return;
+    }
+    setIsDeleting(String(advId));
     try {
-      const response = await fetch(`/api/delete/advertiser/${advertiser.id}`, {
+      const response = await fetch(`/api/delete/advertiser/${advId}` , {
         method: 'DELETE',
       });
 
@@ -230,7 +268,21 @@ function AdvertisersList() {
         throw new Error('Failed to delete advertiser');
       }
 
-      // Refresh the page to show updated data
+      // Reload advertisers for the current network so the list updates immediately
+      try {
+        const netId = getEntityId(entities.network as any);
+        if (netId != null) {
+          const listRes = await fetch(`/api/advertisers?network_id=${netId}`, { cache: 'no-store' });
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            setAdvertisers(listData.advertisers || []);
+          }
+        }
+      } catch (e) {
+        console.info('Post-delete advertisers reload failed; falling back to refresh');
+      }
+      
+      // Soft refresh for any server components
       router.refresh();
     } catch (error) {
       console.error('Error deleting advertiser:', error);
@@ -241,7 +293,7 @@ function AdvertisersList() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="advertisers-list">
       <div className="max-w-md">
         <SearchInput
           placeholder="Search advertisers..."
@@ -258,9 +310,11 @@ function AdvertisersList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAdvertisers.map((advertiser) => (
             <AdvertiserCard 
-              key={advertiser.id} 
+              key={String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)}
               advertiser={advertiser}
-              isSelected={selectedAdvertiser?.id === advertiser.id}
+              isSelected={
+                String(getEntityId(selectedAdvertiser as any)) === String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)
+              }
               onSelect={handleAdvertiserSelect}
               onDelete={handleDelete}
             />
@@ -283,15 +337,13 @@ export default function AdvertisersPage() {
         </div>
         
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton entityType="advertiser" />
+          <CreationButton />
         </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
         <AdvertisersList />
       </Suspense>
-
-      <CreationButton />
     </div>
   );
 }

@@ -17,41 +17,65 @@ export async function GET(request: NextRequest) {
     // Get all campaigns for the selected advertiser from local collections only
     const [syncedCampaigns, localCampaigns] = await Promise.all([
       // Get previously synced campaigns stored locally (no live API calls)
+      // For synced campaigns, advertiser_id is numeric Broadstreet ID
       Campaign.find({ 
-        advertiser_id: parseInt(advertiserId)
+        advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : -99999999
       }).sort({ start_date: -1 }).lean(),
       
       // Get all local campaigns for this advertiser
+      // Include local campaigns regardless of sync state; use original_broadstreet_id when present
+      // For local campaigns, advertiser_id may be number or string (mongo _id)
       LocalCampaign.find({ 
-        advertiser_id: parseInt(advertiserId),
-        synced_with_api: false 
+        $or: [
+          { advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : undefined },
+          { advertiser_id: advertiserId }
+        ].filter((q: any) => q.advertiser_id !== undefined)
       }).sort({ start_date: -1 }).lean()
     ]);
     
-    // Convert local campaigns to the same format as main campaigns for display
-    const convertedLocalCampaigns = localCampaigns.map(local => ({
-      id: local._id.toString(), // Use _id as id for local campaigns
-      name: local.name,
-      advertiser_id: local.advertiser_id,
-      start_date: local.start_date,
-      end_date: local.end_date,
-      active: local.active,
-      weight: local.weight,
-      max_impression_count: local.max_impression_count,
-      notes: local.notes,
-      display_type: local.display_type,
-      path: local.path,
-      created_locally: local.created_locally,
-      synced_with_api: local.synced_with_api,
-      created_at: local.created_at,
-      _id: local._id,
-      sync_errors: local.sync_errors,
-    }));
+    // Shape synced campaigns to expose explicit ID fields
+    const shapedSyncedCampaigns = (syncedCampaigns as any[]).map((c: any) => {
+      const { id: broadstreetId, _id, ...rest } = c;
+      return {
+        ...rest,
+        broadstreet_id: broadstreetId,
+        mongo_id: _id?.toString?.() ?? String(_id),
+        // Explicit names
+        broadstreet_campaign_id: broadstreetId,
+        local_campaign_id: _id?.toString?.() ?? String(_id),
+      };
+    });
+
+    // Convert local campaigns and expose mongo_id (and optional broadstreet_id if synced previously)
+    const convertedLocalCampaigns = (localCampaigns as any[]).map((local: any) => {
+      const { _id, original_broadstreet_id, ...rest } = local;
+      const shaped: any = {
+        ...rest,
+        mongo_id: _id?.toString?.() ?? String(_id),
+        local_campaign_id: _id?.toString?.() ?? String(_id),
+      };
+      if (typeof original_broadstreet_id === 'number') {
+        shaped.broadstreet_id = original_broadstreet_id;
+        shaped.broadstreet_campaign_id = original_broadstreet_id;
+      }
+      return shaped;
+    });
     
-    // Combine both collections
-    const campaigns = [...syncedCampaigns, ...convertedLocalCampaigns].sort((a, b) => 
-      new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
-    );
+    // Combine both collections with explicit IDs only and filter by advertiser id (supports string or number)
+    const allCampaigns = [...shapedSyncedCampaigns, ...convertedLocalCampaigns];
+    const campaigns = allCampaigns
+      .filter((c: any) => {
+        const adv = c?.advertiser_id;
+        if (Number.isFinite(Number(advertiserId))) {
+          return adv === parseInt(advertiserId);
+        }
+        return String(adv) === advertiserId;
+      })
+      .sort((a: any, b: any) => {
+        const aTime = a?.start_date ? new Date(a.start_date).getTime() : -Infinity;
+        const bTime = b?.start_date ? new Date(b.start_date).getTime() : -Infinity;
+        return bTime - aTime;
+      });
     
     return NextResponse.json({ campaigns });
   } catch (error) {

@@ -74,14 +74,14 @@ export default function AuditPage() {
       });
 
       const response = await fetch(`/api/audit/synced-entities?${params}`);
-      const data: AuditResponse = await response.json();
+      const data: Partial<AuditResponse> & { success?: boolean; message?: string } = await response.json();
 
       if (data.success) {
-        setEntities(data.entities);
-        setSummary(data.summary);
-        setPagination(data.pagination);
+        setEntities((data.entities as any) || []);
+        setSummary((data.summary as any) || null);
+        setPagination((data.pagination as any) || { total: 0, limit: 50, offset: 0, has_more: false });
       } else {
-        console.error('Failed to fetch audit data:', data.error);
+        console.error('Failed to fetch audit data:', data.message || 'Unknown error');
       }
     } catch (error) {
       console.error('Error fetching audit data:', error);
