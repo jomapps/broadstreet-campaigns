@@ -13,7 +13,9 @@
 - use Playwright mcp
 
 ## Reference Docs
+**CRITICAL**:
 The docs/entity-reference folder has all the files that you should really read.
+They are the one source of truth. Ask me if you find conflicts.
 
 ## Tests
 

@@ -4,6 +4,15 @@
 
 Advertisers represent companies that run advertising campaigns. Each advertiser belongs to a single network.
 
+## ID Management
+
+Advertisers follow the standardized three-tier ID system:
+- **`broadstreet_id`**: Broadstreet API identifier (number) - for synced advertisers
+- **`mongo_id`**: MongoDB ObjectId (string) - for local storage and local-only advertisers
+- **`_id`**: MongoDB native ObjectId - for internal database operations only
+
+**Business Rule**: Advertisements cannot exist without synced advertisers (never local-only).
+
 ## How to create an advertiser
 
 Use the Broadstreet API to create an advertiser on a specific network.
@@ -119,7 +128,7 @@ curl -X POST http://localhost:3000/api/sync/local-all \
 What happens
 - A dry run validates duplicates and dependencies.
 - If valid, the service creates missing entities in Broadstreet. For advertisers, it uses `name` and optional fields like `web_home_url`, `notes`, `logo`, and `admins` if present.
-- On success, the local advertiser is updated with `original_broadstreet_id`, `synced_with_api: true`, and `synced_at`.
+- On success, the local advertiser is updated with `broadstreet_id`, `synced_with_api: true`, and `synced_at`.
 - If an advertiser with the same `name` already exists remotely, we link to the existing one rather than creating a duplicate.
 
 ## How to update an advertiser

@@ -21,15 +21,20 @@ MongoDB collections are automatically named by Mongoose using lowercase, plurali
 - `LocalZone` model → `localzones` collection
 - etc.
 
-## ID Field Naming Convention
+## ID Field Naming Convention - Single Source of Truth
 
-The application follows a strict three-tier ID system:
+The application follows a **strict three-tier ID system** as defined in `docs/entity-reference/ids.md`:
 
-- **`broadstreet_id`**: Broadstreet API IDs (numbers) - for synced entities
-- **`mongo_id`**: MongoDB ObjectIds (strings) - virtual field from `_id`
-- **`_id`**: MongoDB's native ObjectId field
+### **The Three ID Types**
+1. **`broadstreet_id`**: Broadstreet API IDs (numbers) - for synced entities
+2. **`mongo_id`**: MongoDB ObjectIds (strings) - virtual field from `_id`
+3. **`_id`**: MongoDB's native ObjectId field - for internal operations only
 
-**Never use generic 'id' field names** - always use the specific ID type.
+### **STRICT NAMING RULES**
+- ✅ **ALWAYS use**: `broadstreet_id`, `mongo_id`, `_id`
+- ❌ **NEVER use**: `id`, `mongodb_id`, `mongoId`, `broadstreet_*_id`, `local_*_id`
+
+**Reference**: See `docs/entity-reference/ids.md` for complete ID management documentation.
 
 ## Entity Categories
 
@@ -802,10 +807,13 @@ Network (1)
 
 ### Virtual Fields
 
-All models include these virtual fields:
-- `mongo_id`: String representation of MongoDB's `_id` field
+All models include standardized virtual fields following the three-tier ID system:
+- **`mongo_id`**: String representation of MongoDB's `_id` field (all models)
+- **`broadstreet_id`**: Returns `original_broadstreet_id` (local models only)
 - Enabled via `toJSON: { virtuals: true }` and `toObject: { virtuals: true }`
 - Lean queries supported via `mongoose-lean-virtuals` plugin
+
+**Note**: Legacy entity-specific virtuals (e.g., `local_advertiser_id`, `broadstreet_advertiser_id`) have been removed in favor of the standardized system.
 
 ### Common Schema Options
 
