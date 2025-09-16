@@ -75,3 +75,102 @@ and any corresponding sidebar filters and selection systems should also reflect 
 **CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
 use playwright mcp as required
 *Note* Data has been successfully syncd
+
+#### Findings after success
+
+**Root Cause**: Networks page and sidebar filters were using forbidden fallback patterns that violated the standardized three-tier ID system established in the database consistency audit. Multiple components were using deprecated ID resolution patterns instead of the centralized utility functions.
+
+**Critical Issues Identified:**
+
+1. **Forbidden Fallback Patterns in FiltersCard.tsx**:
+   - **Error Pattern**: `(selectedNetwork as any)?.broadstreet_id ?? (selectedNetwork as any)?.id`
+   - **Error Pattern**: `(network as any).broadstreet_id?.toString?.() || (network as any).id?.toString?.()`
+   - **Cause**: Direct field access with fallback logic instead of using standardized utility functions
+   - **Solution**: Replaced all instances with `getEntityId(entity)` utility function
+
+2. **Inconsistent ID Display Patterns**:
+   - **Error Pattern**: Hardcoded `"BS ID: {network.broadstreet_id}"` in network cards
+   - **Cause**: Manual ID display instead of using standardized component
+   - **Solution**: Replaced with `<EntityIdBadge broadstreet_id={entity.broadstreet_id} mongo_id={entity.mongo_id} />`
+
+3. **Non-Standard Selection Logic**:
+   - **Error Pattern**: `(selectedNetwork as any)?.broadstreet_id === network.broadstreet_id`
+   - **Cause**: Direct field comparison instead of using entity ID utilities
+   - **Solution**: Replaced with `getEntityId(selectedNetwork) === getEntityId(network)`
+
+**Files Modified:**
+- `src/components/layout/FiltersCard.tsx` - Fixed network dropdown selection logic
+- `src/app/networks/page.tsx` - Fixed network card selection and ID display
+
+**Pattern Replacements Made:**
+```typescript
+// OLD PATTERNS (forbidden):
+(entity as any)?.broadstreet_id ?? (entity as any)?.id
+(entity as any).broadstreet_id?.toString?.() || (entity as any).id?.toString?.()
+"BS ID: {entity.broadstreet_id}"
+
+// NEW PATTERNS (required):
+getEntityId(entity)
+getEntityId(entity)?.toString()
+<EntityIdBadge broadstreet_id={entity.broadstreet_id} mongo_id={entity.mongo_id} />
+```
+
+**Testing Results After Fix:**
+- Networks Display: 2 networks ✅ (matches sync results)
+- Network Selection: Card and dropdown selection working ✅
+- Sidebar Synchronization: Network filters properly synchronized ✅
+- ID Display: EntityIdBadge showing "BS #9396" and "BS #9415" ✅
+- Standards Compliance: All forbidden patterns eliminated ✅
+
+**Key Learning**: The same forbidden fallback patterns (`entity.broadstreet_id ?? entity.id`) are likely present in other entity pages (advertisers, campaigns, zones, advertisements, placements). All entity components should be audited for:
+1. **Forbidden fallback patterns** in selection logic
+2. **Hardcoded ID displays** instead of EntityIdBadge
+3. **Direct field access** instead of getEntityId() utility
+4. **Inconsistent key/value patterns** in dropdown components
+
+**Confirmed Similar Issues in Other Entities:**
+
+**ADVERTISERS PAGE** (`src/app/advertisers/page.tsx`) - **5 VIOLATIONS FOUND**:
+```typescript
+// ❌ Line 246: Forbidden fallback pattern in selection logic
+const currentId = (selectedAdvertiser as any)?.broadstreet_id ?? (selectedAdvertiser as any)?.mongo_id ?? (selectedAdvertiser as any)?.name;
+
+// ❌ Line 247: Forbidden fallback pattern in comparison
+const nextId = advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name;
+
+// ❌ Line 256: Forbidden fallback pattern in delete logic
+const advId = advertiser.broadstreet_id ?? advertiser.mongo_id;
+
+// ❌ Line 313: Forbidden fallback pattern in key generation
+key={String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)}
+
+// ❌ Line 316: Mixed pattern - uses getEntityId() but also fallback
+String(getEntityId(selectedAdvertiser as any)) === String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)
+```
+
+**CAMPAIGNS PAGE** (`src/app/campaigns/page.tsx`) - **1 VIOLATION FOUND**:
+```typescript
+// ❌ Line 224: Forbidden fallback pattern in search logic
+const idStr = String(campaign.broadstreet_id ?? campaign.mongo_id ?? '');
+```
+
+**ZONES, ADVERTISEMENTS, PLACEMENTS PAGES** - **NO VIOLATIONS FOUND**:
+- These pages appear to be already using proper patterns or EntityIdBadge components
+- May have been fixed in previous updates or built with correct patterns initially
+
+**Immediate Action Required:**
+1. **ADVERTISERS PAGE**: Fix 5 critical violations in `src/app/advertisers/page.tsx`
+2. **CAMPAIGNS PAGE**: Fix 1 violation in `src/app/campaigns/page.tsx`
+3. **VALIDATION**: Run regex search `broadstreet_id.*\?\?.*id|id.*\?\?.*broadstreet_id` across entire codebase
+4. **TESTING**: Verify all entity selection and display functionality after fixes
+
+**Fix Pattern Template:**
+```typescript
+// Replace all instances of:
+entity.broadstreet_id ?? entity.mongo_id ?? entity.name
+// With:
+getEntityId(entity)
+
+// Add required import:
+import { getEntityId } from '@/lib/utils/entity-helpers';
+```
