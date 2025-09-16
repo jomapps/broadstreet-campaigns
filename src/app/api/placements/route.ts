@@ -246,13 +246,19 @@ export async function GET(request: NextRequest) {
     const campaignIds = Array.from(new Set(deduped
       .map(p => (p as any).campaign_id)
       .filter((v): v is number => typeof v === 'number')));
-    
+    const campaignMongoIds = Array.from(new Set(
+      deduped
+        .map((p: any) => p.campaign_mongo_id)
+        .filter((v): v is string => typeof v === 'string')
+    ));
+
     // Fetch related entities in batches
-    const [ads, zones, localZones, campaignsById] = await Promise.all([
+    const [ads, zones, localZones, campaignsById, localCampaignsById] = await Promise.all([
       Advertisement.find({ broadstreet_id: { $in: adIds } }).lean(),
       Zone.find({ id: { $in: zoneIds } }).lean(),
       (await import('@/lib/models/local-zone')).default.find({ _id: { $in: zoneMongoIds } }).lean(),
       Campaign.find({ id: { $in: campaignIds } }).lean(),
+      LocalCampaign.find({ _id: { $in: campaignMongoIds } }).lean(),
     ]);
 
     // Build lookup maps
@@ -260,6 +266,9 @@ export async function GET(request: NextRequest) {
     const zoneMap = new Map<number, any>(zones.map((z: any) => [z.id, z]));
     const zoneLocalMap = new Map<string, any>(localZones.map((z: any) => [z._id?.toString?.(), z]));
     const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.id, c]));
+    const localCampaignMap = new Map<string, any>(localCampaignsById.map((c: any) => [c._id?.toString?.(), c]));
+
+    console.log(`[Placements API] Built maps - campaigns: ${campaignMap.size}, local campaigns: ${localCampaignMap.size}`);
     
     // Start filtered set
     let filtered = deduped;
@@ -351,7 +360,20 @@ export async function GET(request: NextRequest) {
       const zone = typeof placement.zone_id === 'number' ? zoneMap.get(placement.zone_id) : undefined;
       const zoneLocal = placement.zone_mongo_id ? zoneLocalMap.get(String(placement.zone_mongo_id)) : undefined;
       const campaign = campaignMap.get(placement.campaign_id);
-      const local = placement._localCampaign;
+      const localCampaignFromMap = placement.campaign_mongo_id ? localCampaignMap.get(String(placement.campaign_mongo_id)) : undefined;
+      const local = placement._localCampaign || localCampaignFromMap;
+
+      // Debug logging for campaign resolution
+      if (!local && !campaign && (placement.campaign_id || placement.campaign_mongo_id)) {
+        console.log(`[Placements API] Campaign not found for placement:`, {
+          campaign_id: placement.campaign_id,
+          campaign_mongo_id: placement.campaign_mongo_id,
+          has_localCampaign: !!placement._localCampaign,
+          localCampaignFromMap: !!localCampaignFromMap,
+          campaignMapSize: campaignMap.size,
+          localCampaignMapSize: localCampaignMap.size
+        });
+      }
 
       // For local collection placements, get advertiser directly from the placement
       const advertiser = placement._isLocalCollection && placement.advertiser_id

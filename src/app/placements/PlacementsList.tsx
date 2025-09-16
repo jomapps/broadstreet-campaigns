@@ -184,7 +184,7 @@ function PlacementCard({ placement, onDelete, deletingIds }: PlacementCardProps)
             </span>
             {' • '}
             <span className="inline-flex items-center gap-1">
-              {placement.campaign?.name || `Campaign ${placement.campaign_id}`}
+              {placement.campaign?.name || (placement.campaign_id ? `Campaign ${placement.campaign_id}` : (placement.campaign_mongo_id ? `Campaign ${(placement as any).campaign_mongo_id?.slice(-8) || 'Local'}` : 'Campaign undefined'))}
               {isLocalCampaign && (
                 <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
                   Local
