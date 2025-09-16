@@ -77,7 +77,15 @@ deleting a theme will not delete the zones. it will simply remove the theme from
 the themes page will have extensive search and filter tools, similar to the zones page.
 search will be by any of the zones details.
 
-
-
+## NOTES
+- no mockups
+- no fallbacks
+- either it fails or it works
+- no database migration required. we can simply drop the database and start over.
+- remove any legacy / redundant code
+- we are using Nextjs. params and searchParams need to be awaited
+- pages are server side and any client side components need to be wrapped in suspense
+- please maintain the design of the app. copy.
+- reuse the existing components as much as possible.
 
 
