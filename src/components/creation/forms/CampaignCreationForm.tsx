@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
-import { getEntityId, isEntitySynced, getEntityType } from '@/lib/utils/entity-helpers';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import EntityIdBadge from '@/components/ui/entity-id-badge';
 
 interface CampaignCreationFormProps {

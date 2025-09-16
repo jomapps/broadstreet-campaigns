@@ -1,12 +1,5 @@
 export type EntityIds = { broadstreet_id?: number; mongo_id?: string };
 
-export interface EntityWithIds<TType extends string = string> {
-  ids: EntityIds;
-  id: number | string;
-  name: string;
-  type: TType;
-}
-
 export function getEntityId(entity: { ids?: EntityIds } | Record<string, unknown> | null | undefined): number | string | undefined {
   if (!entity) return undefined;
   // Prefer normalized shape

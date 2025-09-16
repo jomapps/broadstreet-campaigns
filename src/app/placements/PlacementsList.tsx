@@ -5,14 +5,11 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { isEntitySynced } from '@/lib/utils/entity-helpers';
 
-// Client-side version of isLocalEntity to avoid server-side imports
+// Client-side version of isLocalEntity using centralized utility
 function isLocalEntity(entity: any): boolean {
-  if (!entity || typeof entity !== 'object') return false;
-  if (entity.created_locally === true) return true;
-  const hasMongoId = typeof entity.mongo_id === 'string' || typeof entity._id === 'string';
-  const hasBroadstreetId = typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number';
-  return hasMongoId && !hasBroadstreetId;
+  return !isEntitySynced(entity);
 }
 
 // Type for enriched placement data

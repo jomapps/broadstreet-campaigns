@@ -1,7 +1,7 @@
 import connectDB from '../mongodb';
 import broadstreetAPI from '../broadstreet-api';
 import { parseZoneName } from './zone-parser';
-import { cleanupLegacyIndexes, resolveBroadstreetId, isEntitySynced } from './entity-helpers';
+import { cleanupLegacyIndexes, resolveBroadstreetId } from './entity-helpers';
 
 // Import models
 import Network from '../models/network';
@@ -9,10 +9,8 @@ import Advertiser from '../models/advertiser';
 import Zone from '../models/zone';
 import Campaign from '../models/campaign';
 import Advertisement from '../models/advertisement';
-import Placement from '../models/placement';
 import SyncLog from '../models/sync-log';
 import LocalAdvertiser from '../models/local-advertiser';
-import LocalCampaign from '../models/local-campaign';
 import LocalZone from '../models/local-zone';
 
 export async function syncNetworks(): Promise<{ success: boolean; count: number; error?: string }> {
@@ -565,25 +563,13 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
 
 // -----------------------------------------------------------------------------
 // Entity-specific ID resolution helpers (using consolidated utility)
+// These are kept for backward compatibility with existing code
 // -----------------------------------------------------------------------------
 
 export async function resolveAdvertiserBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
   return resolveBroadstreetId(ref, LocalAdvertiser);
 }
 
-export async function resolveCampaignBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  return resolveBroadstreetId(ref, LocalCampaign);
-}
-
 export async function resolveZoneBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
   return resolveBroadstreetId(ref, LocalZone);
-}
-
-// Re-export consolidated functions for backward compatibility
-export function isLocalEntity(entity: any): boolean {
-  return !isEntitySynced(entity);
-}
-
-export function isSyncedEntity(entity: any): boolean {
-  return isEntitySynced(entity);
 }

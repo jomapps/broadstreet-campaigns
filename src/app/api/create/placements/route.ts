@@ -4,7 +4,7 @@ import LocalCampaign from '@/lib/models/local-campaign';
 import Campaign from '@/lib/models/campaign';
 import Advertiser from '@/lib/models/advertiser';
 import Zone from '@/lib/models/zone';
-import { resolveCampaignBroadstreetId, resolveZoneBroadstreetId } from '@/lib/utils/sync-helpers';
+import { resolveZoneBroadstreetId } from '@/lib/utils/sync-helpers';
 
 type RequestBody = {
   campaign_broadstreet_id?: number;

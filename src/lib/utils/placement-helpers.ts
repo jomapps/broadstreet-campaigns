@@ -16,7 +16,7 @@ export function convertSelectionIdsToNumbers(selectedIds: string[], entities: Id
   const idSet = new Set<number>();
   const map = new Map<string, number>();
   for (const e of entities) {
-    map.set(e._id, e.broadstreet_id);
+    map.set(e.mongo_id, e.broadstreet_id);
   }
   for (const sel of selectedIds) {
     const num = map.get(sel);
