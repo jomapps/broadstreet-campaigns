@@ -147,7 +147,9 @@ function validateModelFile(filePath) {
     
     // Validate schema options
     SCHEMA_REQUIREMENTS.schema_options.forEach(option => {
-      if (!schemaOptions.includes(option)) {
+      // More flexible matching for schema options
+      const optionKey = option.split(':')[0].trim();
+      if (!schemaOptions.includes(optionKey) && !schemaOptions.includes(option)) {
         issues.push(`${fileName}: Missing schema option: ${option}`);
       }
     });

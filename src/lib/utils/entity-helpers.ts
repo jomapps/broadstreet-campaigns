@@ -8,8 +8,8 @@
  *
  * RULES:
  * - NEVER use generic "id"
- * - NEVER use "mongodb_id" - always use "mongo_id"
- * - NEVER use legacy explicit naming like "broadstreet_advertiser_id"
+ * - NEVER use "mongo_db_id" - always use "mongo_id"
+ * - NEVER use legacy explicit naming like "broadstreet_entity_id"
  */
 
 export type EntitySelectionKey = string | number;
@@ -86,23 +86,23 @@ export function getEntitySelectionKey(entity: StandardEntity | null | undefined)
 /**
  * Validate if a string is a valid MongoDB ObjectId format
  */
-export function isValidMongoId(id: string): boolean {
-  return /^[0-9a-fA-F]{24}$/.test(id);
+export function isValidMongoId(mongoId: string): boolean {
+  return /^[0-9a-fA-F]{24}$/.test(mongoId);
 }
 
 /**
  * Validate if a number is a valid Broadstreet ID format
  */
-export function isValidBroadstreetId(id: number): boolean {
-  return Number.isInteger(id) && id > 0;
+export function isValidBroadstreetId(broadstreetId: number): boolean {
+  return Number.isInteger(broadstreetId) && broadstreetId > 0;
 }
 
 /**
  * Convert MongoDB ObjectId to string (mongo_id)
  */
-export function objectIdToMongoId(objectId: any): string | undefined {
-  if (!objectId) return undefined;
-  const str = objectId.toString();
+export function objectIdToMongoId(mongoObjectId: any): string | undefined {
+  if (!mongoObjectId) return undefined;
+  const str = mongoObjectId.toString();
   return isValidMongoId(str) ? str : undefined;
 }
 

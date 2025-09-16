@@ -72,7 +72,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.id && zone.id.toString().includes(searchTerm)) ||
+        (zone.broadstreet_id && zone.broadstreet_id.toString().includes(searchTerm)) ||
         zone._id.includes(searchTerm)
       );
     }

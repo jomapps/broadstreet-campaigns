@@ -14,7 +14,7 @@ export async function DELETE(
     const { id } = await params;
     
     // Validate ObjectId format
-    if (!Types.ObjectId.isValid(id)) {
+    if (!Types.ObjectId.isValid(placementId)) {
       return NextResponse.json(
         { error: 'Invalid placement ID format' },
         { status: 400 }
@@ -59,7 +59,7 @@ export async function GET(
     const { id } = await params;
     
     // Validate ObjectId format
-    if (!Types.ObjectId.isValid(id)) {
+    if (!Types.ObjectId.isValid(placementId)) {
       return NextResponse.json(
         { error: 'Invalid placement ID format' },
         { status: 400 }

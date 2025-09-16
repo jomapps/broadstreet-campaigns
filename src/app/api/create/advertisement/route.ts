@@ -38,13 +38,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique ID
-    const maxId = await Advertisement.findOne({}, { id: 1 }).sort({ id: -1 });
-    const newId = maxId ? maxId.id + 1 : 1;
+    // Generate a unique Broadstreet ID
+    const maxId = await Advertisement.findOne({}, { broadstreet_id: 1 }).sort({ broadstreet_id: -1 });
+    const newBroadstreetId = maxId ? maxId.broadstreet_id + 1 : 1;
 
     // Create new advertisement
     const newAdvertisement = new Advertisement({
-      id: newId,
+      broadstreet_id: newBroadstreetId,
       name: name.trim(),
       type,
       preview_url,
@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Advertisement created successfully',
       advertisement: {
-        id: newAdvertisement.id,
+        broadstreet_id: newAdvertisement.broadstreet_id,
+        mongo_id: newAdvertisement._id?.toString(),
         name: newAdvertisement.name,
         type: newAdvertisement.type,
         preview_url: newAdvertisement.preview_url,

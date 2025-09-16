@@ -21,7 +21,7 @@ export async function POST(
       );
     }
 
-    const theme = await Theme.findById(id);
+    const theme = await Theme.findById(themeId);
     
     if (!theme) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function POST(
     }).lean();
 
     const validZoneIds = validZones.map(z => z.broadstreet_id);
-    const invalidZoneIds = zone_ids.filter((id: number) => !validZoneIds.includes(id));
+    const invalidZoneIds = zone_ids.filter((zoneId: number) => !validZoneIds.includes(zoneId));
 
     if (invalidZoneIds.length > 0) {
       return NextResponse.json(
@@ -86,7 +86,7 @@ export async function DELETE(
       );
     }
 
-    const theme = await Theme.findById(id);
+    const theme = await Theme.findById(themeId);
     
     if (!theme) {
       return NextResponse.json(

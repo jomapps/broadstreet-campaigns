@@ -10,9 +10,9 @@ export async function GET(
 ) {
   try {
     await connectDB();
-    const { id } = await params;
+    const { id: themeId } = await params;
 
-    const theme = await Theme.findById(id).lean();
+    const theme = await Theme.findById(themeId).lean();
     
     if (!theme) {
       return NextResponse.json(
@@ -50,7 +50,7 @@ export async function PUT(
     const body = await request.json();
     const { name, description } = body;
 
-    const theme = await Theme.findById(id);
+    const theme = await Theme.findById(themeId);
     
     if (!theme) {
       return NextResponse.json(
@@ -113,8 +113,8 @@ export async function DELETE(
     await connectDB();
     const { id } = await params;
 
-    const theme = await Theme.findById(id);
-    
+    const theme = await Theme.findById(themeId);
+
     if (!theme) {
       return NextResponse.json(
         { error: 'Theme not found' },
@@ -122,7 +122,7 @@ export async function DELETE(
       );
     }
 
-    await Theme.findByIdAndDelete(id);
+    await Theme.findByIdAndDelete(themeId);
 
     return NextResponse.json({ 
       message: 'Theme deleted successfully' 

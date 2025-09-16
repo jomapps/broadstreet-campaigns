@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       }).lean();
 
       const validZoneIds = validZones.map(z => z.broadstreet_id);
-      const invalidZoneIds = zone_ids.filter((id: number) => !validZoneIds.includes(id));
+      const invalidZoneIds = zone_ids.filter((zoneId: number) => !validZoneIds.includes(zoneId));
 
       if (invalidZoneIds.length > 0) {
         return NextResponse.json(

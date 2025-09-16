@@ -83,7 +83,7 @@ export async function validateZoneEligibility(zoneIds: number[]): Promise<{
   }).lean();
   
   const validZoneIds = validZones.map(z => z.broadstreet_id);
-  const invalidZoneIds = zoneIds.filter(id => !validZoneIds.includes(id));
+  const invalidZoneIds = zoneIds.filter(zoneId => !validZoneIds.includes(zoneId));
   
   return {
     valid: validZoneIds,

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import EntityIdBadge from '@/components/ui/entity-id-badge';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 interface CampaignCreationFormProps {
   onClose: () => void;

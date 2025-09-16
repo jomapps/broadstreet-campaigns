@@ -127,26 +127,26 @@ async function LocalOnlyDataWrapper() {
       ...localZones.map(z => z.network_id),
       ...allLocalAdvertisers.map(a => a.network_id),
       ...localCampaigns.map(c => c.network_id),
-      ...localNetworks.map(n => n.id),
+      ...localNetworks.map(n => n.broadstreet_id),
       ...localAdvertisements.map(ad => ad.network_id),
     ])];
     
-    const networks = await Network.find({ id: { $in: networkIds } }).lean();
-    const networkMap = new Map(networks.map(n => [n.id, n.name]));
+    const networks = await Network.find({ broadstreet_id: { $in: networkIds } }).lean();
+    const networkMap = new Map(networks.map(n => [n.broadstreet_id, n.name]));
 
     // Get advertiser names for display (only numeric Broadstreet IDs)
     const advertiserIds = [...new Set(
       localCampaigns
         .map(c => c.advertiser_id)
-        .filter((id): id is number => typeof id === 'number')
+        .filter((advertiserId): advertiserId is number => typeof advertiserId === 'number')
     )];
-    
+
     // Fetch synced advertisers that match those numeric IDs
-    const syncedAdvertisers = await Advertiser.find({ id: { $in: advertiserIds } }).lean();
-    
+    const syncedAdvertisers = await Advertiser.find({ broadstreet_id: { $in: advertiserIds } }).lean();
+
     // Map by numeric ID for campaign display lookups
     const advertiserMap = new Map<number, string>(
-      syncedAdvertisers.map(a => [a.id, a.name])
+      syncedAdvertisers.map(a => [a.broadstreet_id, a.name])
     );
 
     // Serialize the data properly

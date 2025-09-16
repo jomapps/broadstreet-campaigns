@@ -31,8 +31,8 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
 
   // Helper: derive selection key using standardized utility
   const zoneSelectionKey = (zone: ZoneLean) => {
-    const id = getEntityId(zone);
-    return typeof id === 'number' ? String(id) : id || zone._id;
+    const entityId = getEntityId(zone);
+    return typeof entityId === 'number' ? String(entityId) : entityId || zone._id;
   };
 
   // Get currently selected zones that are visible
@@ -44,7 +44,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   const visibleZoneIds = visibleZones.map(zone => zoneSelectionKey(zone));
 
   // Check if all visible zones are selected
-  const allVisibleSelected = visibleZoneIds.length > 0 && visibleZoneIds.every(id => selectedZones.includes(id));
+  const allVisibleSelected = visibleZoneIds.length > 0 && visibleZoneIds.every(zoneId => selectedZones.includes(zoneId));
 
   // Handle select all visible zones
   const handleSelectAll = () => {
@@ -66,7 +66,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
     return visibleSelectedZones
       .filter(zone => isEntitySynced(zone) && zone.synced_with_api)
       .map(zone => zone.broadstreet_id!)
-      .filter(id => id != null);
+      .filter(broadstreetId => broadstreetId != null);
   }, [visibleSelectedZones]);
 
   // Handle adding zones to themes

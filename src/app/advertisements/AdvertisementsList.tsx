@@ -19,7 +19,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
 
   const handleCardClick = () => {
     if (onToggleSelection) {
-      onToggleSelection(String(advertisement.id));
+      onToggleSelection(String(advertisement.broadstreet_id));
     }
   };
   
@@ -186,10 +186,10 @@ export default function AdvertisementsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayAdvertisements.map((advertisement) => {
-            const selectionId = String((advertisement as any).id ?? (advertisement as any)._id);
+            const selectionId = String((advertisement as any).broadstreet_id ?? (advertisement as any)._id);
             return (
               <AdvertisementCard 
-                key={advertisement._id || String(advertisement.id)} 
+                key={advertisement._id || String(advertisement.broadstreet_id)}
                 advertisement={advertisement}
                 isSelected={selectedAdvertisements.includes(selectionId)}
                 onToggleSelection={() => toggleAdvertisementSelection(selectionId)}

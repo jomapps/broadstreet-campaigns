@@ -24,8 +24,8 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, th
   const isConflictZone = hasMultipleSizeTypes(zone.name);
 
   const handleCardClick = () => {
-    if (onToggleSelection && typeof zone.id === 'number') {
-      onToggleSelection(String(zone.id));
+    if (onToggleSelection && zone.broadstreet_id) {
+      onToggleSelection(String(zone.broadstreet_id));
     }
   };
   
@@ -126,7 +126,7 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, th
       </div>
 
       {/* Theme badges - only show for synced zones */}
-      {themes.length > 0 && zone.id && (
+      {themes.length > 0 && zone.broadstreet_id && (
         <div className="mt-3 pt-3 border-t border-gray-200">
           <div className="flex items-center space-x-2">
             <span className="text-xs text-gray-500 font-medium">Themes:</span>
@@ -169,9 +169,9 @@ export default function ZonesList({
   // Get zone IDs for theme fetching (only synced zones)
   const syncedZoneIds = useMemo(() => {
     return displayZones
-      .filter(zone => zone.id && (zone.source === 'api' || !zone.created_locally))
-      .map(zone => zone.id!)
-      .filter(id => id != null);
+      .filter(zone => zone.broadstreet_id && (zone.source === 'api' || !zone.created_locally))
+      .map(zone => zone.broadstreet_id!)
+      .filter(broadstreetId => broadstreetId != null);
   }, [displayZones]);
 
   // Fetch themes for zones
@@ -223,9 +223,9 @@ export default function ZonesList({
               key={zone._id}
               zone={zone}
               networkName={networkMap.get(zone.network_id)}
-              isSelected={selectedZones.includes(String(zone.id))}
+              isSelected={selectedZones.includes(String(zone.broadstreet_id || zone._id))}
               onToggleSelection={toggleZoneSelection}
-              themes={zone.id ? themesByZone.get(zone.id) || [] : []}
+              themes={zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : []}
             />
           ))}
         </div>

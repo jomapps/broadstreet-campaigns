@@ -71,7 +71,7 @@ export default function AddToThemeModal({
     if (checked) {
       setSelectedThemeIds(prev => [...prev, themeId]);
     } else {
-      setSelectedThemeIds(prev => prev.filter(id => id !== themeId));
+      setSelectedThemeIds(prev => prev.filter(selectedId => selectedId !== themeId));
     }
   };
 

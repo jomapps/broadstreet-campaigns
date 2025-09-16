@@ -119,9 +119,9 @@ export function ProgressModal({
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {steps.map((step) => (
               <div
-                key={step.id}
+                key={step.stepId}
                 className={`p-3 rounded-lg border transition-all duration-200 ${getStepStatusColor(step)} ${
-                  currentStep === step.id ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                  currentStep === step.stepId ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                 }`}
               >
                 <div className="flex items-start space-x-3">
@@ -267,8 +267,8 @@ export function useSyncProgress() {
   };
 
   const updateStep = (stepId: string, updates: Partial<SyncStep>) => {
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, ...updates } : step
+    setSteps(prev => prev.map(step =>
+      step.stepId === stepId ? { ...step, ...updates } : step
     ));
   };
 
@@ -324,7 +324,7 @@ export function useSyncProgress() {
     // Update final step
     const finalStep = steps[steps.length - 1];
     if (finalStep) {
-      updateStep(finalStep.id, {
+      updateStep(finalStep.stepId, {
         status: success ? 'completed' : 'failed',
         message: success ? 'Sync completed successfully' : 'Sync completed with errors',
         error: errors && errors.length > 0 ? errors.join(', ') : undefined

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Plus, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import EntityIdBadge from '@/components/ui/entity-id-badge';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 interface AdvertiserCreationFormProps {
   onClose: () => void;

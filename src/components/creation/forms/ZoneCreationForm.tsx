@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import EntityIdBadge from '@/components/ui/entity-id-badge';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 interface ZoneCreationFormProps {
   onClose: () => void;

@@ -9,10 +9,10 @@ export async function DELETE(
   try {
     await connectDB();
 
-    const { id } = await context.params;
+    const { id: networkId } = await context.params;
 
     // Find and delete the local network
-    const deletedNetwork = await LocalNetwork.findByIdAndDelete(id);
+    const deletedNetwork = await LocalNetwork.findByIdAndDelete(networkId);
 
     if (!deletedNetwork) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function DELETE(
     return NextResponse.json({
       message: 'Local network deleted successfully',
       network: {
-        id: deletedNetwork._id,
+        mongo_id: deletedNetwork._id?.toString(),
         name: deletedNetwork.name,
       }
     });

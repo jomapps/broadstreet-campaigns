@@ -9,8 +9,8 @@ export type EntityIds = { broadstreet_id?: number; mongo_id?: string };
 
 export type BaseSelectedEntity<T extends EntityType> = {
   ids: EntityIds;
-  // Legacy convenience id for existing consumers (number when broadstreet_id present, else string mongo_id)
-  id: number | string;
+  // Legacy convenience entityId for existing consumers (number when broadstreet_id present, else string mongo_id)
+  entityId: number | string;
   name: string;
   type: T;
 };
@@ -44,31 +44,31 @@ export function useSelectedEntities(): SelectedEntitiesResult {
   const network = useMemo(() => {
     if (!selectedNetwork) return null;
     const bsId = (selectedNetwork as any).broadstreet_network_id ?? (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
-    const mongoId = (selectedNetwork as any).local_network_id ?? (selectedNetwork as any).mongo_id;
+    const networkMongoId = (selectedNetwork as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
-    if (typeof mongoId === 'string') ids.mongo_id = mongoId;
+    if (typeof networkMongoId === 'string') ids.mongo_id = networkMongoId;
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (mongoId as string),
-      name: (selectedNetwork as any).name || String(bsId ?? mongoId),
+      id: typeof bsId === 'number' ? bsId : (networkMongoId as string),
+      name: (selectedNetwork as any).name || String(bsId ?? networkMongoId),
       type: 'network' as const,
     };
   }, [selectedNetwork]);
 
   const advertiser = useMemo(() => {
     if (!selectedAdvertiser) return null;
-    const bsId = (selectedAdvertiser as any).broadstreet_advertiser_id ?? (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
-    const mongoId = (selectedAdvertiser as any).local_advertiser_id ?? (selectedAdvertiser as any).mongo_id;
+    const bsId = (selectedAdvertiser as any).broadstreet_id;
+    const advertiserMongoId = (selectedAdvertiser as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
-    if (typeof mongoId === 'string') ids.mongo_id = mongoId;
+    if (typeof advertiserMongoId === 'string') ids.mongo_id = advertiserMongoId;
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (mongoId as string),
-      name: (selectedAdvertiser as any).name || String(bsId ?? mongoId),
+      id: typeof bsId === 'number' ? bsId : (advertiserMongoId as string),
+      name: (selectedAdvertiser as any).name || String(bsId ?? advertiserMongoId),
       type: 'advertiser' as const,
     };
   }, [selectedAdvertiser]);
@@ -76,15 +76,15 @@ export function useSelectedEntities(): SelectedEntitiesResult {
   const campaign = useMemo(() => {
     if (!selectedCampaign) return null;
     const bsId = (selectedCampaign as any).broadstreet_campaign_id ?? (selectedCampaign as any).broadstreet_id ?? (selectedCampaign as any).id;
-    const mongoId = (selectedCampaign as any).local_campaign_id ?? (selectedCampaign as any).mongo_id;
+    const campaignMongoId = (selectedCampaign as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
-    if (typeof mongoId === 'string') ids.mongo_id = mongoId;
+    if (typeof campaignMongoId === 'string') ids.mongo_id = campaignMongoId;
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (mongoId as string),
-      name: (selectedCampaign as any).name || String(bsId ?? mongoId),
+      id: typeof bsId === 'number' ? bsId : (campaignMongoId as string),
+      name: (selectedCampaign as any).name || String(bsId ?? campaignMongoId),
       type: 'campaign' as const,
     };
   }, [selectedCampaign]);

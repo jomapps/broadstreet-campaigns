@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Edge case handling: if campaign_mongo_id was provided but does not match a LocalCampaign,
-    // it might actually be a Mongo _id from the synced Campaign collection; try mirroring by that id.
+    // it might actually be a Mongo _id from the synced Campaign collection; try mirroring by that _id.
     if (!campaign && campaign_mongo_id) {
       const sourceByMongo = await Campaign.findById(campaign_mongo_id).lean();
       if (sourceByMongo) {
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
                 { status: 422 }
               );
             }
-            zoneDoc = await Zone.findOne({ id: resolvedZoneId }).lean();
+            zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
             if (zoneDoc && typeof zoneDoc.network_id === 'number') {
               resolvedNetworkId = zoneDoc.network_id;
             }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
           placements: [],
           created_locally: false,
           synced_with_api: false,
-          original_broadstreet_id: (sourceByMongo as any).id,
+          original_broadstreet_id: (sourceByMongo as any).broadstreet_id,
           sync_errors: [],
         });
         campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
       for (const zoneId of resolvedZoneIds) {
         combinations.push({ advertisement_id: adId, zone_id: zoneId, restrictions });
       }
-      // Local zones referenced by mongo id
+      // Local zones referenced by mongo_id
       for (const zoneMongoId of resolvedZoneMongoIds) {
         combinations.push({ advertisement_id: adId, zone_id: NaN as any, zone_mongo_id: zoneMongoId, restrictions });
       }

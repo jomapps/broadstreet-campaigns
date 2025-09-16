@@ -11,8 +11,8 @@
  *
  * RULES:
  * - NEVER use generic "id"
- * - NEVER use "mongodb_id" - always use "mongo_id"
- * - NEVER use legacy explicit naming like "broadstreet_advertiser_id"
+ * - NEVER use "mongo_db_id" - always use "mongo_id"
+ * - NEVER use legacy explicit naming like "advertiser_broadstreet_id"
  */
 
 /**

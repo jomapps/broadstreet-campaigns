@@ -56,7 +56,7 @@ async function ZonesData() {
     // Combine zones from both sources
     const allZones = [
       ...apiZones.map(zone => ({ ...zone, source: 'api' as const })),
-      ...localZones.map(zone => ({ ...zone, source: 'local' as const, id: undefined })) // LocalZone doesn't have id field
+      ...localZones.map(zone => ({ ...zone, source: 'local' as const, broadstreet_id: undefined })) // LocalZone doesn't have broadstreet_id field
     ];
     
     // Get network names

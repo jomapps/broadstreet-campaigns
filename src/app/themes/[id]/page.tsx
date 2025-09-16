@@ -106,8 +106,8 @@ export default function ThemeDetailPage({ params }: ThemeDetailPageProps) {
   const [themeId, setThemeId] = useState<string>('');
 
   useEffect(() => {
-    params.then(({ id }) => {
-      setThemeId(id);
+    params.then(({ id: themeIdParam }) => {
+      setThemeId(themeIdParam);
     });
   }, [params]);
 
@@ -172,7 +172,7 @@ export default function ThemeDetailPage({ params }: ThemeDetailPageProps) {
       setZones(prev => prev.filter(zone => zone.broadstreet_id !== zoneId));
       setTheme(prev => prev ? {
         ...prev,
-        zone_ids: prev.zone_ids.filter(id => id !== zoneId),
+        zone_ids: prev.zone_ids.filter(zoneIdInArray => zoneIdInArray !== zoneId),
         zone_count: prev.zone_count - 1
       } : null);
     } catch (err) {

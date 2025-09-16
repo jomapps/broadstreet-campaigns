@@ -285,13 +285,13 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deselectZones = (zoneIds: string[]) => {
-    setSelectedZones(prev => prev.filter(id => !zoneIds.includes(id)));
+    setSelectedZones(prev => prev.filter(currentZoneId => !zoneIds.includes(currentZoneId)));
   };
 
   const toggleZoneSelection = (zoneId: string) => {
-    setSelectedZones(prev => 
-      prev.includes(zoneId) 
-        ? prev.filter(id => id !== zoneId)
+    setSelectedZones(prev =>
+      prev.includes(zoneId)
+        ? prev.filter(currentZoneId => currentZoneId !== zoneId)
         : [...prev, zoneId]
     );
   };
@@ -305,13 +305,13 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deselectAdvertisements = (advertisementIds: string[]) => {
-    setSelectedAdvertisements(prev => prev.filter(id => !advertisementIds.includes(id)));
+    setSelectedAdvertisements(prev => prev.filter(currentAdId => !advertisementIds.includes(currentAdId)));
   };
 
   const toggleAdvertisementSelection = (advertisementId: string) => {
-    setSelectedAdvertisements(prev => 
-      prev.includes(advertisementId) 
-        ? prev.filter(id => id !== advertisementId)
+    setSelectedAdvertisements(prev =>
+      prev.includes(advertisementId)
+        ? prev.filter(currentAdId => currentAdId !== advertisementId)
         : [...prev, advertisementId]
     );
   };
