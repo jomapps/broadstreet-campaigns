@@ -238,3 +238,22 @@ await broadstreetAPI.deletePlacement({
 - Error handling: 401 indicates invalid/missing token; dependency errors occur when campaign/zone are not synced or ad is missing.
 
 Reference: [Broadstreet Placements API v1](https://api.broadstreetads.com/docs/v1#tag/Placements)
+
+**FEATURE**
+We are going to create a a new collection placements
+this will be only used for local placements. broadstreet placements will be stored in the campaign document as it is now.
+
+When we create a placement, we will create a new document with all the info required:
+network, advertiser, campaign, zone and advertisement 
+This will help clearly establish the relationships between the entities.
+some notes:
+network, advertiser and advertisement will allway be existing broadstreet_id as they will exist guaranteed, else placement is logically not possible.
+campaign can be local or broadstreet. if local, it will have a mongo_id. if broadstreet, it will have a broadstreet_id. 
+zone can be local or broadstreet. if local, it will have a mongo_id. if broadstreet, it will have a broadstreet_id. 
+**Critical** each placement must have a unique combination of campaign, zone and advertisement. This is a business rule.
+
+Ensure that we have a section for placement cards in the local-only page as well.
+Once the sync to broadstreet (upload) is complete, the local items will all be deleted.
+local cards will always have a x on the top right to delete them.
+
+Change the display of the placement page. it will show cards from the local collection as well as the embedded documents in the campaign collection.
