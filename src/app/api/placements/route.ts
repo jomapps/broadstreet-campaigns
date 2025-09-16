@@ -7,6 +7,7 @@ import Advertiser from '@/lib/models/advertiser';
 import Network from '@/lib/models/network';
 import LocalCampaign from '@/lib/models/local-campaign';
 import Placement from '@/lib/models/placement';
+import { generatePlacementKey } from '@/lib/utils/entity-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -203,22 +204,27 @@ export async function GET(request: NextRequest) {
     });
 
     for (const p of sortedPlacements) {
-      const compositeCampaign = (typeof p.campaign_id === 'number'
-        ? String(p.campaign_id)
-        : ((p as any).campaign_mongo_id ? String((p as any).campaign_mongo_id) : ''));
-      const zoneKey = (typeof p.zone_id === 'number' ? String(p.zone_id) : (p as any).zone_mongo_id || '');
-      const key = `${compositeCampaign}-${p.advertisement_id}-${zoneKey}`;
+      const key = generatePlacementKey({
+        advertisement_id: p.advertisement_id,
+        campaign_id: p.campaign_id,
+        campaign_mongo_id: (p as any).campaign_mongo_id,
+        zone_id: p.zone_id,
+        zone_mongo_id: (p as any).zone_mongo_id
+      });
+
       if (!seen.has(key)) {
         seen.add(key);
         deduped.push(p);
       } else if ((p as any)._isLocalCollection) {
         // If we have a duplicate but this is from local collection, replace the embedded one
         const existingIndex = deduped.findIndex(existing => {
-          const existingCampaign = (typeof existing.campaign_id === 'number'
-            ? String(existing.campaign_id)
-            : ((existing as any).campaign_mongo_id ? String((existing as any).campaign_mongo_id) : ''));
-          const existingZoneKey = (typeof existing.zone_id === 'number' ? String(existing.zone_id) : (existing as any).zone_mongo_id || '');
-          const existingKey = `${existingCampaign}-${existing.advertisement_id}-${existingZoneKey}`;
+          const existingKey = generatePlacementKey({
+            advertisement_id: existing.advertisement_id,
+            campaign_id: existing.campaign_id,
+            campaign_mongo_id: (existing as any).campaign_mongo_id,
+            zone_id: existing.zone_id,
+            zone_mongo_id: (existing as any).zone_mongo_id
+          });
           return existingKey === key;
         });
         if (existingIndex >= 0 && !(deduped[existingIndex] as any)._isLocalCollection) {

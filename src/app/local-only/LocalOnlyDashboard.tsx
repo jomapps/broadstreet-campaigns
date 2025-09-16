@@ -465,9 +465,7 @@ function LocalPlacementCard({
               {placement.campaign_id ? `Campaign ${placement.campaign_id}` :
                placement.campaign_mongo_id ? (
                  <EntityIdBadge
-                   id={placement.campaign_mongo_id}
-                   isLocal={true}
-                   label="Campaign"
+                   local_campaign_id={placement.campaign_mongo_id}
                  />
                ) : 'N/A'}
             </span>
@@ -478,9 +476,7 @@ function LocalPlacementCard({
               {placement.zone_id ? `Zone ${placement.zone_id}` :
                placement.zone_mongo_id ? (
                  <EntityIdBadge
-                   id={placement.zone_mongo_id}
-                   isLocal={true}
-                   label="Zone"
+                   local_zone_id={placement.zone_mongo_id}
                  />
                ) : 'N/A'}
             </span>

@@ -6,12 +6,12 @@ import { Types } from 'mongoose';
 // DELETE /api/local-placements/[id] - Delete individual local placement
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
-    
-    const { id } = params;
+
+    const { id } = await params;
     
     // Validate ObjectId format
     if (!Types.ObjectId.isValid(id)) {
@@ -51,12 +51,12 @@ export async function DELETE(
 // GET /api/local-placements/[id] - Get individual local placement
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
-    
-    const { id } = params;
+
+    const { id } = await params;
     
     // Validate ObjectId format
     if (!Types.ObjectId.isValid(id)) {

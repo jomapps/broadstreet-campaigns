@@ -331,7 +331,7 @@ export default function PlacementsList({ placements: initialPlacements, entities
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          campaign_mongo_id: placement.campaign_mongo_id,
+          campaign_mongo_id: (placement as any).campaign_mongo_id,
           advertisement_id: placement.advertisement_id,
           zone_id: placement.zone_id,
           zone_mongo_id: (placement as any).zone_mongo_id
@@ -375,7 +375,7 @@ export default function PlacementsList({ placements: initialPlacements, entities
       (placement.zone_id && placement.zone_id.toString().includes(searchTerm)) ||
       (placement.campaign_id && placement.campaign_id.toString().includes(searchTerm)) ||
       ((placement as any).zone_mongo_id && (placement as any).zone_mongo_id.toString().includes(searchTerm)) ||
-      (placement.campaign_mongo_id && placement.campaign_mongo_id.toString().includes(searchTerm)) ||
+      ((placement as any).campaign_mongo_id && (placement as any).campaign_mongo_id.toString().includes(searchTerm)) ||
       (placement.restrictions && placement.restrictions.some(r =>
         r.toLowerCase().includes(searchTerm.toLowerCase())
       ))

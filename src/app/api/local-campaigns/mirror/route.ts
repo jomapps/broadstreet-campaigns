@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       sync_errors: [],
     });
 
-    return NextResponse.json({ message: 'Mirror created', campaign: { _id: mirror._id.toString() } }, { status: 201 });
+    return NextResponse.json({ message: 'Mirror created', campaign: { _id: mirror._id?.toString() } }, { status: 201 });
   } catch (error) {
     console.error('Mirror LocalCampaign error:', error);
     return NextResponse.json({ message: 'Internal server error' }, { status: 500 });

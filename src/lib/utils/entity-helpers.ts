@@ -55,4 +55,66 @@ export function getEntityType(entity: { ids?: EntityIds } | Record<string, unkno
   return 'none';
 }
 
+// Consolidated ID resolution functions (replaces duplicates in sync-helpers.ts)
+export async function resolveBroadstreetId(
+  entity: { broadstreet_id?: number; mongo_id?: string; original_broadstreet_id?: number } | null | undefined,
+  LocalModel?: any
+): Promise<number | null> {
+  if (!entity) return null;
+
+  // If already has broadstreet_id, return it
+  if (typeof entity.broadstreet_id === 'number') {
+    return entity.broadstreet_id;
+  }
+
+  // If has original_broadstreet_id (for local entities), return it
+  if (typeof entity.original_broadstreet_id === 'number') {
+    return entity.original_broadstreet_id;
+  }
+
+  // If has mongo_id and LocalModel provided, try to resolve from local entity
+  if (entity.mongo_id && LocalModel) {
+    try {
+      const localEntity = await LocalModel.findById(entity.mongo_id).lean();
+      if (localEntity?.original_broadstreet_id) {
+        return localEntity.original_broadstreet_id;
+      }
+    } catch (_) {
+      // Ignore errors and return null
+    }
+  }
+
+  return null;
+}
+
+// Helper to clean up legacy indexes (consolidates duplicate code)
+export async function cleanupLegacyIndexes(Model: any, indexName: string = 'id_1'): Promise<void> {
+  try {
+    const indexes = await Model.collection.indexes();
+    const legacy = indexes.find((i: any) => i.name === indexName);
+    if (legacy) {
+      await Model.collection.dropIndex(indexName);
+    }
+  } catch (_) {
+    // Ignore errors - index might not exist
+  }
+}
+
+// Helper to generate composite keys for placement deduplication
+export function generatePlacementKey(placement: {
+  advertisement_id: number;
+  campaign_id?: number;
+  campaign_mongo_id?: string;
+  zone_id?: number;
+  zone_mongo_id?: string;
+}): string {
+  const campaignKey = typeof placement.campaign_id === 'number'
+    ? String(placement.campaign_id)
+    : (placement.campaign_mongo_id || '');
+  const zoneKey = typeof placement.zone_id === 'number'
+    ? String(placement.zone_id)
+    : (placement.zone_mongo_id || '');
+  return `${campaignKey}-${placement.advertisement_id}-${zoneKey}`;
+}
+
 

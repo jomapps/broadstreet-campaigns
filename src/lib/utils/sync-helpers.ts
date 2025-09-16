@@ -1,6 +1,7 @@
 import connectDB from '../mongodb';
 import broadstreetAPI from '../broadstreet-api';
 import { parseZoneName } from './zone-parser';
+import { cleanupLegacyIndexes, resolveBroadstreetId, isEntitySynced } from './entity-helpers';
 
 // Import models
 import Network from '../models/network';
@@ -28,14 +29,7 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
     const networks = await broadstreetAPI.getNetworks();
     
     // Upsert networks for idempotent sync
-    // Drop any legacy unique index on `id` if present to avoid duplicate null errors
-    try {
-      const indexes = await Network.collection.indexes();
-      const legacy = indexes.find((i: any) => i.name === 'id_1');
-      if (legacy) {
-        await Network.collection.dropIndex('id_1');
-      }
-    } catch (_) {}
+    await cleanupLegacyIndexes(Network);
     
     const networkDocs = networks.map(network => ({
       broadstreet_id: (network as any).broadstreet_id ?? (network as any).id,
@@ -129,14 +123,7 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
     // Upsert all unique advertisers
     const advertiserDocs = Array.from(allAdvertisers.values());
     if (advertiserDocs.length > 0) {
-      // Drop any legacy unique index on `id` if present to avoid duplicate null errors
-      try {
-        const indexes = await Advertiser.collection.indexes();
-        const legacy = indexes.find((i: any) => i.name === 'id_1');
-        if (legacy) {
-          await Advertiser.collection.dropIndex('id_1');
-        }
-      } catch (_) {}
+      await cleanupLegacyIndexes(Advertiser);
 
       await Advertiser.bulkWrite(
         advertiserDocs.map((doc) => ({
@@ -221,14 +208,7 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
     // Upsert all unique zones
     const zoneDocs = Array.from(allZones.values());
     if (zoneDocs.length > 0) {
-      // Drop legacy unique index on `id` if present to avoid dup key on null
-      try {
-        const indexes = await Zone.collection.indexes();
-        const legacy = indexes.find((i: any) => i.name === 'id_1');
-        if (legacy) {
-          await Zone.collection.dropIndex('id_1');
-        }
-      } catch (_) {}
+      await cleanupLegacyIndexes(Zone);
 
       await Zone.bulkWrite(
         zoneDocs.map((doc) => ({
@@ -350,14 +330,7 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
     // Upsert all unique campaigns
     const campaignDocs = Array.from(allCampaigns.values());
     if (campaignDocs.length > 0) {
-      // Drop legacy unique index on `id` if present to avoid dup key on null
-      try {
-        const indexes = await Campaign.collection.indexes();
-        const legacy = indexes.find((i: any) => i.name === 'id_1');
-        if (legacy) {
-          await Campaign.collection.dropIndex('id_1');
-        }
-      } catch (_) {}
+      await cleanupLegacyIndexes(Campaign);
 
       await Campaign.bulkWrite(
         campaignDocs.map((doc) => ({
@@ -437,14 +410,7 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
     // Upsert all unique advertisements
     const advertisementDocs = Array.from(allAdvertisements.values());
     if (advertisementDocs.length > 0) {
-      // Drop legacy unique index on `id` if present to avoid dup key on null
-      try {
-        const indexes = await Advertisement.collection.indexes();
-        const legacy = indexes.find((i: any) => i.name === 'id_1');
-        if (legacy) {
-          await Advertisement.collection.dropIndex('id_1');
-        }
-      } catch (_) {}
+      await cleanupLegacyIndexes(Advertisement);
 
       await Advertisement.bulkWrite(
         advertisementDocs.map((doc) => ({
@@ -598,60 +564,26 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
 }
 
 // -----------------------------------------------------------------------------
-// ID resolution and entity helpers for sync operations
+// Entity-specific ID resolution helpers (using consolidated utility)
 // -----------------------------------------------------------------------------
 
 export async function resolveAdvertiserBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  try {
-    await connectDB();
-    if (typeof ref?.broadstreet_id === 'number') {
-      return ref.broadstreet_id;
-    }
-    if (ref?.mongo_id) {
-      const local = await LocalAdvertiser.findById(ref.mongo_id).lean();
-      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
-    }
-  } catch (_) {}
-  return null;
+  return resolveBroadstreetId(ref, LocalAdvertiser);
 }
 
 export async function resolveCampaignBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  try {
-    await connectDB();
-    if (typeof ref?.broadstreet_id === 'number') {
-      return ref.broadstreet_id;
-    }
-    if (ref?.mongo_id) {
-      const local = await LocalCampaign.findById(ref.mongo_id).lean();
-      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
-    }
-  } catch (_) {}
-  return null;
+  return resolveBroadstreetId(ref, LocalCampaign);
 }
 
 export async function resolveZoneBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  try {
-    await connectDB();
-    if (typeof ref?.broadstreet_id === 'number') {
-      return ref.broadstreet_id;
-    }
-    if (ref?.mongo_id) {
-      const local = await LocalZone.findById(ref.mongo_id).lean();
-      if (local?.original_broadstreet_id) return local.original_broadstreet_id;
-    }
-  } catch (_) {}
-  return null;
+  return resolveBroadstreetId(ref, LocalZone);
 }
 
+// Re-export consolidated functions for backward compatibility
 export function isLocalEntity(entity: any): boolean {
-  if (!entity || typeof entity !== 'object') return false;
-  if (entity.created_locally === true) return true;
-  const hasMongoId = typeof entity.mongo_id === 'string' || typeof entity._id === 'string';
-  const hasBroadstreetId = typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number';
-  return hasMongoId && !hasBroadstreetId;
+  return !isEntitySynced(entity);
 }
 
 export function isSyncedEntity(entity: any): boolean {
-  if (!entity || typeof entity !== 'object') return false;
-  return typeof entity.broadstreet_id === 'number' || typeof entity.original_broadstreet_id === 'number' || entity.synced_with_api === true;
+  return isEntitySynced(entity);
 }

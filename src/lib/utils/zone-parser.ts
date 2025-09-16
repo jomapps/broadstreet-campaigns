@@ -83,12 +83,13 @@ export function getZonesBySize(zones: Zone[], sizeTypes: ZoneSize[]): Zone[] {
  * Get size information for display
  */
 export function getSizeInfo(sizeType: ZoneSize): { dimensions: string; description: string } {
-  const sizeMap = {
+  const sizeMap: Record<ZoneSize, { dimensions: string; description: string }> = {
     SQ: { dimensions: '300x250', description: 'Square ads' },
     PT: { dimensions: '300x600', description: 'Portrait/vertical banners' },
     LS: { dimensions: '728x90', description: 'Horizontal banners' },
+    CS: { dimensions: 'Custom', description: 'Custom size ads' },
   };
-  
+
   return sizeMap[sizeType];
 }
 
