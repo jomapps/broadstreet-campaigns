@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // If not found and we have a numeric campaign_id, upsert a mirror from Campaign
     if (!campaign && typeof campaign_broadstreet_id === 'number') {
-      const source = await Campaign.findOne({ id: campaign_broadstreet_id }).lean();
+      const source = await Campaign.findOne({ broadstreet_id: campaign_broadstreet_id }).lean();
       if (!source) {
         return NextResponse.json(
           { message: 'Source campaign not found to mirror locally' },
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       }
       // Ensure required LocalCampaign fields exist; derive network_id from Advertiser if missing
       const advertiser = (source as any).advertiser_id
-        ? (await Advertiser.findOne({ id: (source as any).advertiser_id }).lean()) as any
+        ? (await Advertiser.findOne({ broadstreet_id: (source as any).advertiser_id }).lean()) as any
         : null;
       let resolvedNetworkId = (source as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
       if (typeof resolvedNetworkId !== 'number') {
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
               { status: 422 }
             );
           }
-          zoneDoc = await Zone.findOne({ id: resolvedZoneId }).lean();
+          zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
           if (zoneDoc && typeof zoneDoc.network_id === 'number') {
             resolvedNetworkId = zoneDoc.network_id;
           }
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
       const sourceByMongo = await Campaign.findById(campaign_mongo_id).lean();
       if (sourceByMongo) {
         const advertiser = (sourceByMongo as any).advertiser_id
-          ? (await Advertiser.findOne({ id: (sourceByMongo as any).advertiser_id }).lean()) as any
+          ? (await Advertiser.findOne({ broadstreet_id: (sourceByMongo as any).advertiser_id }).lean()) as any
           : null;
         let resolvedNetworkId = (sourceByMongo as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
         if (typeof resolvedNetworkId !== 'number') {

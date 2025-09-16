@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     
     // Validate entity dependencies exist
     const [advertisement, advertiser, network] = await Promise.all([
-      Advertisement.findOne({ id: body.advertisement_id }),
+      Advertisement.findOne({ broadstreet_id: body.advertisement_id }),
       Advertiser.findOne({ broadstreet_id: body.advertiser_id }),
       Network.findOne({ broadstreet_id: body.network_id })
     ]);
