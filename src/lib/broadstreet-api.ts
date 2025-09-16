@@ -31,11 +31,7 @@ class BroadstreetAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${this.token}`;
 
-    console.log('[request] Making API call:', {
-      method: options.method || 'GET',
-      url: url.replace(this.token, '***'),
-      body: options.body
-    });
+
 
     const response = await fetch(url, {
       ...options,
@@ -49,19 +45,13 @@ class BroadstreetAPI {
     const statusText = response.statusText;
     const responseText = await response.text();
 
-    console.log('[request] API response:', {
-      status,
-      statusText,
-      responseText: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
-      headers: Object.fromEntries(response.headers.entries())
-    });
+
 
     // Try to parse JSON safely
     let json: any = undefined;
     try {
       json = responseText ? JSON.parse(responseText) : undefined;
     } catch (parseError) {
-      console.error('[request] JSON parse error:', parseError);
       json = undefined;
     }
 

@@ -218,11 +218,7 @@ class SyncService {
         synced_with_api: false 
       });
 
-      console.log('[dryRunSync] Unsynced counts:', {
-        advertisers: localAdvertisers.length,
-        zones: localZones.length,
-        campaigns: localCampaigns.length,
-      });
+
 
       // Check for duplicates
       for (const advertiser of localAdvertisers) {
@@ -459,7 +455,7 @@ class SyncService {
         const classified = this.classifyError(error);
         result.error = classified.message;
         result.code = classified.code;
-        console.error('[syncZone] Error during create:', result.error);
+
 
         // Update local zone with error
         localZone.sync_errors.push(result.error);
@@ -706,11 +702,7 @@ class SyncService {
         synced_with_api: false
       });
 
-      console.log('[syncAllEntities] Unsynced counts:', {
-        advertisers: localAdvertisers.length,
-        zones: localZones.length,
-        campaigns: localCampaigns.length,
-      });
+
 
       report.totalEntities = localAdvertisers.length + localZones.length + localCampaigns.length;
 
@@ -740,7 +732,7 @@ class SyncService {
           2, // High priority for validation
           `validate-network-${networkId}`
         );
-        console.log('[syncAllEntities] Network validation successful');
+
       } catch (error) {
         const validationError = `Network validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
         report.errors.push(validationError);
