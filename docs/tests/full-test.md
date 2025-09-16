@@ -426,3 +426,63 @@ You will need to select a network and advertiser to create a campaign.
 
 use playwright mcp as required
 *Note* Data has been successfully syncd
+
+#### Findings after success
+
+**✅ TASK 6 COMPLETED SUCCESSFULLY**
+
+**Root Cause**: Campaign creation functionality was broken due to incorrect ID extraction in the `CampaignCreationForm.tsx`. The form was attempting to use `getEntityId()` on the wrong object structure, causing required `network_id` and `advertiser_id` fields to be undefined in API requests.
+
+**Critical Issues Identified:**
+
+1. **Incorrect ID Extraction in Campaign Form**:
+   - **Error Pattern**: `getEntityId(entities.network)` and `getEntityId(entities.advertiser)` (lines 206-207)
+   - **Cause**: The `entities` object from `useSelectedEntities` has structure `{ ids: {...}, entityId: ..., name: ... }`, not direct entity fields
+   - **Solution**: Changed to use `entities.network?.entityId` and `entities.advertiser?.entityId` directly
+
+2. **Missing Validation in Form Submission**:
+   - **Error Pattern**: No validation that required IDs were successfully extracted before API call
+   - **Cause**: Form would submit with undefined `network_id`, causing 400 Bad Request errors
+   - **Solution**: Added explicit validation with clear error messages for missing required IDs
+
+**Files Modified:**
+- `src/components/creation/forms/CampaignCreationForm.tsx` - Fixed ID extraction logic and added validation
+
+**Pattern Replacements Made:**
+```typescript
+// OLD PATTERN (broken):
+const networkIdValue = getEntityId(entities.network);
+const advertiserIdValue = getEntityId(entities.advertiser);
+
+// NEW PATTERN (working):
+const networkIdValue = entities.network?.entityId;
+const advertiserIdValue = entities.advertiser?.entityId;
+
+// Added validation:
+if (!networkIdValue) {
+  throw new Error('Network ID is required but not available');
+}
+if (!advertiserIdValue) {
+  throw new Error('Advertiser ID is required but not available');
+}
+```
+
+**Testing Results After Fix:**
+- Campaign Creation: Successfully created "Test Campaign - Task 6 Verification" ✅
+- Local Campaign Display: Shows proper "Local" badge with MongoDB ID only ✅
+- Campaign Count: Now displays 7 campaigns (6 synced + 1 new local) ✅
+- ID Display: EntityIdBadge showing proper format for all campaigns ✅
+- Form Validation: Required fields properly validated before submission ✅
+- Business Logic: Network + Advertiser requirement correctly enforced ✅
+
+**Key Discovery**: The `useSelectedEntities` hook returns a normalized structure with `entityId` field, not the raw entity object. Campaign creation forms must use this normalized structure rather than attempting to extract IDs using `getEntityId()` utility.
+
+**Impact**: This was a **critical functional bug** that completely prevented local campaign creation. The fix ensures proper ID extraction and validation, making campaign creation fully functional.
+
+**Standards Compliance Achieved:**
+- ✅ **EntityIdBadge consistency**: All campaigns display standardized ID badges
+- ✅ **Local entity styling**: New local campaign shows appropriate local badge and styling
+- ✅ **Three-tier ID system**: Proper handling of both synced and local-only campaigns
+- ✅ **No forbidden patterns**: All ID operations use standardized approaches
+
+**Pattern for Other Entity Creation Forms**: Other entity creation forms should verify they're using `entities.{entity}?.entityId` rather than `getEntityId(entities.{entity})` to avoid similar issues.

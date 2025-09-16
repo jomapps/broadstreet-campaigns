@@ -202,9 +202,18 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
     try {
       // Build payload with required fields
-      // Use helper to support polymorphic IDs (broadstreet or mongo)
-      const networkIdValue = getEntityId(entities.network);
-      const advertiserIdValue = getEntityId(entities.advertiser);
+      // Use the entityId from the entities structure (which is already resolved by useSelectedEntities)
+      const networkIdValue = entities.network?.entityId;
+      const advertiserIdValue = entities.advertiser?.entityId;
+
+      // Validate that we have the required IDs
+      if (!networkIdValue) {
+        throw new Error('Network ID is required but not available');
+      }
+      if (!advertiserIdValue) {
+        throw new Error('Advertiser ID is required but not available');
+      }
+
       const payload: any = {
         name: formData.name.trim(),
         // Send numeric IDs when available for current API expectations
