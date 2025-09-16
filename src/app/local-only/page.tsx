@@ -95,8 +95,8 @@ async function LocalOnlyDataWrapper() {
       LocalCampaign.find({ $or: [ { synced_with_api: false }, { 'placements.0': { $exists: true } } ] }).sort({ created_at: -1 }).lean(),
       LocalNetwork.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
       LocalAdvertisement.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
-      // Fetch local placements from the collection
-      Placement.find({ created_locally: true }).sort({ created_at: -1 }).lean(),
+      // Fetch local placements from the collection that haven't been synced
+      Placement.find({ created_locally: true, synced_with_api: false }).sort({ created_at: -1 }).lean(),
     ]);
     
     // Also fetch locally created advertisers from the main Advertiser collection

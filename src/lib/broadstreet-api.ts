@@ -31,6 +31,12 @@ class BroadstreetAPI {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${this.token}`;
 
+    console.log('[request] Making API call:', {
+      method: options.method || 'GET',
+      url: url.replace(this.token, '***'),
+      body: options.body
+    });
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -43,11 +49,19 @@ class BroadstreetAPI {
     const statusText = response.statusText;
     const responseText = await response.text();
 
+    console.log('[request] API response:', {
+      status,
+      statusText,
+      responseText: responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''),
+      headers: Object.fromEntries(response.headers.entries())
+    });
+
     // Try to parse JSON safely
     let json: any = undefined;
     try {
       json = responseText ? JSON.parse(responseText) : undefined;
-    } catch (_) {
+    } catch (parseError) {
+      console.error('[request] JSON parse error:', parseError);
       json = undefined;
     }
 
@@ -56,6 +70,7 @@ class BroadstreetAPI {
       error.status = status;
       error.statusText = statusText;
       error.endpoint = endpoint;
+      error.responseText = responseText;
       throw error;
     }
 
@@ -270,18 +285,39 @@ class BroadstreetAPI {
     campaign_id: number;
     advertisement_id: number;
     zone_id: number;
-    restrictions?: string;
+    restrictions?: string[];
   }): Promise<Placement> {
     const response = await this.request<PlacementsResponse>('/placements', {
       method: 'POST',
       body: JSON.stringify(placement),
     });
-    const p: any = response.placement as any;
+
+    // Handle Broadstreet API behavior: 201 Created with empty response body
+    // This means the placement was created successfully, but no data is returned
+    if (response === undefined || response === null) {
+      // Return the placement data based on the request since API doesn't return it
+      return {
+        advertisement_id: placement.advertisement_id,
+        zone_id: placement.zone_id,
+        campaign_id: placement.campaign_id,
+        restrictions: placement.restrictions || [],
+      } as unknown as Placement;
+    }
+
+    // Handle normal response with placement data
+    let placementData: any;
+    if (response && typeof response === 'object') {
+      // Try different possible response structures
+      placementData = response.placement || response.data || response;
+    } else {
+      throw new Error(`Invalid API response structure: ${typeof response}`);
+    }
+
     return {
-      advertisement_id: p.advertisement_id,
-      zone_id: p.zone_id,
+      advertisement_id: placementData.advertisement_id || placement.advertisement_id,
+      zone_id: placementData.zone_id || placement.zone_id,
       campaign_id: placement.campaign_id,
-      restrictions: p.restrictions || [],
+      restrictions: placementData.restrictions || placement.restrictions || [],
     } as unknown as Placement;
   }
 
