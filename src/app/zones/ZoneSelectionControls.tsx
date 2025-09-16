@@ -9,44 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckSquare, Square, Filter } from 'lucide-react';
 import AddToThemeModal from '@/components/themes/AddToThemeModal';
-
-type ZoneLean = {
-  _id: string;
-  __v: number;
-  id?: number;
-  name: string;
-  network_id: number;
-  alias?: string | null;
-  self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
-  size_number?: number | null;
-  category?: string | null;
-  block?: string | null;
-  is_home?: boolean;
-  // LocalZone specific fields
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-  created_at?: string;
-  synced_at?: string;
-  original_broadstreet_id?: number;
-  sync_errors?: string[];
-  // Additional LocalZone fields
-  advertisement_count?: number;
-  allow_duplicate_ads?: boolean;
-  concurrent_campaigns?: number;
-  advertisement_label?: string;
-  archived?: boolean;
-  display_type?: 'standard' | 'rotation';
-  rotation_interval?: number;
-  animation_type?: string;
-  width?: number;
-  height?: number;
-  rss_shuffle?: boolean;
-  style?: string;
-  source?: 'api' | 'local';
-  createdAt: string;
-  updatedAt: string;
-};
+import { ZoneLean } from '@/lib/types/lean-entities';
+import { getEntityId, isEntitySynced } from '@/lib/utils/entity-helpers';
 
 interface ZoneSelectionControlsProps {
   zones: ZoneLean[];
@@ -65,8 +29,11 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   // The zones prop now contains the filtered zones from ZoneFiltersWrapper
   const visibleZones = zones;
 
-  // Helper: derive selection key (prefer Broadstreet numeric id)
-  const zoneSelectionKey = (zone: ZoneLean) => (zone.id != null ? String(zone.id) : zone._id);
+  // Helper: derive selection key using standardized utility
+  const zoneSelectionKey = (zone: ZoneLean) => {
+    const id = getEntityId(zone);
+    return typeof id === 'number' ? String(id) : id || zone._id;
+  };
 
   // Get currently selected zones that are visible
   const visibleSelectedZones = useMemo(() => {
@@ -94,11 +61,11 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
     setShowOnlySelected(!showOnlySelected);
   };
 
-  // Get synced zone IDs for theme operations
+  // Get synced zone IDs for theme operations using standardized utility
   const syncedSelectedZoneIds = useMemo(() => {
     return visibleSelectedZones
-      .filter(zone => zone.id && (zone.source === 'api' || !zone.created_locally))
-      .map(zone => zone.id!)
+      .filter(zone => isEntitySynced(zone) && zone.synced_with_api)
+      .map(zone => zone.broadstreet_id!)
       .filter(id => id != null);
   }, [visibleSelectedZones]);
 

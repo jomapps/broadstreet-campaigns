@@ -29,7 +29,7 @@ export async function DELETE(
       // Check if this might be a Broadstreet ID (numeric)
       const numericId = parseInt(id);
       if (!isNaN(numericId)) {
-        deletedZone = await Zone.findOneAndDelete({ id: numericId });
+        deletedZone = await Zone.findOneAndDelete({ broadstreet_id: numericId });
         zoneType = 'synced';
       } else if (isValidObjectId) {
         // If it's a valid ObjectId but not found in LocalZone, try Zone collection by _id

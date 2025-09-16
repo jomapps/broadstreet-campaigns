@@ -96,22 +96,9 @@ ZoneSchema.index({ network_id: 1 });
 ZoneSchema.index({ size_type: 1 });
 ZoneSchema.index({ category: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 ZoneSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
-});
-
-// New explicit ID naming per entity
-ZoneSchema.virtual('local_zone_id').get(function (this: any) {
-  return this._id?.toString();
-});
-ZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
-  return this.broadstreet_id;
-});
-
-// Relationship aliasing to explicit naming
-ZoneSchema.virtual('broadstreet_network_id').get(function (this: any) {
-  return this.network_id;
 });
 
 // Ensure virtuals are present in lean() results

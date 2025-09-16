@@ -156,22 +156,9 @@ const CampaignSchema = new Schema<ICampaign>({
 CampaignSchema.index({ advertiser_id: 1 });
 CampaignSchema.index({ active: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 CampaignSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
-});
-
-// New explicit ID naming per entity
-CampaignSchema.virtual('local_campaign_id').get(function (this: any) {
-  return this._id?.toString();
-});
-CampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) {
-  return this.broadstreet_id;
-});
-
-// Relationship aliasing to explicit naming
-CampaignSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
-  return this.advertiser_id;
 });
 CampaignSchema.virtual('broadstreet_network_id').get(function (this: any) {
   return this.network_id;

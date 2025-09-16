@@ -100,19 +100,11 @@ LocalAdvertiserSchema.index({ network_id: 1, name: 1 }, { unique: true });
 LocalAdvertiserSchema.index({ created_locally: 1 });
 LocalAdvertiserSchema.index({ synced_with_api: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 LocalAdvertiserSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
 LocalAdvertiserSchema.virtual('broadstreet_id').get(function (this: any) {
-  return this.original_broadstreet_id ?? undefined;
-});
-
-// New explicit ID naming per entity
-LocalAdvertiserSchema.virtual('local_advertiser_id').get(function (this: any) {
-  return this._id?.toString();
-});
-LocalAdvertiserSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 

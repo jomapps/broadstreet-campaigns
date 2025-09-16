@@ -1,54 +1,163 @@
-export type EntityIds = { broadstreet_id?: number; mongo_id?: string };
+/**
+ * STANDARDIZED ID MANAGEMENT UTILITIES - SINGLE SOURCE OF TRUTH
+ *
+ * This file implements the three-tier ID system:
+ * 1. broadstreet_id (number) - Broadstreet API identifiers
+ * 2. mongo_id (string) - MongoDB ObjectId as string
+ * 3. _id (ObjectId) - MongoDB native identifier (internal use only)
+ *
+ * RULES:
+ * - NEVER use generic "id"
+ * - NEVER use "mongodb_id" - always use "mongo_id"
+ * - NEVER use legacy explicit naming like "broadstreet_advertiser_id"
+ */
 
-export function getEntityId(entity: { ids?: EntityIds } | Record<string, unknown> | null | undefined): number | string | undefined {
+export type EntitySelectionKey = string | number;
+
+export interface StandardEntity {
+  broadstreet_id?: number;
+  mongo_id?: string;
+  _id?: string;
+}
+
+/**
+ * Extract the primary ID from any entity, preferring Broadstreet ID over MongoDB ID
+ * This is the SINGLE SOURCE OF TRUTH for entity ID extraction
+ */
+export function getEntityId(entity: StandardEntity | null | undefined): EntitySelectionKey | undefined {
   if (!entity) return undefined;
-  // Prefer normalized shape
-  const ids = (entity as any).ids as EntityIds | undefined;
-  if (ids) {
-    return ids.broadstreet_id ?? ids.mongo_id;
+
+  // Priority 1: Broadstreet ID (preferred for synced entities)
+  if (typeof entity.broadstreet_id === 'number') {
+    return entity.broadstreet_id;
   }
-  // Fallback to top-level standard fields
-  const bs = (entity as any).broadstreet_id as number | undefined;
-  const mongo = (entity as any).mongo_id as string | undefined;
-  if (bs != null) return bs;
-  if (mongo != null) return mongo;
-  // Fallback to explicit naming convention fields broadstreet_*_id / local_*_id
-  const keys = Object.keys(entity as any);
-  const bsKey = keys.find(k => /^broadstreet_.*_id$/.test(k));
-  if (bsKey && typeof (entity as any)[bsKey] === 'number') return (entity as any)[bsKey] as number;
-  const localKey = keys.find(k => /^local_.*_id$/.test(k));
-  if (localKey && typeof (entity as any)[localKey] === 'string') return (entity as any)[localKey] as string;
+
+  // Priority 2: MongoDB ID string (for local-only entities)
+  if (typeof entity.mongo_id === 'string' && entity.mongo_id.length > 0) {
+    return entity.mongo_id;
+  }
+
+  // Priority 3: MongoDB ObjectId as string (fallback)
+  if (typeof entity._id === 'string' && entity._id.length > 0) {
+    return entity._id;
+  }
+
   return undefined;
 }
 
-export function isEntitySynced(entity: { ids?: EntityIds } | Record<string, unknown> | null | undefined): boolean {
+/**
+ * Determine if an entity is synced with Broadstreet API
+ * This is the SINGLE SOURCE OF TRUTH for sync status detection
+ */
+export function isEntitySynced(entity: StandardEntity | null | undefined): boolean {
   if (!entity) return false;
-  const ids = (entity as any).ids as EntityIds | undefined;
-  if (ids) return ids.broadstreet_id !== undefined;
-  if ((entity as any).broadstreet_id !== undefined) return true;
-  // Also consider explicit naming
-  return Object.keys(entity as any).some(k => /^broadstreet_.*_id$/.test(k) && typeof (entity as any)[k] === 'number');
+  return typeof entity.broadstreet_id === 'number';
 }
 
-export function getEntityType(entity: { ids?: EntityIds } | Record<string, unknown> | null | undefined): 'synced' | 'local' | 'both' | 'none' {
+/**
+ * Classify entity sync status comprehensively
+ * This is the SINGLE SOURCE OF TRUTH for entity type classification
+ */
+export function getEntityType(entity: StandardEntity | null | undefined): 'synced' | 'local' | 'both' | 'none' {
   if (!entity) return 'none';
-  const ids = (entity as any).ids as EntityIds | undefined;
-  let hasBs = false;
-  let hasMongo = false;
-  if (ids) {
-    hasBs = ids.broadstreet_id !== undefined;
-    hasMongo = ids.mongo_id !== undefined;
-  } else {
-    hasBs = (entity as any).broadstreet_id !== undefined || Object.keys(entity as any).some(k => /^broadstreet_.*_id$/.test(k));
-    hasMongo = (entity as any).mongo_id !== undefined || Object.keys(entity as any).some(k => /^local_.*_id$/.test(k));
-  }
-  if (hasBs && hasMongo) return 'both';
-  if (hasBs) return 'synced';
-  if (hasMongo) return 'local';
+
+  const hasBroadstreetId = typeof entity.broadstreet_id === 'number';
+  const hasMongoId = (typeof entity.mongo_id === 'string' && entity.mongo_id.length > 0) ||
+                     (typeof entity._id === 'string' && entity._id.length > 0);
+
+  if (hasBroadstreetId && hasMongoId) return 'both';
+  if (hasBroadstreetId) return 'synced';
+  if (hasMongoId) return 'local';
   return 'none';
 }
 
-// Consolidated ID resolution functions (replaces duplicates in sync-helpers.ts)
+/**
+ * Generate a consistent selection key for entity identification
+ * Used by zone selection, theme management, and other entity operations
+ */
+export function getEntitySelectionKey(entity: StandardEntity | null | undefined): EntitySelectionKey | undefined {
+  return getEntityId(entity);
+}
+
+/**
+ * ID VALIDATION AND CONVERSION UTILITIES
+ */
+
+/**
+ * Validate if a string is a valid MongoDB ObjectId format
+ */
+export function isValidMongoId(id: string): boolean {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+}
+
+/**
+ * Validate if a number is a valid Broadstreet ID format
+ */
+export function isValidBroadstreetId(id: number): boolean {
+  return Number.isInteger(id) && id > 0;
+}
+
+/**
+ * Convert MongoDB ObjectId to string (mongo_id)
+ */
+export function objectIdToMongoId(objectId: any): string | undefined {
+  if (!objectId) return undefined;
+  const str = objectId.toString();
+  return isValidMongoId(str) ? str : undefined;
+}
+
+/**
+ * SIDEBAR FILTER ID RESOLUTION
+ * The sidebar can provide either broadstreet_id or mongo_id
+ * This is the SINGLE SOURCE OF TRUTH for resolving sidebar filter IDs
+ */
+export function resolveSidebarFilterId(filterValue: any): { broadstreet_id?: number; mongo_id?: string } {
+  // Handle numeric values (Broadstreet IDs)
+  if (typeof filterValue === 'number' && isValidBroadstreetId(filterValue)) {
+    return { broadstreet_id: filterValue };
+  }
+
+  // Handle string values (MongoDB IDs)
+  if (typeof filterValue === 'string') {
+    if (isValidMongoId(filterValue)) {
+      return { mongo_id: filterValue };
+    }
+    // Try to parse as number (string representation of Broadstreet ID)
+    const parsed = parseInt(filterValue, 10);
+    if (!isNaN(parsed) && isValidBroadstreetId(parsed)) {
+      return { broadstreet_id: parsed };
+    }
+  }
+
+  // Handle objects with explicit ID fields
+  if (typeof filterValue === 'object' && filterValue !== null) {
+    const result: { broadstreet_id?: number; mongo_id?: string } = {};
+
+    if (typeof filterValue.broadstreet_id === 'number' && isValidBroadstreetId(filterValue.broadstreet_id)) {
+      result.broadstreet_id = filterValue.broadstreet_id;
+    }
+
+    if (typeof filterValue.mongo_id === 'string' && isValidMongoId(filterValue.mongo_id)) {
+      result.mongo_id = filterValue.mongo_id;
+    }
+
+    if (result.broadstreet_id || result.mongo_id) {
+      return result;
+    }
+  }
+
+  return {};
+}
+
+/**
+ * LEGACY COMPATIBILITY FUNCTIONS
+ * These functions maintain backward compatibility with existing sync code
+ */
+
+/**
+ * Resolve Broadstreet ID from entity (legacy compatibility)
+ * @deprecated Use getEntityId() instead for new code
+ */
 export async function resolveBroadstreetId(
   entity: { broadstreet_id?: number; mongo_id?: string; original_broadstreet_id?: number } | null | undefined,
   LocalModel?: any

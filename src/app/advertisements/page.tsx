@@ -3,24 +3,7 @@ import connectDB from '@/lib/mongodb';
 import Advertisement from '@/lib/models/advertisement';
 import CreationButton from '@/components/creation/CreationButton';
 import AdvertisementFiltersWrapper from './AdvertisementFiltersWrapper';
-
-// Type for lean query result (plain object without Mongoose methods)
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  id: number;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: Date;
-  updatedAt: Date;
-};
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 
 function LoadingSkeleton() {

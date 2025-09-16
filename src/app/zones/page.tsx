@@ -5,44 +5,7 @@ import LocalZone from '@/lib/models/local-zone';
 import Network from '@/lib/models/network';
 import CreationButton from '@/components/creation/CreationButton';
 import ZoneFiltersWrapper from './ZoneFiltersWrapper';
-
-// Type for lean query result (plain object without Mongoose methods)
-type ZoneLean = {
-  _id: string;
-  __v: number;
-  id?: number; // Optional for LocalZone (uses _id instead)
-  name: string;
-  network_id: number;
-  alias?: string | null;
-  self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
-  size_number?: number | null;
-  category?: string | null;
-  block?: string | null;
-  is_home?: boolean;
-  // LocalZone specific fields
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-  created_at?: string;
-  synced_at?: string;
-  original_broadstreet_id?: number;
-  sync_errors?: string[];
-  // Additional LocalZone fields
-  advertisement_count?: number;
-  allow_duplicate_ads?: boolean;
-  concurrent_campaigns?: number;
-  advertisement_label?: string;
-  archived?: boolean;
-  display_type?: 'standard' | 'rotation';
-  rotation_interval?: number;
-  animation_type?: string;
-  width?: number;
-  height?: number;
-  rss_shuffle?: boolean;
-  style?: string;
-  createdAt: string;
-  updatedAt: string;
-};
+import { ZoneLean } from '@/lib/types/lean-entities';
 
 
 function LoadingSkeleton() {
@@ -98,14 +61,14 @@ async function ZonesData() {
     
     // Get network names
     const networkIds = [...new Set(allZones.map(z => z.network_id))];
-    const networks = await Network.find({ id: { $in: networkIds } }).lean();
-    const networkMap = new Map(networks.map(n => [n.id, n.name]));
+    const networks = await Network.find({ broadstreet_id: { $in: networkIds } }).lean();
+    const networkMap = new Map(networks.map(n => [n.broadstreet_id, n.name]));
 
     // Serialize the data to plain objects
     const serializedZones = allZones.map((zone: any) => ({
       _id: (zone as any)._id?.toString?.(),
       __v: zone.__v,
-      id: zone.id,
+      broadstreet_id: zone.broadstreet_id,
       name: zone.name,
       network_id: zone.network_id,
       alias: zone.alias,

@@ -88,17 +88,9 @@ const NetworkSchema = new Schema<INetwork>({
 
 // Note: broadstreet_id field already has unique: true which creates an index
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 NetworkSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
-});
-
-// New explicit ID naming per entity
-NetworkSchema.virtual('local_network_id').get(function (this: any) {
-  return this._id?.toString();
-});
-NetworkSchema.virtual('broadstreet_network_id').get(function (this: any) {
-  return this.broadstreet_id;
 });
 
 // Ensure virtuals are present in lean() results

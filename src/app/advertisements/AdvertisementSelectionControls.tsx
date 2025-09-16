@@ -8,23 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckSquare, Square, Filter } from 'lucide-react';
-
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  id: number;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: string;
-  updatedAt: string;
-};
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 interface AdvertisementSelectionControlsProps {
   advertisements: AdvertisementLean[];
@@ -49,11 +33,11 @@ export default function AdvertisementSelectionControls({
 
   // Get currently selected advertisements that are visible (use Broadstreet numeric id)
   const visibleSelectedAdvertisements = useMemo(() => {
-    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(ad.id)));
+    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(ad.broadstreet_id)));
   }, [visibleAdvertisements, selectedAdvertisements]);
 
   // Get all visible advertisement IDs (use Broadstreet numeric id)
-  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(ad.id));
+  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(ad.broadstreet_id));
 
   // Check if all visible advertisements are selected
   const allVisibleSelected = visibleAdvertisementIds.length > 0 && visibleAdvertisementIds.every(id => selectedAdvertisements.includes(id));

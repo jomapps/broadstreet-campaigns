@@ -142,19 +142,11 @@ LocalZoneSchema.index(
 LocalZoneSchema.index({ created_locally: 1 });
 LocalZoneSchema.index({ synced_with_api: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 LocalZoneSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
 LocalZoneSchema.virtual('broadstreet_id').get(function (this: any) {
-  return this.original_broadstreet_id ?? undefined;
-});
-
-// New explicit ID naming per entity
-LocalZoneSchema.virtual('local_zone_id').get(function (this: any) {
-  return this._id?.toString();
-});
-LocalZoneSchema.virtual('broadstreet_zone_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 

@@ -2,31 +2,70 @@
 
 ## Overview
 
-The Broadstreet Campaigns application uses a **dual-database architecture** with complex ID management patterns. This document serves as the **single source of truth** for all ID-related patterns, utilities, and best practices.
+The Broadstreet Campaigns application uses a **dual-database architecture** with a **standardized three-tier ID system**. This document serves as the **single source of truth** for all ID-related patterns, utilities, and best practices.
 
-## Core ID Types
+## Core ID Types - The Three-Tier System
 
-### **Broadstreet ID** (`broadstreet_id`)
+### **1. Broadstreet ID** (`broadstreet_id`)
 - **Type**: `number`
 - **Source**: Assigned by the Broadstreet API
 - **Usage**: Primary identifier for all synced entities
 - **Scope**: All entities that exist in the Broadstreet system
 - **Example**: `12345`
+- **Rule**: NEVER use generic `id` - always use explicit `broadstreet_id`
 
-### **MongoDB ID** (`mongo_id`)
-- **Type**: `string` (MongoDB ObjectId)
+### **2. MongoDB ID** (`mongo_id`)
+- **Type**: `string` (MongoDB ObjectId as string)
 - **Source**: Assigned by MongoDB when document is created
 - **Usage**: Primary identifier for local storage and local-only entities
 - **Scope**: ALL entities (both synced and local-only)
 - **Example**: `"507f1f77bcf86cd799439011"`
+- **Rule**: ALWAYS use `mongo_id` - NEVER use `mongodb_id` or other variants
+
+### **3. MongoDB ObjectId** (`_id`)
+- **Type**: `ObjectId` (MongoDB native type)
+- **Source**: MongoDB's native document identifier
+- **Usage**: Internal MongoDB operations, direct database queries
+- **Scope**: ALL MongoDB documents
+- **Example**: `ObjectId("507f1f77bcf86cd799439011")`
+- **Rule**: Use only for direct MongoDB operations, convert to `mongo_id` for application logic
+
+## ID Naming Rules - STRICT ENFORCEMENT
+
+### **NEVER Use These Patterns**
+```typescript
+// ❌ FORBIDDEN - Generic naming
+entity.id                    // Too ambiguous
+entity.mongodb_id            // Wrong spelling
+entity.mongoId               // Wrong case
+entity.objectId              // Wrong concept
+
+// ❌ FORBIDDEN - Legacy API patterns
+entity.broadstreet_advertiser_id  // Redundant when context is clear
+entity.local_advertiser_id        // Use mongo_id instead
+```
+
+### **ALWAYS Use These Patterns**
+```typescript
+// ✅ REQUIRED - Standard fields
+entity.broadstreet_id        // For Broadstreet API IDs
+entity.mongo_id              // For MongoDB ObjectId strings
+entity._id                   // For native MongoDB operations only
+
+// ✅ ACCEPTABLE - When context requires clarity
+campaign.campaign_id         // In placement relationships
+zone.zone_id                 // In placement relationships
+```
 
 ## Entity States and ID Patterns
 
 ### 1. **Synced Entities** (Exist in both systems)
 ```typescript
 {
-  broadstreet_id: 12345,        // Primary API identifier
-  mongo_id: "507f1f77bcf86cd799439011",  // Local storage identifier
+  broadstreet_id: 12345,                    // Primary API identifier
+  mongo_id: "507f1f77bcf86cd799439011",     // Local storage identifier
+  _id: ObjectId("507f1f77bcf86cd799439011"), // MongoDB native (internal)
+  synced_with_api: true,
   // ... other fields
 }
 ```
@@ -34,8 +73,9 @@ The Broadstreet Campaigns application uses a **dual-database architecture** with
 ### 2. **Local-Only Entities** (Not yet synced to Broadstreet)
 ```typescript
 {
-  broadstreet_id: undefined,    // No API identifier yet
-  mongo_id: "507f1f77bcf86cd799439011",  // Only local identifier
+  broadstreet_id: undefined,                // No API identifier yet
+  mongo_id: "507f1f77bcf86cd799439011",     // Only local identifier
+  _id: ObjectId("507f1f77bcf86cd799439011"), // MongoDB native (internal)
   created_locally: true,
   synced_with_api: false,
   // ... other fields
@@ -45,8 +85,9 @@ The Broadstreet Campaigns application uses a **dual-database architecture** with
 ### 3. **API-First Entities** (Downloaded from Broadstreet)
 ```typescript
 {
-  broadstreet_id: 12345,        // Primary API identifier
-  mongo_id: "507f1f77bcf86cd799439011",  // Generated during sync
+  broadstreet_id: 12345,                    // Primary API identifier
+  mongo_id: "507f1f77bcf86cd799439011",     // Generated during sync
+  _id: ObjectId("507f1f77bcf86cd799439011"), // MongoDB native (internal)
   created_locally: false,
   synced_with_api: true,
   // ... other fields

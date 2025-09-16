@@ -5,26 +5,7 @@ import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-
-// Type for serialized advertisement data (plain object without Mongoose methods)
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  id: number;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: string;
-  updatedAt: string;
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-};
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 interface AdvertisementCardProps {
   advertisement: AdvertisementLean;
@@ -71,7 +52,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           }`}>
             {advertisement.active_placement ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">ID: {advertisement.id}</span>
+          <span className="card-meta text-gray-500">ID: {advertisement.broadstreet_id}</span>
         </div>
       </div>
       
