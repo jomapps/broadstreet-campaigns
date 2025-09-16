@@ -62,9 +62,11 @@ type PlacementLean = {
 
 interface PlacementCardProps {
   placement: PlacementLean;
+  onDelete: (placement: PlacementLean) => void;
+  deletingIds: Set<string>;
 }
 
-function PlacementCard({ placement }: PlacementCardProps) {
+function PlacementCard({ placement, onDelete, deletingIds }: PlacementCardProps) {
   const startDate = placement.campaign?.start_date ? new Date(placement.campaign.start_date) : null;
   const endDate = placement.campaign?.end_date ? new Date(placement.campaign.end_date) : null;
   const now = new Date();
@@ -87,12 +89,26 @@ function PlacementCard({ placement }: PlacementCardProps) {
   // (excluding advertisements and networks which are never local-only)
   const isLocal = isLocalCampaign || isLocalZone || hasLocalZoneId;
 
+  const placementId = `${placement.advertisement_id}-${placement.zone_id || (placement as any).zone_mongo_id || ''}`;
+  const isDeleting = deletingIds.has(placementId);
+
   return (
     <div
-      className={`rounded-lg shadow-sm border-2 overflow-hidden hover:shadow-md transition-all duration-200 ${cardStateClasses({ isLocal, isSelected: false })}`}
+      className={`rounded-lg shadow-sm border-2 overflow-hidden hover:shadow-md transition-all duration-200 relative ${cardStateClasses({ isLocal, isSelected: false })}`}
       data-testid={`placement-card`}
       data-placement-id={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
     >
+      {/* Delete button for local-only placements */}
+      {isLocal && (
+        <button
+          onClick={() => onDelete(placement)}
+          disabled={isDeleting}
+          className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 shadow-sm"
+          title="Delete local placement"
+        >
+          {isDeleting ? '⋯' : '×'}
+        </button>
+      )}
       {/* Thumbnail and title */}
       <div className="relative h-36 bg-gray-50 border-b border-gray-100">
         {placement.advertisement?.preview_url && (
@@ -297,8 +313,52 @@ interface PlacementsListProps {
   };
 }
 
-export default function PlacementsList({ placements, entities }: PlacementsListProps) {
+export default function PlacementsList({ placements: initialPlacements, entities }: PlacementsListProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [placements, setPlacements] = useState(initialPlacements);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+
+  // Delete placement function
+  const handleDeletePlacement = async (placement: PlacementLean) => {
+    const placementId = `${placement.advertisement_id}-${placement.zone_id || (placement as any).zone_mongo_id || ''}`;
+
+    if (deletingIds.has(placementId)) return; // Prevent double-clicks
+
+    setDeletingIds(prev => new Set(prev).add(placementId));
+
+    try {
+      const response = await fetch('/api/placements', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          campaign_mongo_id: placement.campaign_mongo_id,
+          advertisement_id: placement.advertisement_id,
+          zone_id: placement.zone_id,
+          zone_mongo_id: (placement as any).zone_mongo_id
+        })
+      });
+
+      if (response.ok) {
+        // Remove from local state
+        setPlacements(prev => prev.filter(p => {
+          const pId = `${p.advertisement_id}-${p.zone_id || (p as any).zone_mongo_id || ''}`;
+          return pId !== placementId;
+        }));
+      } else {
+        console.error('Failed to delete placement');
+        alert('Failed to delete placement. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error deleting placement:', error);
+      alert('Error deleting placement. Please try again.');
+    } finally {
+      setDeletingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(placementId);
+        return newSet;
+      });
+    }
+  };
 
   const filteredPlacements = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -311,10 +371,12 @@ export default function PlacementsList({ placements, entities }: PlacementsListP
       placement.zone?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       placement.advertiser?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       placement.network?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      placement.advertisement_id.toString().includes(searchTerm) ||
-      placement.zone_id.toString().includes(searchTerm) ||
-      placement.campaign_id.toString().includes(searchTerm) ||
-      (placement.restrictions && placement.restrictions.some(r => 
+      (placement.advertisement_id && placement.advertisement_id.toString().includes(searchTerm)) ||
+      (placement.zone_id && placement.zone_id.toString().includes(searchTerm)) ||
+      (placement.campaign_id && placement.campaign_id.toString().includes(searchTerm)) ||
+      ((placement as any).zone_mongo_id && (placement as any).zone_mongo_id.toString().includes(searchTerm)) ||
+      (placement.campaign_mongo_id && placement.campaign_mongo_id.toString().includes(searchTerm)) ||
+      (placement.restrictions && placement.restrictions.some(r =>
         r.toLowerCase().includes(searchTerm.toLowerCase())
       ))
     );
@@ -386,9 +448,11 @@ export default function PlacementsList({ placements, entities }: PlacementsListP
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="placements-list">
           {filteredPlacements.map((placement) => (
-            <PlacementCard 
-              key={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`} 
+            <PlacementCard
+              key={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
               placement={placement}
+              onDelete={handleDeletePlacement}
+              deletingIds={deletingIds}
             />
           ))}
         </div>

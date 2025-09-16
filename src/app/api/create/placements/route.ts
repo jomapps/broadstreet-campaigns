@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build combinations (Cartesian product)
-    const combinations = [] as Array<{ advertisement_id: number; zone_id: number; restrictions?: string[] }>;
+    const combinations = [] as Array<{ advertisement_id: number; zone_id: number; zone_mongo_id?: string; restrictions?: string[] }>;
     for (const adId of normalizedAdIds) {
       // Numeric zones
       for (const zoneId of resolvedZoneIds) {
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
       }
       // Local zones referenced by mongo id
       for (const zoneMongoId of resolvedZoneMongoIds) {
-        combinations.push({ advertisement_id: adId, zone_id: NaN as any, restrictions });
+        combinations.push({ advertisement_id: adId, zone_id: NaN as any, zone_mongo_id: zoneMongoId, restrictions });
       }
     }
 

@@ -368,3 +368,53 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const body = await request.json();
+    const { campaign_mongo_id, advertisement_id, zone_id, zone_mongo_id } = body;
+
+    if (!campaign_mongo_id || !advertisement_id) {
+      return NextResponse.json(
+        { error: 'campaign_mongo_id and advertisement_id are required' },
+        { status: 400 }
+      );
+    }
+
+    // Build the placement filter
+    const placementFilter: any = { advertisement_id };
+
+    if (zone_id !== undefined) {
+      placementFilter.zone_id = zone_id;
+    }
+
+    if (zone_mongo_id) {
+      placementFilter.zone_mongo_id = zone_mongo_id;
+    }
+
+    // Remove the placement from the campaign
+    const result = await LocalCampaign.updateOne(
+      { _id: campaign_mongo_id },
+      { $pull: { placements: placementFilter } }
+    );
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json(
+        { error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Placement deleted successfully',
+      modifiedCount: result.modifiedCount
+    });
+
+  } catch (error) {
+    console.error('Error deleting placement:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
