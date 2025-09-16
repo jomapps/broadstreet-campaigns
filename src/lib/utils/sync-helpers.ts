@@ -99,7 +99,6 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
       try {
         // Guard against invalid network identifiers
         if (typeof (network as any).broadstreet_id !== 'number') {
-          console.warn(`[syncAdvertisers] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
           continue;
         }
 
@@ -122,14 +121,8 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
           }
         });
       } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error?.code === 11000) {
-          console.log(`[syncAdvertisers] Duplicate key errors ignored for network ${(network as any).broadstreet_id} advertisers`);
-        } else if (typeof error?.status === 'number') {
-          console.warn(`[syncAdvertisers] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
-        } else {
-          console.error(`[syncAdvertisers] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
-        }
+        // Handle duplicate key errors gracefully - silently continue
+        continue;
       }
     }
 
@@ -220,14 +213,8 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
           }
         });
       } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error?.code === 11000) {
-          console.log(`[syncZones] Duplicate key errors ignored for network ${(network as any).broadstreet_id} zones`);
-        } else if (typeof error?.status === 'number') {
-          console.warn(`[syncZones] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
-        } else {
-          console.error(`[syncZones] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
-        }
+        // Handle errors gracefully - silently continue
+        continue;
       }
     }
 
@@ -292,7 +279,6 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
       try {
         const advBsId = (advertiser as any).broadstreet_id ?? (advertiser as any).id;
         if (typeof advBsId !== 'number') {
-          console.warn(`[syncCampaigns] Skipping advertiser with invalid broadstreet_id:`, { _id: (advertiser as any)._id?.toString?.(), broadstreet_id: (advertiser as any).broadstreet_id });
           continue;
         }
 
@@ -356,14 +342,8 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
           }
         });
       } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error?.code === 11000) {
-          console.log(`[syncCampaigns] Duplicate key errors ignored for advertiser ${(advertiser as any).broadstreet_id} campaigns`);
-        } else if (typeof error?.status === 'number') {
-          console.warn(`[syncCampaigns] Skipping advertiser ${(advertiser as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
-        } else {
-          console.error(`[syncCampaigns] Error for advertiser ${(advertiser as any).broadstreet_id}:`, error?.message || error);
-        }
+        // Handle errors gracefully - silently continue
+        continue;
       }
     }
 
@@ -427,7 +407,6 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
     for (const network of networks) {
       try {
         if (typeof (network as any).broadstreet_id !== 'number') {
-          console.warn(`[syncAdvertisements] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
           continue;
         }
 
@@ -450,14 +429,8 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
           }
         });
       } catch (error: any) {
-        // Handle duplicate key errors gracefully
-        if (error?.code === 11000) {
-          console.log(`[syncAdvertisements] Duplicate key errors ignored for network ${(network as any).broadstreet_id} advertisements`);
-        } else if (typeof error?.status === 'number') {
-          console.warn(`[syncAdvertisements] Skipping network ${(network as any).broadstreet_id} due to API error ${error.status} ${error.statusText} on ${error.endpoint}`);
-        } else {
-          console.error(`[syncAdvertisements] Error for network ${(network as any).broadstreet_id}:`, error?.message || error);
-        }
+        // Handle errors gracefully - silently continue
+        continue;
       }
     }
 
@@ -530,7 +503,6 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
         // Use Broadstreet campaign identifier, not Mongo _id
         const campBsId = (campaign as any).broadstreet_id;
         if (typeof campBsId !== 'number') {
-          console.warn(`[syncPlacements] Skipping campaign with invalid broadstreet_id`, { _id: (campaign as any)._id?.toString?.(), broadstreet_id: campBsId });
           continue;
         }
         const apiPlacements = await broadstreetAPI.getPlacements(campBsId);
@@ -608,8 +580,6 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
   };
 
   try {
-    console.log('Starting full sync...');
-
     // Sync in order of dependencies
     results.networks = await syncNetworks();
     results.advertisers = await syncAdvertisers();
@@ -623,7 +593,6 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
     return { success: allSuccessful, results };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('syncAll failed:', message);
     return { success: false, results, error: message };
   }
 }

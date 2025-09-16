@@ -113,7 +113,6 @@ export async function GET() {
       advertisements,
     });
   } catch (error) {
-    console.error('Error fetching local entities:', error);
     return NextResponse.json(
       { message: 'Internal server error' },
       { status: 500 }

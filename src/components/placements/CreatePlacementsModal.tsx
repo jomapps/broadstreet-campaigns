@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
-import { usePlacementCreation } from '@/hooks/usePlacementCreation';
+import { useLocalPlacementCreation } from '@/hooks/useLocalPlacementCreation';
 
 interface CreatePlacementsModalProps {
   isOpen: boolean;
@@ -14,6 +14,8 @@ interface CreatePlacementsModalProps {
 export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlacementsModalProps) {
   const entities = useSelectedEntities();
   const {
+    networkId,
+    advertiserId,
     adIds,
     adCount,
     zoneCount,
@@ -21,14 +23,14 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
     isSubmitting,
     error,
     successMessage,
-    createPlacements,
+    createLocalPlacements,
     clearMessages,
-  } = usePlacementCreation();
+  } = useLocalPlacementCreation();
 
   if (!isOpen) return null;
 
   const handleSubmit = async () => {
-    await createPlacements();
+    await createLocalPlacements();
   };
 
   const handleClose = () => {
@@ -47,9 +49,25 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
           </Button>
         </CardHeader>
         <CardContent className="flex-1 overflow-auto space-y-4">
-          <div className="space-y-1">
-            <p className="text-sm text-gray-700">Campaign</p>
-            <p className="font-medium">{entities.campaign?.name ?? 'N/A'}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <p className="text-sm text-gray-700">Network</p>
+              <p className="font-medium">{entities.network?.name ?? 'N/A'}</p>
+              {!entities.network && (
+                <p className="text-xs text-red-600">Required for local placements</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-gray-700">Advertiser</p>
+              <p className="font-medium">{entities.advertiser?.name ?? 'N/A'}</p>
+              {!entities.advertiser && (
+                <p className="text-xs text-red-600">Required for local placements</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-gray-700">Campaign</p>
+              <p className="font-medium">{entities.campaign?.name ?? 'N/A'}</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -85,7 +103,10 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3" data-testid="placement-summary">
             <p className="text-sm text-blue-800">
-              {adCount} advertisements × {entities.zones.length} zones = <strong>{combinationsCount}</strong> placements
+              {adCount} advertisements × {entities.zones.length} zones = <strong>{combinationsCount}</strong> local placements
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              These will be stored in the local placement collection and can be synced to Broadstreet later.
             </p>
           </div>
 
@@ -103,8 +124,12 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
 
           <div className="flex justify-end space-x-3 pt-2">
             <Button variant="outline" onClick={handleClose} disabled={isSubmitting} data-testid="cancel-button">Cancel</Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !entities.campaign || combinationsCount === 0} data-testid="create-placements-button">
-              {isSubmitting ? 'Creating...' : 'Create Placements'}
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !entities.campaign || !entities.network || !entities.advertiser || combinationsCount === 0}
+              data-testid="create-placements-button"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Local Placements'}
             </Button>
           </div>
         </CardContent>

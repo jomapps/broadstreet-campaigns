@@ -6,6 +6,7 @@ import Zone from '@/lib/models/zone';
 import Advertiser from '@/lib/models/advertiser';
 import Network from '@/lib/models/network';
 import LocalCampaign from '@/lib/models/local-campaign';
+import Placement from '@/lib/models/placement';
 
 export async function GET(request: NextRequest) {
   try {
@@ -58,12 +59,28 @@ export async function GET(request: NextRequest) {
     if (networkId) (localQuery as any).network_id = parseInt(networkId);
     const localCampaigns = await LocalCampaign.find(localQuery).lean();
 
+    // Fetch local placements from the dedicated collection
+    const localPlacementQuery: Record<string, unknown> = {};
+    if (networkId) localPlacementQuery.network_id = parseInt(networkId);
+    if (advertiserId) localPlacementQuery.advertiser_id = parseInt(advertiserId);
+    if (campaignId) localPlacementQuery.campaign_id = parseInt(campaignId);
+    if (campaignMongoId) localPlacementQuery.campaign_mongo_id = campaignMongoId;
+    if (advertisementIdFilter) localPlacementQuery.advertisement_id = parseInt(advertisementIdFilter);
+    if (zoneIdFilter) localPlacementQuery.zone_id = parseInt(zoneIdFilter);
+
+    const localPlacements = await Placement.find({
+      ...localPlacementQuery,
+      created_locally: true
+    }).lean();
+
     // Debug logging
     console.log(`[Placements API] Network ID: ${networkId}`);
     console.log(`[Placements API] Campaign query:`, campaignQuery);
     console.log(`[Placements API] Found ${campaigns.length} synced campaigns`);
     console.log(`[Placements API] Local query:`, localQuery);
     console.log(`[Placements API] Found ${localCampaigns.length} local campaigns`);
+    console.log(`[Placements API] Local placement query:`, localPlacementQuery);
+    console.log(`[Placements API] Found ${localPlacements.length} local placements`);
 
     // Log campaign details
     campaigns.forEach((c: any, i) => {
@@ -151,18 +168,63 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // From local placement collection
+    for (const localPlacement of localPlacements) {
+      console.log(`[Placements API] Processing local placement from collection:`, localPlacement);
+
+      const placementData = {
+        advertisement_id: (localPlacement as any).advertisement_id,
+        zone_id: (localPlacement as any).zone_id,
+        zone_mongo_id: (localPlacement as any).zone_mongo_id,
+        restrictions: (localPlacement as any).restrictions,
+        campaign_id: (localPlacement as any).campaign_id,
+        campaign_mongo_id: (localPlacement as any).campaign_mongo_id,
+        _isLocalCollection: true, // Flag to identify source
+        _localPlacementId: (localPlacement as any)._id?.toString?.(),
+        network_id: (localPlacement as any).network_id,
+        advertiser_id: (localPlacement as any).advertiser_id,
+      };
+
+      console.log(`[Placements API] Adding local collection placement:`, placementData);
+      allPlacements.push(placementData);
+    }
+
     console.log(`[Placements API] Total placements collected: ${allPlacements.length}`);
     
-    // Deduplicate across synced/local to avoid duplicates. Prefer numeric campaign_id when present; fall back to campaign_mongo_id.
+    // Deduplicate across synced/local/collection to avoid duplicates. Prefer local collection over embedded.
     const seen = new Set<string>();
     const deduped: typeof allPlacements = [];
-    for (const p of allPlacements) {
+
+    // Sort to prioritize local collection placements over embedded ones
+    const sortedPlacements = allPlacements.sort((a, b) => {
+      if ((a as any)._isLocalCollection && !(b as any)._isLocalCollection) return -1;
+      if (!(a as any)._isLocalCollection && (b as any)._isLocalCollection) return 1;
+      return 0;
+    });
+
+    for (const p of sortedPlacements) {
       const compositeCampaign = (typeof p.campaign_id === 'number'
         ? String(p.campaign_id)
         : ((p as any).campaign_mongo_id ? String((p as any).campaign_mongo_id) : ''));
       const zoneKey = (typeof p.zone_id === 'number' ? String(p.zone_id) : (p as any).zone_mongo_id || '');
       const key = `${compositeCampaign}-${p.advertisement_id}-${zoneKey}`;
-      if (!seen.has(key)) { seen.add(key); deduped.push(p); }
+      if (!seen.has(key)) {
+        seen.add(key);
+        deduped.push(p);
+      } else if ((p as any)._isLocalCollection) {
+        // If we have a duplicate but this is from local collection, replace the embedded one
+        const existingIndex = deduped.findIndex(existing => {
+          const existingCampaign = (typeof existing.campaign_id === 'number'
+            ? String(existing.campaign_id)
+            : ((existing as any).campaign_mongo_id ? String((existing as any).campaign_mongo_id) : ''));
+          const existingZoneKey = (typeof existing.zone_id === 'number' ? String(existing.zone_id) : (existing as any).zone_mongo_id || '');
+          const existingKey = `${existingCampaign}-${existing.advertisement_id}-${existingZoneKey}`;
+          return existingKey === key;
+        });
+        if (existingIndex >= 0 && !(deduped[existingIndex] as any)._isLocalCollection) {
+          deduped[existingIndex] = p; // Replace embedded with local collection
+        }
+      }
     }
 
     console.log(`[Placements API] After deduplication: ${deduped.length} placements`);
@@ -255,6 +317,9 @@ export async function GET(request: NextRequest) {
           p._localCampaign.network_id = parseInt(networkId);
         }
 
+        // For local collection placements, use the direct network_id
+        const networkFromLocalCollection = p._isLocalCollection ? p.network_id : undefined;
+
         const networkFromSynced = z?.network_id;
         const networkFromLocal = zl?.network_id;
         const networkFromCampaign = c?.network_id;
@@ -268,12 +333,13 @@ export async function GET(request: NextRequest) {
           (typeof networkFromLocal === 'number' && networkFromLocal === nid) ||
           (typeof networkFromCampaign === 'number' && networkFromCampaign === nid) ||
           (typeof networkFromAdvertiser === 'number' && networkFromAdvertiser === nid) ||
-          (typeof networkFromLocalCampaign === 'number' && networkFromLocalCampaign === nid)
+          (typeof networkFromLocalCampaign === 'number' && networkFromLocalCampaign === nid) ||
+          (typeof networkFromLocalCollection === 'number' && networkFromLocalCollection === nid)
         );
       });
     }
 
-    // Enrich using maps; handle local campaign enrichment
+    // Enrich using maps; handle local campaign and local collection enrichment
     const enrichedPlacements = filtered.map((placement: any) => {
       const advertisement = adMap.get(placement.advertisement_id);
       const zone = typeof placement.zone_id === 'number' ? zoneMap.get(placement.zone_id) : undefined;
@@ -281,15 +347,24 @@ export async function GET(request: NextRequest) {
       const campaign = campaignMap.get(placement.campaign_id);
       const local = placement._localCampaign;
 
-      const advertiser = campaign
-        ? advertiserMap.get(campaign.advertiser_id)
-        : (local?.advertiser_id ? advertiserMap.get(local.advertiser_id) : null);
+      // For local collection placements, get advertiser directly from the placement
+      const advertiser = placement._isLocalCollection && placement.advertiser_id
+        ? advertiserMap.get(placement.advertiser_id)
+        : (campaign
+          ? advertiserMap.get(campaign.advertiser_id)
+          : (local?.advertiser_id ? advertiserMap.get(local.advertiser_id) : null));
 
-      const network = zone ? networkMap.get(zone.network_id) : null;
+      // For local collection placements, get network directly from the placement
+      const network = placement._isLocalCollection && placement.network_id
+        ? networkMap.get(placement.network_id)
+        : (zone ? networkMap.get(zone.network_id) : null);
 
       return {
         ...placement,
         ...(placement.campaign_mongo_id ? { campaign_mongo_id: placement.campaign_mongo_id } : {}),
+        // Source identification
+        source: placement._isLocalCollection ? 'local_collection' : (placement._localCampaign ? 'local_embedded' : 'synced_embedded'),
+        ...(placement._localPlacementId ? { local_placement_id: placement._localPlacementId } : {}),
         advertisement: advertisement ? {
           broadstreet_id: (advertisement as any).id,
           mongo_id: (advertisement as any)._id?.toString?.(),

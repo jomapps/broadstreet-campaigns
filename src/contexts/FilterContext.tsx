@@ -390,8 +390,7 @@ export function useFilters() {
           !__warnedKeys[String(prop)]
         ) {
           __warnedKeys[String(prop)] = true;
-          // eslint-disable-next-line no-console
-          console.warn('[FilterContext] Direct access to', String(prop), 'is deprecated for read-only usage. Use useSelectedEntities() instead. Keep useFilters for setters, arrays, or loading flags.');
+          // Deprecated access warning removed for production
         }
         return Reflect.get(target, prop, receiver);
       },

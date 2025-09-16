@@ -31,14 +31,18 @@ type LocalOnlyData = {
   campaigns: LocalEntity[];
   networks: LocalEntity[];
   advertisements: LocalEntity[];
-  placements?: Array<{
+  placements: Array<{
     _id: string;
-    campaign_mongo_id: string;
+    network_id: number;
+    advertiser_id: number;
     advertisement_id: number;
+    campaign_id?: number;
+    campaign_mongo_id?: string;
     zone_id?: number;
     zone_mongo_id?: string;
     restrictions?: string[];
     created_at?: string;
+    type: 'placement';
   }>;
 };
 
@@ -405,6 +409,94 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
   );
 }
 
+// Local Placement Card Component
+function LocalPlacementCard({
+  placement,
+  networkMap,
+  advertiserMap,
+  onDelete,
+  isDeleting
+}: {
+  placement: LocalOnlyData['placements'][0];
+  networkMap: Map<number, string>;
+  advertiserMap: Map<number, string>;
+  onDelete: (id: string) => void;
+  isDeleting: boolean;
+}) {
+  const networkName = networkMap.get(placement.network_id) || `Network ${placement.network_id}`;
+  const advertiserName = advertiserMap.get(placement.advertiser_id) || `Advertiser ${placement.advertiser_id}`;
+
+  return (
+    <Card className={`p-4 border-2 relative ${cardStateClasses({ isLocal: true, isSelected: false })}`}>
+      {/* Delete button */}
+      <button
+        onClick={() => onDelete(placement._id)}
+        disabled={isDeleting}
+        className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 shadow-sm"
+        title="Delete local placement"
+      >
+        {isDeleting ? '⋯' : '×'}
+      </button>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="font-semibold text-sm">Local Placement</div>
+          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+            Local
+          </Badge>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Network:</span>
+            <span className="font-medium">{networkName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Advertiser:</span>
+            <span className="font-medium">{advertiserName}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Advertisement:</span>
+            <span className="font-medium">Ad {placement.advertisement_id}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Campaign:</span>
+            <span className="font-medium">
+              {placement.campaign_id ? `Campaign ${placement.campaign_id}` :
+               placement.campaign_mongo_id ? (
+                 <EntityIdBadge
+                   id={placement.campaign_mongo_id}
+                   isLocal={true}
+                   label="Campaign"
+                 />
+               ) : 'N/A'}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Zone:</span>
+            <span className="font-medium">
+              {placement.zone_id ? `Zone ${placement.zone_id}` :
+               placement.zone_mongo_id ? (
+                 <EntityIdBadge
+                   id={placement.zone_mongo_id}
+                   isLocal={true}
+                   label="Zone"
+                 />
+               ) : 'N/A'}
+            </span>
+          </div>
+          {placement.restrictions && placement.restrictions.length > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Restrictions:</span>
+              <span className="font-medium">{placement.restrictions.join(', ')}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
   const entities = useSelectedEntities();
@@ -430,7 +522,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
     completeSync
   } = useSyncProgress();
 
-  const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length;
+  const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length + data.placements.length;
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -444,26 +536,39 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
     });
   };
 
-  const handleDelete = async (id: string, type: string) => {
-    if (!confirm(`Are you sure you want to delete this ${type}? This action cannot be undone.`)) {
+  const handleDelete = async (id: string, type?: string) => {
+    // Determine type from the placement data if not provided
+    const entityType = type || (data.placements.find(p => p._id === id) ? 'placement' : 'unknown');
+
+    if (!confirm(`Are you sure you want to delete this ${entityType}? This action cannot be undone.`)) {
       return;
     }
 
     setIsDeleting(id);
     try {
-      const response = await fetch(`/api/delete/${type}/${id}`, {
-        method: 'DELETE',
-      });
+      let response;
+
+      if (entityType === 'placement') {
+        // Use the local placement deletion endpoint
+        response = await fetch(`/api/local-placements/${id}`, {
+          method: 'DELETE',
+        });
+      } else {
+        // Use the existing entity deletion endpoint
+        response = await fetch(`/api/delete/${entityType}/${id}`, {
+          method: 'DELETE',
+        });
+      }
 
       if (!response.ok) {
-        throw new Error('Failed to delete entity');
+        throw new Error(`Failed to delete ${entityType}`);
       }
 
       // Refresh the page to show updated data
       router.refresh();
     } catch (error) {
-      console.error('Error deleting entity:', error);
-      alert('Failed to delete entity. Please try again.');
+      console.error(`Error deleting ${entityType}:`, error);
+      alert(`Failed to delete ${entityType}. Please try again.`);
     } finally {
       setIsDeleting(null);
     }
@@ -738,6 +843,30 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
                 </div>
               </Card>
             )))}
+          </div>
+        </div>
+      )}
+
+      {/* Local Placements from Collection */}
+      {data.placements && data.placements.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <h2 className="text-xl font-semibold text-gray-900">Local Placements</h2>
+            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+              Collection
+            </Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.placements.map((placement) => (
+              <LocalPlacementCard
+                key={placement._id}
+                placement={placement}
+                networkMap={networkMap}
+                advertiserMap={advertiserMap}
+                onDelete={handleDelete}
+                isDeleting={isDeleting === placement._id}
+              />
+            ))}
           </div>
         </div>
       )}

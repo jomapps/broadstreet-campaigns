@@ -32,20 +32,13 @@ async function main() {
   const outDir = path.join(backupsDir, stamp);
   fs.mkdirSync(outDir, { recursive: true });
 
-  console.log(`[db:backup] Creating backup at ${outDir}`);
   const args = ['--uri', mongoUri, '--out', outDir];
   const proc = spawn('mongodump', args, { stdio: 'inherit' });
   proc.on('error', (err) => {
-    console.error('[db:backup] Failed to start mongodump. Is it installed and in PATH?', err.message);
+    process.exit(1);
   });
   proc.on('close', (code) => {
-    if (code === 0) {
-      console.log('[db:backup] Success:', outDir);
-      process.exit(0);
-    } else {
-      console.error('[db:backup] mongodump exited with code', code);
-      process.exit(code || 1);
-    }
+    process.exit(code || 0);
   });
 }
 

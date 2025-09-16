@@ -19,7 +19,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[db:reset] Error:', err.message || err);
   process.exit(1);
 });
 

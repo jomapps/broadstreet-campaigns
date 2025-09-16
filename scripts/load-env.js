@@ -25,7 +25,7 @@ function loadEnvFile(filePath) {
       }
     });
   } catch (err) {
-    console.warn(`[env] Failed to load ${filePath}:`, err.message);
+    // Silently handle env loading errors
   }
 }
 

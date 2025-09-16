@@ -7,6 +7,7 @@ import LocalNetwork from '@/lib/models/local-network';
 import LocalAdvertisement from '@/lib/models/local-advertisement';
 import Network from '@/lib/models/network';
 import Advertiser from '@/lib/models/advertiser';
+import Placement from '@/lib/models/placement';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, Calendar, Globe, Image } from 'lucide-react';
@@ -87,13 +88,15 @@ async function LocalOnlyDataWrapper() {
     await connectDB();
     
     // Fetch all local entities that haven't been synced
-    const [localZones, localAdvertisers, localCampaigns, localNetworks, localAdvertisements] = await Promise.all([
+    const [localZones, localAdvertisers, localCampaigns, localNetworks, localAdvertisements, localPlacements] = await Promise.all([
       LocalZone.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
       LocalAdvertiser.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
       // Include campaigns with placements regardless of synced status
       LocalCampaign.find({ $or: [ { synced_with_api: false }, { 'placements.0': { $exists: true } } ] }).sort({ created_at: -1 }).lean(),
       LocalNetwork.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
       LocalAdvertisement.find({ synced_with_api: false }).sort({ created_at: -1 }).lean(),
+      // Fetch local placements from the collection
+      Placement.find({ created_locally: true }).sort({ created_at: -1 }).lean(),
     ]);
     
     // Also fetch locally created advertisers from the main Advertiser collection
@@ -177,6 +180,12 @@ async function LocalOnlyDataWrapper() {
         _id: (advertisement as any)._id?.toString?.(),
         created_at: (advertisement as any).created_at?.toISOString?.(),
         type: 'advertisement' as const,
+      })),
+      placements: localPlacements.map((placement: any) => ({
+        ...placement,
+        _id: (placement as any)._id?.toString?.(),
+        created_at: (placement as any).created_at?.toISOString?.(),
+        type: 'placement' as const,
       })),
     };
 

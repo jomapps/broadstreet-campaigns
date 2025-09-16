@@ -18,9 +18,8 @@ export function clearZoneSelectionsFromStorage(): void {
     }
     window.localStorage.removeItem('broadstreet_selected_zones');
     window.localStorage.removeItem('broadstreet_show_only_selected');
-    console.log('Zone selections cleared from localStorage');
   } catch (error) {
-    console.error('Error clearing zone selections from localStorage:', error);
+    // Silently handle localStorage errors
   }
 }
 

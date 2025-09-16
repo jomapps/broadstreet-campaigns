@@ -19,7 +19,6 @@ export async function POST() {
       }, { status: 500 });
     }
   } catch (error) {
-    console.error('Sync advertisements error:', error);
     return NextResponse.json({
       success: false,
       message: 'Failed to sync advertisements',

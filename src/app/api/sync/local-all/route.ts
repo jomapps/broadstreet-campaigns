@@ -27,11 +27,6 @@ export async function POST(request: NextRequest) {
 
     // Perform dry run first
     const dryRun = await syncService.dryRunSync(networkId);
-    console.log('[local-all] Dry run result:', {
-      valid: (dryRun as any)?.valid,
-      warnings: (dryRun as any)?.warnings?.length || 0,
-      errors: (dryRun as any)?.errors?.length || 0,
-    });
     
     if (!dryRun.valid) {
       return NextResponse.json({

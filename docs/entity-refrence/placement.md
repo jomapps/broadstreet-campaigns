@@ -239,21 +239,201 @@ await broadstreetAPI.deletePlacement({
 
 Reference: [Broadstreet Placements API v1](https://api.broadstreetads.com/docs/v1#tag/Placements)
 
-**FEATURE**
-We are going to create a a new collection placements
-this will be only used for local placements. broadstreet placements will be stored in the campaign document as it is now.
+## NEW FEATURE: Local Placement Collection
 
-When we create a placement, we will create a new document with all the info required:
-network, advertiser, campaign, zone and advertisement 
-This will help clearly establish the relationships between the entities.
-some notes:
-network, advertiser and advertisement will allway be existing broadstreet_id as they will exist guaranteed, else placement is logically not possible.
-campaign can be local or broadstreet. if local, it will have a mongo_id. if broadstreet, it will have a broadstreet_id. 
-zone can be local or broadstreet. if local, it will have a mongo_id. if broadstreet, it will have a broadstreet_id. 
-**Critical** each placement must have a unique combination of campaign, zone and advertisement. This is a business rule.
+### Overview
+We are implementing a **dual-storage architecture** for placements to better support local-only workflows:
 
-Ensure that we have a section for placement cards in the local-only page as well.
-Once the sync to broadstreet (upload) is complete, the local items will all be deleted.
-local cards will always have a x on the top right to delete them.
+- **Local placements**: Stored in a dedicated `placements` collection (new)
+- **Broadstreet placements**: Continue to be stored as embedded documents in campaign documents (existing)
 
-Change the display of the placement page. it will show cards from the local collection as well as the embedded documents in the campaign collection.
+### Architecture Design
+
+#### Local Placement Document Structure
+```typescript
+{
+  _id: ObjectId("..."),
+  // Entity relationships - all required for clear data lineage
+  network_id: number,           // Always Broadstreet ID (guaranteed to exist)
+  advertiser_id: number,        // Always Broadstreet ID (guaranteed to exist)
+  advertisement_id: number,     // Always Broadstreet ID (guaranteed to exist)
+
+  // Campaign reference - flexible for local/synced campaigns
+  campaign_id?: number,         // Broadstreet ID (if synced campaign)
+  campaign_mongo_id?: string,   // MongoDB ObjectId (if local campaign)
+
+  // Zone reference - flexible for local/synced zones
+  zone_id?: number,             // Broadstreet ID (if synced zone)
+  zone_mongo_id?: string,       // MongoDB ObjectId (if local zone)
+
+  // Optional placement configuration
+  restrictions?: string[],
+
+  // Local tracking metadata
+  created_locally: true,
+  synced_with_api: false,
+  created_at: Date,
+  synced_at?: Date,
+  sync_errors?: string[]
+}
+```
+
+#### Business Rules & Constraints
+
+1. **Unique Placement Constraint**: Each placement must have a unique combination of:
+   - `campaign_id` OR `campaign_mongo_id`
+   - `zone_id` OR `zone_mongo_id`
+   - `advertisement_id`
+
+2. **Entity Dependencies**:
+   - `network_id`, `advertiser_id`, `advertisement_id` must always reference existing Broadstreet entities
+   - `campaign_id`/`campaign_mongo_id` must reference existing campaign (local or synced)
+   - `zone_id`/`zone_mongo_id` must reference existing zone (local or synced)
+
+3. **ID Field Logic**:
+   - Exactly one campaign reference: `campaign_id` XOR `campaign_mongo_id`
+   - Exactly one zone reference: `zone_id` XOR `zone_mongo_id`
+
+### User Experience Changes
+
+#### Local-Only Page Enhancement
+- **New dedicated "Local Placements" section** displaying cards from the placements collection
+- Each placement card shows:
+  - Campaign name/ID with local badge if applicable
+  - Advertisement name/ID
+  - Zone name/ID with local badge if applicable
+  - Network context
+  - **Delete button (×)** in top-right corner for immediate removal
+
+#### Placements Page Enhancement
+- **Unified display** showing both:
+  - Local placements from the `placements` collection
+  - Embedded placements from campaign documents
+- **Visual distinction**: Local placement cards use yellowish styling with local badges
+- **Enhanced card content**: Display campaign, advertisement, and zone names/IDs
+
+#### Sync & Cleanup Workflow
+- **Upload to Broadstreet**: Local placements are synced to Broadstreet API
+- **Post-sync cleanup**: Successfully synced local placements are automatically deleted
+- **Error handling**: Failed syncs remain in local collection with error details
+
+### Technical Implementation Notes
+
+- **Database indexes**: Compound unique index on campaign+zone+advertisement combinations
+- **API endpoints**: New endpoints for local placement CRUD operations
+- **Data migration**: Existing embedded placements remain unchanged
+- **Backward compatibility**: Existing placement workflows continue to function
+
+## IMPLEMENTATION PLAN
+
+### Phase 1: Database Schema & Model Updates
+**Estimated Time: 2-3 hours**
+
+#### Task 1.1: Update Local Placement Model
+- [ ] Enhance `src/lib/models/placement.ts` to support the new schema
+- [ ] Add flexible campaign/zone ID fields (`campaign_id` OR `campaign_mongo_id`, `zone_id` OR `zone_mongo_id`)
+- [ ] Add entity relationship fields (`network_id`, `advertiser_id`)
+- [ ] Add local tracking metadata fields
+- [ ] Create compound unique index for business rule enforcement
+- [ ] Add validation logic for XOR constraints on ID fields
+
+#### Task 1.2: Database Migration Strategy
+- [ ] Create database migration script to handle existing data
+- [ ] Ensure backward compatibility with embedded placements
+- [ ] Test migration with sample data
+
+### Phase 2: API Endpoints Development
+**Estimated Time: 4-5 hours**
+
+#### Task 2.1: Local Placement CRUD APIs
+- [ ] Create `POST /api/local-placements` - Create local placement with full entity relationships
+- [ ] Create `GET /api/local-placements` - List local placements with filtering
+- [ ] Create `DELETE /api/local-placements/[id]` - Delete individual local placement
+- [ ] Add validation for entity dependencies and unique constraints
+
+#### Task 2.2: Enhanced Placements API
+- [ ] Update `GET /api/placements` to include both local and embedded placements
+- [ ] Add source identification (local vs embedded) in response
+- [ ] Maintain existing filtering capabilities
+- [ ] Add entity enrichment for local placements
+
+#### Task 2.3: Sync Integration
+- [ ] Update sync service to handle local placement collection
+- [ ] Implement post-sync cleanup (delete successfully synced local placements)
+- [ ] Add error handling and retry logic
+- [ ] Update sync progress tracking
+
+### Phase 3: Frontend Components Enhancement
+**Estimated Time: 5-6 hours**
+
+#### Task 3.1: Local-Only Page Updates
+- [ ] Add dedicated "Local Placements" section to `src/app/local-only/LocalOnlyDashboard.tsx`
+- [ ] Create local placement cards with enhanced entity information
+- [ ] Implement delete functionality with confirmation
+- [ ] Add loading states and error handling
+
+#### Task 3.2: Placements Page Unification
+- [ ] Update `src/app/placements/PlacementsList.tsx` to display unified placement list
+- [ ] Add visual distinction for local vs embedded placements
+- [ ] Enhance placement cards with campaign/advertisement/zone names and IDs
+- [ ] Implement local badge display logic
+
+#### Task 3.3: Placement Creation Flow
+- [ ] Update placement creation to use new local collection
+- [ ] Modify `src/hooks/usePlacementCreation.ts` to call new API endpoint
+- [ ] Add entity relationship validation in frontend
+- [ ] Update success/error messaging
+
+### Phase 4: Testing & Validation
+**Estimated Time: 3-4 hours**
+
+#### Task 4.1: Unit Testing
+- [ ] Test placement model validation and constraints
+- [ ] Test API endpoints with various scenarios
+- [ ] Test sync functionality with local placements
+- [ ] Test unique constraint enforcement
+
+#### Task 4.2: Integration Testing
+- [ ] Test complete placement creation workflow
+- [ ] Test local-only page functionality
+- [ ] Test unified placements page display
+- [ ] Test sync and cleanup process
+
+#### Task 4.3: Data Integrity Testing
+- [ ] Verify no duplicate placements can be created
+- [ ] Test entity relationship validation
+- [ ] Test migration script with real data
+- [ ] Verify backward compatibility
+
+### Phase 5: Database Reset & Clean Start
+**Estimated Time: 1 hour**
+
+#### Task 5.1: Database Cleanup
+- [ ] Drop existing MongoDB database
+- [ ] Re-sync all data from Broadstreet API
+- [ ] Verify clean state with no embedded placements
+- [ ] Test new local placement creation
+
+### Implementation Notes
+
+#### Pre-Implementation Checklist
+- [ ] Backup current database state
+- [ ] Document current placement workflows
+- [ ] Identify all placement-related components and APIs
+- [ ] Plan rollback strategy if needed
+
+#### Success Criteria
+- [ ] Local placements stored in dedicated collection
+- [ ] Unified placement display working correctly
+- [ ] Local-only page shows placement section
+- [ ] Sync process handles local placements
+- [ ] No data loss during migration
+- [ ] All existing functionality preserved
+
+#### Risk Mitigation
+- [ ] Maintain backward compatibility during transition
+- [ ] Implement feature flags for gradual rollout
+- [ ] Monitor database performance with new indexes
+- [ ] Test thoroughly before production deployment
+
+**Total Estimated Time: 15-19 hours**

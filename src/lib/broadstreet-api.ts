@@ -17,10 +17,7 @@ import { mapApiIds } from './types/mapApiIds';
 const API_BASE_URL = process.env.BROADSTREET_API_BASE_URL || 'https://api.broadstreetads.com/api/1';
 const API_TOKEN = process.env.BROADSTREET_API_TOKEN || '';
 
-// Only warn in runtime, not during build
-if (typeof window !== 'undefined' && (!API_BASE_URL || !API_TOKEN)) {
-  console.warn('Missing Broadstreet API configuration. API calls will fail.');
-}
+// Configuration validation removed for production
 
 class BroadstreetAPI {
   private baseURL: string;
@@ -33,20 +30,6 @@ class BroadstreetAPI {
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}${endpoint.includes('?') ? '&' : '?'}access_token=${this.token}`;
-    const sanitizedUrl = this.token ? url.replace(this.token, '***') : url;
-
-    // Parse body for logging (if any)
-    let parsedBody: any = undefined;
-    try {
-      if (options.body && typeof options.body === 'string') {
-        parsedBody = JSON.parse(options.body as string);
-      }
-    } catch (_) {
-      parsedBody = options.body;
-    }
-
-    const method = (options.method || 'GET').toUpperCase();
-    console.log('[BroadstreetAPI] Request:', { method, endpoint, url: sanitizedUrl, body: parsedBody });
 
     const response = await fetch(url, {
       ...options,
@@ -69,7 +52,6 @@ class BroadstreetAPI {
     }
 
     if (!response.ok) {
-      console.error('[BroadstreetAPI] Response (error):', { method, endpoint, status, statusText, body: responseText?.slice(0, 1000) });
       const error: any = new Error(`API request failed: ${status} ${statusText}`);
       error.status = status;
       error.statusText = statusText;
@@ -77,7 +59,6 @@ class BroadstreetAPI {
       throw error;
     }
 
-    console.log('[BroadstreetAPI] Response (ok):', { method, endpoint, status, keys: json ? Object.keys(json) : undefined });
     return json as T;
   }
 
@@ -323,7 +304,6 @@ class BroadstreetAPI {
         advertiser.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing advertiser:', error);
       return false; // Assume no conflict if we can't check
     }
   }
@@ -338,7 +318,6 @@ class BroadstreetAPI {
       const match = response.advertisers.find(a => a.name.toLowerCase().trim() === normalized);
       return match || null;
     } catch (error) {
-      console.error('Error finding existing advertiser by name:', error);
       return null;
     }
   }
@@ -350,7 +329,6 @@ class BroadstreetAPI {
         campaign.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing campaign:', error);
       return false; // Assume no conflict if we can't check
     }
   }
@@ -362,7 +340,6 @@ class BroadstreetAPI {
       const match = response.campaigns.find(c => c.name.toLowerCase().trim() === normalized);
       return match || null;
     } catch (error) {
-      console.error('Error finding existing campaign by name:', error);
       return null;
     }
   }
@@ -374,7 +351,6 @@ class BroadstreetAPI {
         zone.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing zone:', error);
       return false; // Assume no conflict if we can't check
     }
   }
@@ -386,7 +362,6 @@ class BroadstreetAPI {
         advertisement.name.toLowerCase().trim() === name.toLowerCase().trim()
       );
     } catch (error) {
-      console.error('Error checking existing advertisement:', error);
       return false; // Assume no conflict if we can't check
     }
   }

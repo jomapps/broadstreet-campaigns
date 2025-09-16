@@ -17,14 +17,7 @@ export async function DELETE(request: NextRequest) {
 
     const totalDeleted = advertiserResult.deletedCount + campaignResult.deletedCount + zoneResult.deletedCount;
 
-    // Log the deletion operation
-    console.log(`Audit data deletion completed:`, {
-      advertisers: advertiserResult.deletedCount,
-      campaigns: campaignResult.deletedCount,
-      zones: zoneResult.deletedCount,
-      total: totalDeleted,
-      timestamp: new Date().toISOString()
-    });
+    // Deletion operation completed
 
     return NextResponse.json({
       success: true,
@@ -38,9 +31,8 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error deleting audit data:', error);
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred while deleting audit data'
       },
