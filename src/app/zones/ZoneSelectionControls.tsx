@@ -64,13 +64,16 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   // The zones prop now contains the filtered zones from ZoneFiltersWrapper
   const visibleZones = zones;
 
+  // Helper: derive selection key (prefer Broadstreet numeric id)
+  const zoneSelectionKey = (zone: ZoneLean) => (zone.id != null ? String(zone.id) : zone._id);
+
   // Get currently selected zones that are visible
   const visibleSelectedZones = useMemo(() => {
-    return visibleZones.filter(zone => selectedZones.includes(zone._id));
+    return visibleZones.filter(zone => selectedZones.includes(zoneSelectionKey(zone)));
   }, [visibleZones, selectedZones]);
 
-  // Get all visible zone IDs
-  const visibleZoneIds = visibleZones.map(zone => zone._id);
+  // Get all visible zone IDs (prefer numeric Broadstreet ids as strings)
+  const visibleZoneIds = visibleZones.map(zone => zoneSelectionKey(zone));
 
   // Check if all visible zones are selected
   const allVisibleSelected = visibleZoneIds.length > 0 && visibleZoneIds.every(id => selectedZones.includes(id));

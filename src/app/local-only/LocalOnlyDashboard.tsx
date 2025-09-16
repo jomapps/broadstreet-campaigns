@@ -31,6 +31,15 @@ type LocalOnlyData = {
   campaigns: LocalEntity[];
   networks: LocalEntity[];
   advertisements: LocalEntity[];
+  placements?: Array<{
+    _id: string;
+    campaign_mongo_id: string;
+    advertisement_id: number;
+    zone_id?: number;
+    zone_mongo_id?: string;
+    restrictions?: string[];
+    created_at?: string;
+  }>;
 };
 
 interface LocalOnlyDashboardProps {
@@ -697,6 +706,41 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
       />
+
+      {/* Placements under Campaigns (embedded) */}
+      {data.campaigns.some((c: any) => Array.isArray(c.placements) && c.placements.length > 0) && (
+        <div className="space-y-4">
+          <div className="flex items-center space-x-3">
+            <h2 className="text-xl font-semibold text-gray-900">Placements (Local Embedded)</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.campaigns.flatMap((c: any) => (c.placements || []).map((p: any, idx: number) => (
+              <Card key={`${c._id}-${p.advertisement_id}-${p.zone_id || p.zone_mongo_id || idx}`} className="p-4 border-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold">Campaign: {c.name}</div>
+                  <Badge variant="outline" className="text-xs">Local</Badge>
+                </div>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Ad ID:</span>
+                    <span className="font-medium">{p.advertisement_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Zone:</span>
+                    <span className="font-medium">{p.zone_id ?? p.zone_mongo_id}</span>
+                  </div>
+                  {Array.isArray(p.restrictions) && p.restrictions.length > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Restrictions:</span>
+                      <span className="font-medium">{p.restrictions.join(', ')}</span>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )))}
+          </div>
+        </div>
+      )}
 
       {/* Progress Modal */}
       <ProgressModal

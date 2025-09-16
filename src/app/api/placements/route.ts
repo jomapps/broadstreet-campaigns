@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Guardrails in production to avoid heavy unfiltered queries
     const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoId || advertisementIdFilter || zoneIdFilter);
-    if (process.env.NODE_ENV === 'production' && !hasAnyFilter) {
+    if (process.env.NODE_ENV === 'production' && !hasAnyFilter && !hardLimit) {
       return NextResponse.json({
         success: false,
         message: 'At least one filter (network_id, advertiser_id, campaign_id, campaign_mongo_id, advertisement_id, or zone_id) is required.',
@@ -45,21 +45,38 @@ export async function GET(request: NextRequest) {
     const campaignQuery: Record<string, unknown> = {};
     if (campaignId) campaignQuery.id = parseInt(campaignId);
     if (advertiserId) campaignQuery.advertiser_id = parseInt(advertiserId);
+    if (networkId) campaignQuery.network_id = parseInt(networkId);
 
     // Fetch synced campaigns unless a specific local campaign is requested
     const campaigns = campaignMongoId ? [] : await Campaign.find(campaignQuery).lean();
 
-    // Also fetch local campaigns that match advertiser filter and optionally map to a specific campaign id via original_broadstreet_id
+    // Also fetch local campaigns that match filters and optionally map to a specific campaign id via original_broadstreet_id
     const localQuery: Record<string, unknown> = {};
     if (advertiserId) localQuery.advertiser_id = parseInt(advertiserId);
     if (campaignId) localQuery.original_broadstreet_id = parseInt(campaignId);
     if (campaignMongoId) (localQuery as any)._id = campaignMongoId; // could use new Types.ObjectId(campaignMongoId)
+    if (networkId) (localQuery as any).network_id = parseInt(networkId);
     const localCampaigns = await LocalCampaign.find(localQuery).lean();
+
+    // Additionally, if filtering by network, include all campaigns whose advertiser belongs to that network
+    if (networkId) {
+      const nid = parseInt(networkId);
+      const advertisersInNetwork = await Advertiser.find({ network_id: nid }).lean();
+      const advertiserIds = advertisersInNetwork.map((a: any) => a.id).filter((v: any) => typeof v === 'number');
+      if (advertiserIds.length > 0) {
+        const inferred = await Campaign.find({ advertiser_id: { $in: advertiserIds } }).lean();
+        const existing = new Set((campaigns as any[]).map(c => (c as any).id));
+        for (const c of inferred) {
+          if (!existing.has((c as any).id)) (campaigns as any[]).push(c);
+        }
+      }
+    }
 
     // Collect all placements from both sources
     const allPlacements: Array<{
       advertisement_id: number;
       zone_id: number;
+      zone_mongo_id?: string;
       restrictions?: string[];
       campaign_id?: number; // broadstreet_id
       campaign_mongo_id?: string;
@@ -74,10 +91,11 @@ export async function GET(request: NextRequest) {
       };
     }> = [];
 
-    // From synced campaigns
+    // From synced campaigns (no remote calls; rely on locally stored placements)
     for (const campaign of campaigns) {
-      if (campaign.placements && campaign.placements.length > 0) {
-        for (const placement of campaign.placements as any[]) {
+      const placementsArr = Array.isArray((campaign as any).placements) ? ((campaign as any).placements as any[]) : [];
+      if (placementsArr.length > 0) {
+        for (const placement of placementsArr) {
           allPlacements.push({
             advertisement_id: (placement as any).advertisement_id,
             zone_id: (placement as any).zone_id,
@@ -97,6 +115,7 @@ export async function GET(request: NextRequest) {
           allPlacements.push({
             advertisement_id: (placement as any).advertisement_id,
             zone_id: (placement as any).zone_id,
+            ...(typeof (placement as any).zone_mongo_id === 'string' ? { zone_mongo_id: (placement as any).zone_mongo_id } : {}),
             restrictions: (placement as any).restrictions,
             ...(typeof numericId === 'number' ? { campaign_id: numericId } : {}),
             campaign_mongo_id: mongoId,
@@ -121,38 +140,39 @@ export async function GET(request: NextRequest) {
       const compositeCampaign = (typeof p.campaign_id === 'number'
         ? String(p.campaign_id)
         : ((p as any).campaign_mongo_id ? String((p as any).campaign_mongo_id) : ''));
-      const key = `${compositeCampaign}-${p.advertisement_id}-${p.zone_id}`;
+      const zoneKey = (typeof p.zone_id === 'number' ? String(p.zone_id) : (p as any).zone_mongo_id || '');
+      const key = `${compositeCampaign}-${p.advertisement_id}-${zoneKey}`;
       if (!seen.has(key)) { seen.add(key); deduped.push(p); }
     }
     
     // Build unique id sets for batch fetching
     const adIds = Array.from(new Set(deduped.map(p => p.advertisement_id)));
-    const zoneIds = Array.from(new Set(deduped.map(p => p.zone_id)));
+    const zoneIds = Array.from(new Set(deduped.map(p => p.zone_id).filter((v): v is number => typeof v === 'number')));
+    const zoneMongoIds = Array.from(new Set(
+      deduped
+        .map((p: any) => p.zone_mongo_id)
+        .filter((v): v is string => typeof v === 'string')
+    ));
     const campaignIds = Array.from(new Set(deduped
       .map(p => (p as any).campaign_id)
       .filter((v): v is number => typeof v === 'number')));
     
     // Fetch related entities in batches
-    const [ads, zones, campaignsById] = await Promise.all([
+    const [ads, zones, localZones, campaignsById] = await Promise.all([
       Advertisement.find({ id: { $in: adIds } }).lean(),
       Zone.find({ id: { $in: zoneIds } }).lean(),
+      (await import('@/lib/models/local-zone')).default.find({ _id: { $in: zoneMongoIds } }).lean(),
       Campaign.find({ id: { $in: campaignIds } }).lean(),
     ]);
     
     // Build lookup maps
     const adMap = new Map<number, any>(ads.map((a: any) => [a.id, a]));
     const zoneMap = new Map<number, any>(zones.map((z: any) => [z.id, z]));
+    const zoneLocalMap = new Map<string, any>(localZones.map((z: any) => [z._id?.toString?.(), z]));
     const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.id, c]));
     
-    // Optional filter by networkId using zoneMap
+    // Start filtered set
     let filtered = deduped;
-    if (networkId) {
-      const nid = parseInt(networkId);
-      filtered = filtered.filter(p => {
-        const z = zoneMap.get(p.zone_id);
-        return z && z.network_id === nid;
-      });
-    }
     if (advertisementIdFilter) {
       const aid = parseInt(advertisementIdFilter);
       if (Number.isFinite(aid)) {
@@ -178,7 +198,11 @@ export async function GET(request: NextRequest) {
       }).filter((v): v is number => typeof v === 'number')
     ));
     const networkIds = Array.from(new Set(
-      filtered.map(p => zoneMap.get(p.zone_id)?.network_id).filter((v): v is number => typeof v === 'number')
+      filtered.map((p: any) => {
+        const fromSynced = typeof p.zone_id === 'number' ? zoneMap.get(p.zone_id)?.network_id : undefined;
+        const fromLocal = p.zone_mongo_id ? zoneLocalMap.get(String(p.zone_mongo_id))?.network_id : undefined;
+        return fromSynced ?? fromLocal;
+      }).filter((v): v is number => typeof v === 'number')
     ));
     const [advertisers, networks] = await Promise.all([
       Advertiser.find({ id: { $in: advertiserIds } }).lean(),
@@ -187,10 +211,32 @@ export async function GET(request: NextRequest) {
     const advertiserMap = new Map<number, any>(advertisers.map((a: any) => [a.id, a]));
     const networkMap = new Map<number, any>(networks.map((n: any) => [n.id, n]));
 
+    // Optional filter by networkId using all available maps (after maps are built)
+    if (networkId) {
+      const nid = parseInt(networkId);
+      filtered = filtered.filter((p: any) => {
+        const z = typeof p.zone_id === 'number' ? zoneMap.get(p.zone_id) : undefined;
+        const zl = p.zone_mongo_id ? zoneLocalMap.get(String(p.zone_mongo_id)) : undefined;
+        const c = typeof p.campaign_id === 'number' ? campaignMap.get(p.campaign_id) : undefined;
+        const adv = c && typeof (c as any).advertiser_id === 'number' ? advertiserMap.get((c as any).advertiser_id) : undefined;
+        const networkFromSynced = z?.network_id;
+        const networkFromLocal = zl?.network_id;
+        const networkFromCampaign = c?.network_id;
+        const networkFromAdvertiser = adv?.network_id;
+        return (
+          (typeof networkFromSynced === 'number' && networkFromSynced === nid) ||
+          (typeof networkFromLocal === 'number' && networkFromLocal === nid) ||
+          (typeof networkFromCampaign === 'number' && networkFromCampaign === nid) ||
+          (typeof networkFromAdvertiser === 'number' && networkFromAdvertiser === nid)
+        );
+      });
+    }
+
     // Enrich using maps; handle local campaign enrichment
     const enrichedPlacements = filtered.map((placement: any) => {
       const advertisement = adMap.get(placement.advertisement_id);
-      const zone = zoneMap.get(placement.zone_id);
+      const zone = typeof placement.zone_id === 'number' ? zoneMap.get(placement.zone_id) : undefined;
+      const zoneLocal = placement.zone_mongo_id ? zoneLocalMap.get(String(placement.zone_mongo_id)) : undefined;
       const campaign = campaignMap.get(placement.campaign_id);
       const local = placement._localCampaign;
 
@@ -241,7 +287,15 @@ export async function GET(request: NextRequest) {
           alias: (zone as any).alias,
           size_type: (zone as any).size_type,
           size_number: (zone as any).size_number,
-        } : null,
+        } : (zoneLocal ? {
+          broadstreet_id: undefined,
+          mongo_id: (zoneLocal as any)._id?.toString?.(),
+          local_zone_id: (zoneLocal as any)._id?.toString?.(),
+          name: (zoneLocal as any).name,
+          alias: (zoneLocal as any).alias,
+          size_type: (zoneLocal as any).size_type,
+          size_number: (zoneLocal as any).size_number,
+        } : null),
         advertiser: advertiser ? {
           broadstreet_id: (advertiser as any).id,
           mongo_id: (advertiser as any)._id?.toString?.(),

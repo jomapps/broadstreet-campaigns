@@ -36,12 +36,18 @@ export function usePlacementCreation(): UsePlacementCreationResult {
   const adIds = useMemo(() => toNumericIds(entities.advertisements as any), [entities.advertisements]);
 
   const zoneIds = useMemo(() => toNumericIds(entities.zones as any), [entities.zones]);
+  const zoneMongoIds = useMemo(
+    () => (entities.zones as any)
+      .map((z: any) => (typeof z?.ids?.mongo_id === 'string' ? z.ids.mongo_id : null))
+      .filter((v: string | null): v is string => typeof v === 'string'),
+    [entities.zones]
+  );
 
   // Fallback-aware counts to handle string ID selections
-  const adCount = adIds.length > 0 ? adIds.length : entities.advertisements.length;
-  const zoneCount = zoneIds.length > 0 ? zoneIds.length : entities.zones.length;
+  const adCount = adIds.length;
+  const zoneCount = entities.zones.length; // count total selected zones, including local
 
-  const combinationsCount = useMemo(() => adCount * zoneCount, [adCount, zoneCount]);
+  const combinationsCount = useMemo(() => adIds.length * entities.zones.length, [adIds.length, entities.zones.length]);
 
   const clearMessages = () => {
     setError(null);
@@ -56,18 +62,27 @@ export function usePlacementCreation(): UsePlacementCreationResult {
     setSuccessMessage(null);
 
     try {
+      // Pre-validate numeric selections only
+      if (adIds.length === 0) {
+        throw new Error('Select at least one advertisement');
+      }
+      if (entities.zones.length === 0) {
+        throw new Error('Select at least one zone');
+      }
+
       const payload: any = {
-        advertisement_ids: adIds.length > 0 ? adIds : (entities.advertisements as any).map((ad: any) => ad.ids.broadstreet_id).filter((n: any) => typeof n === 'number'),
-        zone_ids: zoneIds.length > 0 ? zoneIds : (entities.zones as any).map((zone: any) => zone.ids.broadstreet_id).filter((n: any) => typeof n === 'number'),
+        advertisement_ids: adIds,
+        // Include both numeric Broadstreet zone IDs and local Mongo IDs
+        zone_ids: [...zoneIds, ...zoneMongoIds],
       };
 
-      // Validate that we have either campaign_mongo_id or campaign_id
+      // Validate that we have either campaign_mongo_id or campaign_broadstreet_id
       let hasValidCampaignId = false;
       if (campaignMongoId) {
         payload.campaign_mongo_id = campaignMongoId;
         hasValidCampaignId = true;
       } else if (typeof (entities.campaign as any)?.ids?.broadstreet_id === 'number') {
-        payload.campaign_id = (entities.campaign as any).ids.broadstreet_id as number;
+        payload.campaign_broadstreet_id = (entities.campaign as any).ids.broadstreet_id as number;
         hasValidCampaignId = true;
       }
 

@@ -109,7 +109,12 @@ const LocalCampaignSchema = new Schema<ILocalCampaign>({
     },
     zone_id: {
       type: Number,
-      required: true,
+      required: false,
+    },
+    // Allow referencing an unsynced local zone via Mongo _id until sync assigns a Broadstreet ID
+    zone_mongo_id: {
+      type: String,
+      required: false,
     },
     restrictions: [{
       type: String,

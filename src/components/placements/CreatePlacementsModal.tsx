@@ -73,7 +73,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
               {entities.zones.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
                   {entities.zones.slice(0, 5).map((zone) => (
-                    <li key={zone.id}>Zone {zone.id}</li>
+                    <li key={String(zone.id)}>Zone {String(zone.id)}</li>
                   ))}
                   {entities.zones.length > 5 && (
                     <li>+{entities.zones.length - 5} more</li>
@@ -85,7 +85,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3" data-testid="placement-summary">
             <p className="text-sm text-blue-800">
-              {adCount} advertisements × {zoneCount} zones = <strong>{combinationsCount}</strong> placements
+              {adCount} advertisements × {entities.zones.length} zones = <strong>{combinationsCount}</strong> placements
             </p>
           </div>
 

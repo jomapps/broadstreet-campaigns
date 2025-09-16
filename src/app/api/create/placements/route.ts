@@ -33,15 +33,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Strictly normalize and validate advertisement_ids and zone_ids to numeric Broadstreet IDs
+    // Strictly normalize ads to numeric Broadstreet IDs; zones can be numeric or Mongo IDs, convert later
     const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
     const normalizedAdIdsAll = Array.isArray(advertisement_ids) ? advertisement_ids.map(toNum) : [];
-    const normalizedZoneIdsAll = Array.isArray(zone_ids) ? zone_ids.map(toNum) : [];
     const normalizedAdIds = normalizedAdIdsAll.filter((v) => Number.isFinite(v)) as number[];
-    const normalizedZoneIds = normalizedZoneIdsAll.filter((v) => Number.isFinite(v)) as number[];
-    if (normalizedAdIds.length !== normalizedAdIdsAll.length || normalizedZoneIds.length !== normalizedZoneIdsAll.length) {
+    if (normalizedAdIds.length !== normalizedAdIdsAll.length) {
       return NextResponse.json(
-        { message: 'advertisement_ids and zone_ids must be numbers or numeric strings' },
+        { message: 'advertisement_ids must be numbers or numeric strings' },
         { status: 400 }
       );
     }
@@ -200,15 +198,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // IDs already strictly normalized above
-    const normalizedAdIdsFinal = normalizedAdIds;
-    const normalizedZoneIdsFinal = normalizedZoneIds;
+    // Resolve zones: allow numeric Broadstreet IDs or Mongo IDs; store appropriately
+    const resolvedZoneIds: number[] = [];
+    const resolvedZoneMongoIds: string[] = [];
+    for (const zid of zone_ids) {
+      if (typeof zid === 'number' || (typeof zid === 'string' && /^\d+$/.test(zid))) {
+        const asNum = typeof zid === 'number' ? zid : parseInt(zid, 10);
+        resolvedZoneIds.push(asNum);
+      } else if (typeof zid === 'string') {
+        resolvedZoneMongoIds.push(zid);
+      }
+    }
 
     // Build combinations (Cartesian product)
     const combinations = [] as Array<{ advertisement_id: number; zone_id: number; restrictions?: string[] }>;
-    for (const adId of normalizedAdIdsFinal) {
-      for (const zoneId of normalizedZoneIdsFinal) {
+    for (const adId of normalizedAdIds) {
+      // Numeric zones
+      for (const zoneId of resolvedZoneIds) {
         combinations.push({ advertisement_id: adId, zone_id: zoneId, restrictions });
+      }
+      // Local zones referenced by mongo id
+      for (const zoneMongoId of resolvedZoneMongoIds) {
+        combinations.push({ advertisement_id: adId, zone_id: NaN as any, restrictions });
       }
     }
 
@@ -217,12 +228,13 @@ export async function POST(request: NextRequest) {
     // This prevents accidental overwrites but may require manual cleanup if restrictions need to change
     const beforeDoc = await LocalCampaign.findById((campaign as any)._id).lean();
     const before: any[] = (beforeDoc as any)?.placements ?? [];
-    const existingKeys = new Set(before.map((p: any) => `${p.advertisement_id}-${p.zone_id}`));
+    const existingKeys = new Set(before.map((p: any) => `${p.advertisement_id}-${p.zone_id || p.zone_mongo_id || ''}`));
     const toInsert = combinations
-      .filter((c) => !existingKeys.has(`${c.advertisement_id}-${c.zone_id}`))
-      .map((c) => ({
+      .filter((c: any) => !existingKeys.has(`${c.advertisement_id}-${Number.isFinite(c.zone_id) ? c.zone_id : (c.zone_mongo_id || '')}`))
+      .map((c: any) => ({
         advertisement_id: c.advertisement_id,
-        zone_id: c.zone_id,
+        ...(Number.isFinite(c.zone_id) ? { zone_id: c.zone_id } : {}),
+        ...(!Number.isFinite(c.zone_id) && typeof c.zone_mongo_id === 'string' ? { zone_mongo_id: c.zone_mongo_id } : {}),
         ...(c.restrictions && c.restrictions.length > 0 ? { restrictions: c.restrictions } : {}),
       }));
 

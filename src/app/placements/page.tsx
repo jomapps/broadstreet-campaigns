@@ -91,16 +91,14 @@ function PlacementsData() {
 
   useEffect(() => {
     const fetchPlacements = async () => {
-      if (!entities.network) {
-        setPlacements([]);
-        return;
-      }
-
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
+        // If network is selected, prefer narrowing by network; otherwise, fetch with a hard limit
         if (entities.network?.ids.broadstreet_id != null) {
           params.append('network_id', String(entities.network.ids.broadstreet_id));
+        } else {
+          params.append('limit', '200');
         }
         
         if (entities.advertiser?.ids.broadstreet_id != null) {
