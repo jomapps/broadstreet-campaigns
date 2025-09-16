@@ -10,14 +10,16 @@
 - **Next.js Version**: 15.0.0
 - **Node.js Version**: 20.9.0
 - **pnpm Version**: 8.11.0
-- use Playwright mcp
+
 
 ## Reference Docs
 **CRITICAL**:
 The docs/entity-reference folder has all the files that you should really read.
 They are the one source of truth. Ask me if you find conflicts.
 
-## Tests
+## Tasks
 
-### Sync Data Test
+### Task 1:Sync Data Test
+use Playwright mcp
 Go do dashboard page and press sync data button.
+Fix any issues and ensure that the data syncs correctly.

@@ -2,6 +2,7 @@ import connectDB from '../mongodb';
 import broadstreetAPI from '../broadstreet-api';
 import { parseZoneName } from './zone-parser';
 import { cleanupLegacyIndexes, resolveBroadstreetId } from './entity-helpers';
+import { mapApiIds } from '../types/mapApiIds';
 
 // Import models
 import Network from '../models/network';
@@ -15,6 +16,8 @@ import LocalZone from '../models/local-zone';
 
 export async function syncNetworks(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'networks',
     status: 'pending',
     startTime: new Date(),
@@ -25,21 +28,24 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
     await syncLog.save();
 
     const networks = await broadstreetAPI.getNetworks();
-    
+
     // Upsert networks for idempotent sync
     await cleanupLegacyIndexes(Network);
-    
-    const networkDocs = networks.map(network => ({
-      broadstreet_id: (network as any).broadstreet_id ?? (network as any).id,
-      name: network.name,
-      group_id: network.group_id,
-      web_home_url: network.web_home_url,
-      logo: network.logo,
-      valet_active: network.valet_active,
-      path: network.path,
-      advertiser_count: network.advertiser_count,
-      zone_count: network.zone_count,
-    }));
+
+    const networkDocs = networks.map(network => {
+      const mapped = mapApiIds(network, { stripId: true });
+      return {
+        broadstreet_id: mapped.broadstreet_id,
+        name: mapped.name,
+        group_id: mapped.group_id,
+        web_home_url: mapped.web_home_url,
+        logo: mapped.logo,
+        valet_active: mapped.valet_active,
+        path: mapped.path,
+        advertiser_count: mapped.advertiser_count,
+        zone_count: mapped.zone_count,
+      };
+    });
 
     if (networkDocs.length) {
       await Network.bulkWrite(
@@ -72,6 +78,8 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
 
 export async function syncAdvertisers(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'advertisers',
     status: 'pending',
     startTime: new Date(),
@@ -90,25 +98,25 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
     for (const network of networks) {
       try {
         // Guard against invalid network identifiers
-        if (typeof (network as any).broadstreet_id !== 'number') {
+        if (typeof network.broadstreet_id !== 'number') {
           continue;
         }
 
-        const advertisers = await broadstreetAPI.getAdvertisers((network as any).broadstreet_id);
-        
+        const advertisers = await broadstreetAPI.getAdvertisers(network.broadstreet_id);
+
         advertisers.forEach(advertiser => {
+          const mapped = mapApiIds(advertiser, { stripId: true });
           // Only add if we haven't seen this advertiser ID before
-          const advBsId = (advertiser as any).broadstreet_id ?? (advertiser as any).id;
-          if (!allAdvertisers.has(advBsId)) {
-            allAdvertisers.set(advBsId, {
-              broadstreet_id: advBsId,
-              name: advertiser.name,
-              logo: advertiser.logo,
-              web_home_url: advertiser.web_home_url,
-              notes: advertiser.notes,
-              admins: advertiser.admins,
+          if (mapped.broadstreet_id && !allAdvertisers.has(mapped.broadstreet_id)) {
+            allAdvertisers.set(mapped.broadstreet_id, {
+              broadstreet_id: mapped.broadstreet_id,
+              name: mapped.name,
+              logo: mapped.logo,
+              web_home_url: mapped.web_home_url,
+              notes: mapped.notes,
+              admins: mapped.admins,
               // Persist network context so we can derive campaign network_id when needed
-              network_id: (network as any).broadstreet_id,
+              network_id: network.broadstreet_id,
             });
           }
         });
@@ -153,6 +161,8 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
 
 export async function syncZones(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'zones',
     status: 'pending',
     startTime: new Date(),
@@ -171,24 +181,24 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
     for (const network of networks) {
       try {
         // Guard invalid network identifiers
-        if (typeof (network as any).broadstreet_id !== 'number') {
-          console.warn(`[syncZones] Skipping network with invalid broadstreet_id:`, { _id: (network as any)._id?.toString?.(), broadstreet_id: (network as any).broadstreet_id });
+        if (typeof network.broadstreet_id !== 'number') {
+          console.warn(`[syncZones] Skipping network with invalid broadstreet_id:`, { _id: network._id?.toString?.(), broadstreet_id: network.broadstreet_id });
           continue;
         }
 
-        const zones = await broadstreetAPI.getZones((network as any).broadstreet_id);
-        
+        const zones = await broadstreetAPI.getZones(network.broadstreet_id);
+
         zones.forEach(zone => {
+          const mapped = mapApiIds(zone, { stripId: true });
           // Only add if we haven't seen this zone ID before
-          const zoneBsId = (zone as any).broadstreet_id ?? (zone as any).id;
-          if (!allZones.has(zoneBsId)) {
-            const parsed = parseZoneName(zone.name);
-            allZones.set(zoneBsId, {
-              broadstreet_id: zoneBsId,
-              name: zone.name,
-              network_id: (zone as any).network_id ?? (network as any).broadstreet_id,
-              alias: zone.alias,
-              self_serve: zone.self_serve,
+          if (mapped.broadstreet_id && !allZones.has(mapped.broadstreet_id)) {
+            const parsed = parseZoneName(mapped.name);
+            allZones.set(mapped.broadstreet_id, {
+              broadstreet_id: mapped.broadstreet_id,
+              name: mapped.name,
+              network_id: mapped.network_id ?? network.broadstreet_id,
+              alias: mapped.alias,
+              self_serve: mapped.self_serve,
               size_type: parsed.size_type,
               size_number: parsed.size_number,
               category: parsed.category,
@@ -238,6 +248,8 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
 
 export async function syncCampaigns(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'campaigns',
     status: 'pending',
     startTime: new Date(),
@@ -255,22 +267,21 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
 
     for (const advertiser of advertisers) {
       try {
-        const advBsId = (advertiser as any).broadstreet_id ?? (advertiser as any).id;
-        if (typeof advBsId !== 'number') {
+        if (typeof advertiser.broadstreet_id !== 'number') {
           continue;
         }
 
-        const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advBsId);
+        const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advertiser.broadstreet_id);
 
         campaigns.forEach(campaign => {
+          const mapped = mapApiIds(campaign, { stripId: true });
           // Only add if we haven't seen this campaign ID before
-          const campBsId = (campaign as any).broadstreet_id ?? (campaign as any).id;
-          if (!allCampaigns.has(campBsId)) {
+          if (mapped.broadstreet_id && !allCampaigns.has(mapped.broadstreet_id)) {
             // Preserve raw payload for round-trip safety
             const raw = campaign;
 
             // Normalize weight: Broadstreet may return strings like "default" or "remnant"
-            const weightRaw = (campaign as unknown as Record<string, unknown>).weight as string | number | undefined;
+            const weightRaw = (mapped as unknown as Record<string, unknown>).weight as string | number | undefined;
             let weight: number | undefined;
             if (typeof weightRaw === 'number') {
               weight = weightRaw;
@@ -286,30 +297,30 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
             }
 
             // Dates: keep raw and normalized (optional)
-            const startDateRaw = (campaign as unknown as Record<string, unknown>).start_date as string | undefined;
-            const endDateRaw = (campaign as unknown as Record<string, unknown>).end_date as string | undefined;
+            const startDateRaw = (mapped as unknown as Record<string, unknown>).start_date as string | undefined;
+            const endDateRaw = (mapped as unknown as Record<string, unknown>).end_date as string | undefined;
 
             // display_type: keep raw and normalized (optional)
-            const displayTypeRaw = (campaign as unknown as Record<string, unknown>).display_type as string | undefined;
+            const displayTypeRaw = (mapped as unknown as Record<string, unknown>).display_type as string | undefined;
             const allowedDisplay = ['no_repeat', 'allow_repeat_campaign', 'allow_repeat_advertisement', 'force_repeat_campaign'] as const;
             const displayType = allowedDisplay.includes(displayTypeRaw as typeof allowedDisplay[number]) ? displayTypeRaw : undefined;
 
-            allCampaigns.set(campBsId, {
-              broadstreet_id: campBsId,
-              name: campaign.name,
-              advertiser_id: (campaign as any).advertiser_id ?? advBsId,
+            allCampaigns.set(mapped.broadstreet_id, {
+              broadstreet_id: mapped.broadstreet_id,
+              name: mapped.name,
+              advertiser_id: mapped.advertiser_id ?? advertiser.broadstreet_id,
               start_date: startDateRaw,
               end_date: endDateRaw,
-              max_impression_count: campaign.max_impression_count,
+              max_impression_count: mapped.max_impression_count,
               display_type: displayType,
-              active: campaign.active,
+              active: mapped.active,
               weight,
-              path: campaign.path,
-              archived: campaign.archived,
-              pacing_type: campaign.pacing_type,
-              impression_max_type: campaign.impression_max_type,
-              paused: campaign.paused,
-              notes: campaign.notes,
+              path: mapped.path,
+              archived: mapped.archived,
+              pacing_type: mapped.pacing_type,
+              impression_max_type: mapped.impression_max_type,
+              paused: mapped.paused,
+              notes: mapped.notes,
               // raw preservation
               weight_raw: typeof weightRaw === 'string' ? weightRaw : undefined,
               display_type_raw: displayTypeRaw,
@@ -360,6 +371,8 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
 
 export async function syncAdvertisements(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'advertisements',
     status: 'pending',
     startTime: new Date(),
@@ -377,25 +390,25 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
 
     for (const network of networks) {
       try {
-        if (typeof (network as any).broadstreet_id !== 'number') {
+        if (typeof network.broadstreet_id !== 'number') {
           continue;
         }
 
-        const advertisements = await broadstreetAPI.getAdvertisements({ networkId: (network as any).broadstreet_id });
+        const advertisements = await broadstreetAPI.getAdvertisements({ networkId: network.broadstreet_id });
 
         advertisements.forEach(advertisement => {
+          const mapped = mapApiIds(advertisement, { stripId: true });
           // Only add if we haven't seen this advertisement ID before
-          const adBsId = (advertisement as any).broadstreet_id ?? (advertisement as any).id;
-          if (!allAdvertisements.has(adBsId)) {
-            allAdvertisements.set(adBsId, {
-              broadstreet_id: adBsId,
-              name: advertisement.name,
-              updated_at: advertisement.updated_at,
-              type: advertisement.type,
-              advertiser: advertisement.advertiser,
-              active: advertisement.active,
-              active_placement: advertisement.active_placement,
-              preview_url: advertisement.preview_url,
+          if (mapped.broadstreet_id && !allAdvertisements.has(mapped.broadstreet_id)) {
+            allAdvertisements.set(mapped.broadstreet_id, {
+              broadstreet_id: mapped.broadstreet_id,
+              name: mapped.name,
+              updated_at: mapped.updated_at,
+              type: mapped.type,
+              advertiser: mapped.advertiser,
+              active: mapped.active,
+              active_placement: mapped.active_placement,
+              preview_url: mapped.preview_url,
             });
           }
         });
@@ -446,6 +459,8 @@ interface SyncResult {
 
 export async function syncPlacements(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
+    networkId: -1, // Special ID for global sync operations
+    syncType: 'full',
     entity: 'placements',
     status: 'pending',
     startTime: new Date(),
@@ -465,36 +480,36 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
     for (const campaign of campaigns) {
       try {
         // Use Broadstreet campaign identifier, not Mongo _id
-        const campBsId = (campaign as any).broadstreet_id;
-        if (typeof campBsId !== 'number') {
+        if (typeof campaign.broadstreet_id !== 'number') {
           continue;
         }
-        const apiPlacements = await broadstreetAPI.getPlacements(campBsId);
-        
+        const apiPlacements = await broadstreetAPI.getPlacements(campaign.broadstreet_id);
+
         if (apiPlacements.length > 0) {
           // Update the campaign with placements using MongoDB _id
           const coerced = apiPlacements
             .map((placement: any) => {
-              const adId = Number((placement as any).advertisement_id ?? (placement as any).advertisement_broadstreet_id);
-              const zoneId = Number((placement as any).zone_id ?? (placement as any).zone_broadstreet_id);
+              const mapped = mapApiIds(placement, { stripId: true });
+              const adId = Number(mapped.advertisement_id ?? mapped.advertisement_broadstreet_id);
+              const zoneId = Number(mapped.zone_id ?? mapped.zone_broadstreet_id);
               if (!Number.isFinite(adId) || !Number.isFinite(zoneId)) {
                 return null;
               }
               return {
                 advertisement_id: adId,
                 zone_id: zoneId,
-                restrictions: (placement as any).restrictions || [],
+                restrictions: mapped.restrictions || [],
               };
             })
-            .filter(Boolean) as Array<{ advertisement_id: number; zone_id: number; restrictions: string[] }>; 
+            .filter(Boolean) as Array<{ advertisement_id: number; zone_id: number; restrictions: string[] }>;
 
           const updateResult = await Campaign.updateOne(
             { _id: campaign._id },
-            { 
+            {
               placements: coerced
             }
           );
-          console.log(`Campaign ${(campaign as any).broadstreet_id}: embedded ${apiPlacements.length} placement(s). Updated ${updateResult.modifiedCount}, matched ${updateResult.matchedCount}.`);
+          console.log(`Campaign ${campaign.broadstreet_id}: embedded ${apiPlacements.length} placement(s). Updated ${updateResult.modifiedCount}, matched ${updateResult.matchedCount}.`);
         } else {
           // Ensure placements is an empty array if none returned
           await Campaign.updateOne(
@@ -502,14 +517,14 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
             { placements: [] }
           );
         }
-        
+
         totalPlacements += apiPlacements.length;
       } catch (error: any) {
         // Handle duplicate key errors gracefully
         if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for campaign ${(campaign as any).broadstreet_id} placements`);
+          console.log(`Duplicate key errors ignored for campaign ${campaign.broadstreet_id} placements`);
         } else {
-          console.error(`Error syncing placements for campaign ${(campaign as any).broadstreet_id}:`, error);
+          console.error(`Error syncing placements for campaign ${campaign.broadstreet_id}:`, error);
         }
       }
     }
