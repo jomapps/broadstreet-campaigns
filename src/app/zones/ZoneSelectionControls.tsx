@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckSquare, Square, Filter } from 'lucide-react';
+import AddToThemeModal from '@/components/themes/AddToThemeModal';
 
 type ZoneLean = {
   _id: string;
@@ -93,6 +94,49 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
     setShowOnlySelected(!showOnlySelected);
   };
 
+  // Get synced zone IDs for theme operations
+  const syncedSelectedZoneIds = useMemo(() => {
+    return visibleSelectedZones
+      .filter(zone => zone.id && (zone.source === 'api' || !zone.created_locally))
+      .map(zone => zone.id!)
+      .filter(id => id != null);
+  }, [visibleSelectedZones]);
+
+  // Handle adding zones to themes
+  const handleAddToThemes = async (themeIds: string[], zoneIds: number[]) => {
+    try {
+      const promises = themeIds.map(themeId =>
+        fetch(`/api/themes/${themeId}/zones`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ zone_ids: zoneIds }),
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const results = await Promise.all(responses.map(r => r.json()));
+
+      // Check for errors
+      const errors = results.filter((result, index) => !responses[index].ok);
+      if (errors.length > 0) {
+        throw new Error(`Failed to add zones to ${errors.length} theme(s)`);
+      }
+
+      // Show success message
+      const totalAdded = results.reduce((sum, result) => sum + (result.added_zones?.length || 0), 0);
+      alert(`Successfully added ${totalAdded} zone assignments to ${themeIds.length} theme(s)`);
+
+      // Optionally refresh the page to show updated theme badges
+      window.location.reload();
+    } catch (error) {
+      console.error('Error adding zones to themes:', error);
+      alert('Failed to add zones to themes. Please try again.');
+      throw error;
+    }
+  };
+
   if (!entities.network) {
     return null;
   }
@@ -119,7 +163,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Selection Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -130,7 +174,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
             <CheckSquare className="h-4 w-4" />
             Select All Visible
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -141,7 +185,20 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
             <Square className="h-4 w-4" />
             Deselect All Visible
           </Button>
+
+          <AddToThemeModal
+            selectedZoneIds={syncedSelectedZoneIds}
+            onAddToThemes={handleAddToThemes}
+            disabled={syncedSelectedZoneIds.length === 0}
+          />
         </div>
+
+        {/* Theme operation info */}
+        {selectedZones.length > 0 && syncedSelectedZoneIds.length !== selectedZones.length && (
+          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+            <strong>Note:</strong> Only {syncedSelectedZoneIds.length} of {selectedZones.length} selected zones can be added to themes (synced zones only).
+          </div>
+        )}
 
         {/* Only Selected Toggle */}
         <div className="flex items-center space-x-2">

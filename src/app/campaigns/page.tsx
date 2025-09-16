@@ -13,6 +13,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import CopyZonesToThemeModal from '@/components/themes/CopyZonesToThemeModal';
 
 // Type for campaign data from filter context
 type CampaignLean = {
@@ -30,6 +31,11 @@ type CampaignLean = {
   path: string;
   created_locally?: boolean;
   synced_with_api?: boolean;
+  placements?: Array<{
+    advertisement_id: number;
+    zone_id: number;
+    restrictions?: string[];
+  }>;
 };
 
 interface CampaignCardProps {
@@ -38,9 +44,10 @@ interface CampaignCardProps {
   isSelected: boolean;
   onSelect: (campaign: CampaignLean) => void;
   onDelete?: (campaign: CampaignLean) => void;
+  onCopyZonesToTheme?: (campaignName: string, themeName: string, description?: string) => Promise<void>;
 }
 
-function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete }: CampaignCardProps) {
+function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete, onCopyZonesToTheme }: CampaignCardProps) {
   const isLocal = campaign.created_locally && !campaign.synced_with_api;
   const startDate = new Date(campaign.start_date);
   const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
@@ -152,6 +159,16 @@ function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete
         <div className="mt-4 pt-4 border-t border-gray-200">
           <p className="card-text text-gray-600">Notes</p>
           <p className="card-text text-gray-900 mt-1">{campaign.notes}</p>
+        </div>
+      )}
+
+      {/* Copy Zones to Theme Button */}
+      {onCopyZonesToTheme && campaign.placements && campaign.placements.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <CopyZonesToThemeModal
+            campaign={campaign}
+            onCopyZonesToTheme={onCopyZonesToTheme}
+          />
         </div>
       )}
     </div>
@@ -314,6 +331,57 @@ function CampaignsList() {
     }
   };
 
+  // Handle copying zones from campaign to theme
+  const handleCopyZonesToTheme = async (campaignName: string, themeName: string, description?: string) => {
+    try {
+      // Find the campaign to get its zone IDs
+      const campaign = filteredCampaigns.find(c => c.name === campaignName);
+      if (!campaign || !campaign.placements) {
+        throw new Error('Campaign not found or has no placements');
+      }
+
+      // Extract unique zone IDs from placements
+      const zoneIds = [...new Set(campaign.placements.map(p => p.zone_id))];
+
+      if (zoneIds.length === 0) {
+        throw new Error('Campaign has no zones to copy');
+      }
+
+      // Create the theme with the zone IDs
+      const response = await fetch('/api/themes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: themeName,
+          description,
+          zone_ids: zoneIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create theme');
+      }
+
+      const result = await response.json();
+
+      // Show success message
+      alert(`Successfully created theme "${themeName}" with ${zoneIds.length} zone${zoneIds.length !== 1 ? 's' : ''} from campaign "${campaignName}"`);
+
+      // Optionally navigate to the new theme
+      const themeId = result.theme._id;
+      if (themeId) {
+        router.push(`/themes/${themeId}`);
+      }
+    } catch (error) {
+      console.error('Error copying zones to theme:', error);
+      alert(`Failed to create theme: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  };
+
   return (
     <div className="space-y-6" data-testid="campaigns-list">
       <div className="max-w-md">
@@ -331,7 +399,7 @@ function CampaignsList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredCampaigns.map((campaign) => (
-            <CampaignCard 
+            <CampaignCard
               key={String(getEntityId(campaign as any))}
               campaign={campaign}
               advertiserName={entities.advertiser?.name}
@@ -340,6 +408,7 @@ function CampaignsList() {
               }
               onSelect={handleCampaignSelect}
               onDelete={handleDelete}
+              onCopyZonesToTheme={handleCopyZonesToTheme}
             />
           ))}
         </div>

@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { ThemeBadges } from '@/components/themes/ThemeBadge';
+import { useZoneThemes } from '@/hooks/useZoneThemes';
 
 // Type for serialized zone data (plain object without Mongoose methods)
 type ZoneLean = {
@@ -51,9 +53,10 @@ interface ZoneCardProps {
   networkName?: string;
   isSelected?: boolean;
   onToggleSelection?: (zoneId: string) => void;
+  themes?: Array<{ _id: string; name: string; zone_count?: number }>;
 }
 
-function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: ZoneCardProps) {
+function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, themes = [] }: ZoneCardProps) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
   const isLocalZone = zone.source === 'local' || zone.created_locally;
   const isConflictZone = hasMultipleSizeTypes(zone.name);
@@ -159,6 +162,16 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
           </span>
         )}
       </div>
+
+      {/* Theme badges - only show for synced zones */}
+      {themes.length > 0 && zone.id && (
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-500 font-medium">Themes:</span>
+            <ThemeBadges themes={themes} maxDisplay={2} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -187,9 +200,20 @@ export default function ZonesList({
 }: ZonesListProps) {
   const entities = useSelectedEntities();
   const { toggleZoneSelection } = useFilters();
-  
+
   // Use filtered zones if provided, otherwise fall back to local filtering
   const displayZones = filteredZones || zones;
+
+  // Get zone IDs for theme fetching (only synced zones)
+  const syncedZoneIds = useMemo(() => {
+    return displayZones
+      .filter(zone => zone.id && (zone.source === 'api' || !zone.created_locally))
+      .map(zone => zone.id!)
+      .filter(id => id != null);
+  }, [displayZones]);
+
+  // Fetch themes for zones
+  const { themesByZone } = useZoneThemes(syncedZoneIds);
 
   // Check if network is selected
   if (!entities.network) {
@@ -233,12 +257,13 @@ export default function ZonesList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayZones.map((zone) => (
-            <ZoneCard 
-              key={zone._id} 
-              zone={zone} 
+            <ZoneCard
+              key={zone._id}
+              zone={zone}
               networkName={networkMap.get(zone.network_id)}
               isSelected={selectedZones.includes(String(zone.id))}
               onToggleSelection={toggleZoneSelection}
+              themes={zone.id ? themesByZone.get(zone.id) || [] : []}
             />
           ))}
         </div>
