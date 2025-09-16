@@ -33,7 +33,6 @@ const AdvertisementSchema = new Schema<IAdvertisement>({
   },
   network_id: {
     type: Number,
-    index: true,
   },
   name: {
     type: String,
