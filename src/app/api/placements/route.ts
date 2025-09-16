@@ -227,11 +227,11 @@ export async function GET(request: NextRequest) {
       }).filter((v): v is number => typeof v === 'number')
     ));
     const [advertisers, networks] = await Promise.all([
-      Advertiser.find({ id: { $in: advertiserIds } }).lean(),
-      Network.find({ id: { $in: networkIds } }).lean(),
+      Advertiser.find({ broadstreet_id: { $in: advertiserIds } }).lean(),
+      Network.find({ broadstreet_id: { $in: networkIds } }).lean(),
     ]);
-    const advertiserMap = new Map<number, any>(advertisers.map((a: any) => [a.id, a]));
-    const networkMap = new Map<number, any>(networks.map((n: any) => [n.id, n]));
+    const advertiserMap = new Map<number, any>(advertisers.map((a: any) => [a.broadstreet_id, a]));
+    const networkMap = new Map<number, any>(networks.map((n: any) => [n.broadstreet_id, n]));
 
 
 

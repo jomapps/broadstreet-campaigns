@@ -75,13 +75,17 @@ function PlacementCard({ placement }: PlacementCardProps) {
 
   // Determine if any of the related entities are local
   // NOTE: Advertisements and Networks are NEVER local-only - they're always synced entities
+  // NOTE: Advertisers are NEVER local if advertisement exists (rule: can't create ads without advertiser)
   const isLocalCampaign = placement.campaign ? isLocalEntity(placement.campaign) : false;
   const isLocalZone = placement.zone ? isLocalEntity(placement.zone) : false;
-  const isLocalAdvertiser = placement.advertiser ? isLocalEntity(placement.advertiser) : false;
+  const isLocalAdvertiser = false; // Advertisers are NEVER local if advertisement exists
+
+  // Check if zone is local by checking for zone_mongo_id (when zone data is null but zone_mongo_id exists)
+  const hasLocalZoneId = !!(placement as any).zone_mongo_id;
 
   // Consider the placement "local" if any of its key entities are local
   // (excluding advertisements and networks which are never local-only)
-  const isLocal = isLocalCampaign || isLocalZone;
+  const isLocal = isLocalCampaign || isLocalZone || hasLocalZoneId;
 
   return (
     <div
@@ -97,6 +101,23 @@ function PlacementCard({ placement }: PlacementCardProps) {
             src={placement.advertisement.preview_url}
             alt={`Preview of ${placement.advertisement.name}`}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // Hide the image if it fails to load and show a fallback
+              e.currentTarget.style.display = 'none';
+              const parent = e.currentTarget.parentElement;
+              if (parent && !parent.querySelector('.fallback-content')) {
+                const fallback = document.createElement('div');
+                fallback.className = 'fallback-content w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200';
+                fallback.innerHTML = `
+                  <div class="text-center">
+                    <div class="text-4xl text-gray-400 mb-2">📄</div>
+                    <div class="text-sm text-gray-500">Preview Unavailable</div>
+                    <div class="text-xs text-gray-400 mt-1">${placement.advertisement?.type || 'Advertisement'}</div>
+                  </div>
+                `;
+                parent.appendChild(fallback);
+              }
+            }}
           />
         )}
         <div className="absolute top-2 right-2 flex flex-col gap-1">
@@ -170,18 +191,25 @@ function PlacementCard({ placement }: PlacementCardProps) {
           <div className="flex items-center justify-between card-text">
             <span className="text-gray-500">Zone</span>
             <span className="font-medium text-gray-900 inline-flex items-center gap-2">
-              {placement.zone?.name || `Zone ${placement.zone_id}`}
-              {isLocalZone && (
-                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
-                  Local
-                </Badge>
-              )}
-              {placement.zone && (
+              <span className="inline-flex items-center gap-1">
+                {placement.zone?.name || (hasLocalZoneId ? `Zone ${(placement as any).zone_mongo_id?.slice(-8) || 'Local'}` : `Zone ${placement.zone_id || 'undefined'}`)}
+                {(isLocalZone || hasLocalZoneId) && (
+                  <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
+                    Local
+                  </Badge>
+                )}
+              </span>
+              {placement.zone ? (
                 <EntityIdBadge
                   broadstreet_id={placement.zone.broadstreet_id}
                   mongo_id={placement.zone.mongo_id}
                 />
-              )}
+              ) : hasLocalZoneId ? (
+                <EntityIdBadge
+                  broadstreet_id={undefined}
+                  mongo_id={(placement as any).zone_mongo_id}
+                />
+              ) : null}
               {placement.zone?.alias && (
                 <span className="text-gray-500 ml-1">({placement.zone.alias})</span>
               )}
