@@ -6,6 +6,7 @@ import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 interface AdvertisementCardProps {
@@ -53,7 +54,10 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           }`}>
             {advertisement.active_placement ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">ID: {advertisement.broadstreet_id}</span>
+          <EntityIdBadge
+            broadstreet_id={advertisement.broadstreet_id}
+            mongo_id={advertisement.mongo_id}
+          />
         </div>
       </div>
       

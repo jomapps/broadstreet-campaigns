@@ -47,8 +47,9 @@ async function AdvertisementsData() {
   const serializedAdvertisements = advertisements.map(advertisement => ({
     _id: advertisement._id.toString(),
     __v: advertisement.__v,
-    // Ensure UI uses Broadstreet numeric ID
-    id: (advertisement as any).broadstreet_id,
+    // Use standardized ID mapping - preserve broadstreet_id for proper EntityIdBadge display
+    broadstreet_id: advertisement.broadstreet_id,
+    mongo_id: advertisement._id.toString(),
     name: advertisement.name,
     updated_at: advertisement.updated_at,
     type: advertisement.type,

@@ -3,13 +3,15 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import AdvertisementSelectionControls from './AdvertisementSelectionControls';
 import AdvertisementsList from './AdvertisementsList';
 
 type AdvertisementLean = {
   _id: string;
   __v: number;
-  id: number;
+  broadstreet_id?: number;
+  mongo_id: string;
   name: string;
   updated_at: string;
   type: string;
@@ -84,8 +86,7 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
         (ad.name?.toLowerCase?.().includes(term) ?? false) ||
         (ad.advertiser?.toLowerCase?.().includes(term) ?? false) ||
         (ad.type?.toLowerCase?.().includes(term) ?? false) ||
-        String((ad as any).id ?? '').includes(searchTerm) ||
-        String((ad as any)._id ?? '').includes(searchTerm)
+        String(getEntityId(ad) ?? '').includes(searchTerm)
       );
     }
     

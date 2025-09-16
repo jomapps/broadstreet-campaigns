@@ -253,12 +253,100 @@ use playwright mcp as required
 
 **Final Status**: **13 critical UI violations eliminated** while preserving 13 legitimate API/special-case patterns. The codebase now has **complete ID consistency** across all user-facing components.
 
-### Task 3: Advertisement Page
+### Task 4: Advertisement Page
 
 Please go to the advertisements page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
 we should be able to see - Advertisements: 102 ✅
 and any corresponding sidebar filters and selection systems should also reflect this.
 You will need to select a an advertiser and a network to see the advertisements.
+
+**CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
+
+use playwright mcp as required
+*Note* Data has been successfully syncd
+
+#### Findings after success
+
+**Root Cause**: Advertisements page components contained forbidden fallback patterns and improper ID display implementations that violated the standardized three-tier ID system. The violations were concentrated in data serialization, search logic, and selection controls.
+
+**Critical Issues Identified:**
+
+1. **Forbidden ID Mapping in page.tsx**:
+   - **Error Pattern**: `id: (advertisement as any).broadstreet_id` (line 51)
+   - **Cause**: Using deprecated type casting instead of proper field mapping
+   - **Solution**: Replaced with standardized field structure using `broadstreet_id` and `mongo_id`
+
+2. **Forbidden Search Patterns in AdvertisementFiltersWrapper.tsx**:
+   - **Error Pattern**: `String((ad as any).id ?? '')` and `String((ad as any)._id ?? '')` (lines 87-88)
+   - **Cause**: Using forbidden fallback logic with type casting in search functionality
+   - **Solution**: Replaced with `String(getEntityId(ad) ?? '')` using standardized utility
+
+3. **Hardcoded ID Display in AdvertisementsList.tsx**:
+   - **Error Pattern**: `<span>ID: {advertisement.broadstreet_id}</span>` (line 56)
+   - **Cause**: Manual ID display instead of standardized component
+   - **Solution**: Replaced with `<EntityIdBadge broadstreet_id={advertisement.broadstreet_id} mongo_id={advertisement.mongo_id} />`
+
+4. **Direct Field Access in AdvertisementSelectionControls.tsx**:
+   - **Error Pattern**: `String(ad.broadstreet_id)` (lines 36, 40)
+   - **Cause**: Direct field access instead of using standardized utility
+   - **Solution**: Replaced with `String(getEntityId(ad))` utility function
+
+**Files Modified:**
+- `src/app/advertisements/page.tsx` - Fixed data serialization and type definitions
+- `src/app/advertisements/AdvertisementFiltersWrapper.tsx` - Fixed search logic and added getEntityId import
+- `src/app/advertisements/AdvertisementsList.tsx` - Replaced hardcoded ID display with EntityIdBadge
+- `src/app/advertisements/AdvertisementSelectionControls.tsx` - Fixed selection logic with getEntityId utility
+
+**Pattern Replacements Made:**
+```typescript
+// OLD PATTERNS (forbidden):
+id: (advertisement as any).broadstreet_id
+String((ad as any).id ?? '')
+String((ad as any)._id ?? '')
+<span>ID: {advertisement.broadstreet_id}</span>
+String(ad.broadstreet_id)
+
+// NEW PATTERNS (required):
+broadstreet_id: advertisement.broadstreet_id,
+mongo_id: advertisement._id.toString()
+String(getEntityId(ad) ?? '')
+<EntityIdBadge broadstreet_id={advertisement.broadstreet_id} mongo_id={advertisement.mongo_id} />
+String(getEntityId(ad))
+```
+
+**Testing Results After Fix:**
+- Advertisements Display: 10+ advertisements visible for selected advertiser ✅
+- ID Display: EntityIdBadge showing proper "BS #1163299" and "DB …e8fb90eb" format ✅
+- Search Functionality: Search filtering working with standardized ID resolution ✅
+- Type Filtering: Multiple advertisement types (StaticAdvertisement, StencilAdvertisement, HtmlAdvertisement) ✅
+- Selection Controls: Advertisement selection for placements working correctly ✅
+- Sidebar Synchronization: Network and advertiser filters properly synchronized ✅
+
+**Key Discovery**: The advertisements page required **both network AND advertiser selection** to display any advertisements, which is correct business logic. All 102 advertisements are loaded but filtered by the selected advertiser, demonstrating proper data loading with client-side filtering.
+
+**Advertisement Types Confirmed Working:**
+- **StaticAdvertisement**: Image-based ads with preview images
+- **StencilAdvertisement**: Template-based advertisements
+- **HtmlAdvertisement**: HTML/code-based advertisements
+
+**Business Logic Validation:**
+- ✅ **Network + Advertiser Requirement**: Correctly enforced for advertisement display
+- ✅ **Preview URLs**: All advertisement preview links functional
+- ✅ **Active/Inactive Status**: Proper status badges and filtering
+- ✅ **Advertisement Count**: Displays appropriate count per advertiser (varies by advertiser)
+
+**Standards Compliance Achieved:**
+- ✅ **Three-tier ID system**: Proper `broadstreet_id`, `mongo_id`, `_id` usage
+- ✅ **EntityIdBadge consistency**: Standardized ID display across all cards
+- ✅ **getEntityId() adoption**: Centralized ID resolution in all components
+- ✅ **No forbidden patterns**: All `entity.field ?? fallback` patterns eliminated
+
+### Task 5: Zones Page
+
+Please go to the zones page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
+we should be able to see - Zones: 649 ✅
+and any corresponding sidebar filters and selection systems should also reflect this.
+We also have create new zones in the local database button. Please ensure you are able to do this also.
 
 **CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
 
