@@ -13,9 +13,9 @@
 
 
 ## Reference Docs
-**CRITICAL**:
 The docs/entity-reference folder has all the files that you should really read.
 They are the one source of truth. Ask me if you find conflicts.
+
 
 ## Tasks
 
@@ -67,3 +67,11 @@ broadstreet_id: mapped.broadstreet_id,
 - Placements: 4,358 ✅
 
 **Key Learning**: When database models change to enforce new ID standards, all sync functions must be updated to comply with the new patterns. The `mapApiIds` utility is essential for converting legacy API responses to the standardized ID format.
+
+### Task 2: Networks Page
+Please go to the networks page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
+we should be able to see - Networks: 2 ✅
+and any corresponding sidebar filters and selection systems should also reflect this.
+**CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
+use playwright mcp as required
+*Note* Data has been successfully syncd
