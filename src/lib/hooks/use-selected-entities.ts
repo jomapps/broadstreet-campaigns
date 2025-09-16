@@ -52,7 +52,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (networkMongoId as string),
+      entityId: typeof bsId === 'number' ? bsId : (networkMongoId as string),
       name: (selectedNetwork as any).name || String(bsId ?? networkMongoId),
       type: 'network' as const,
     };
@@ -68,7 +68,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (advertiserMongoId as string),
+      entityId: typeof bsId === 'number' ? bsId : (advertiserMongoId as string),
       name: (selectedAdvertiser as any).name || String(bsId ?? advertiserMongoId),
       type: 'advertiser' as const,
     };
@@ -84,7 +84,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
     if (!ids.broadstreet_id && !ids.mongo_id) return null;
     return {
       ids,
-      id: typeof bsId === 'number' ? bsId : (campaignMongoId as string),
+      entityId: typeof bsId === 'number' ? bsId : (campaignMongoId as string),
       name: (selectedCampaign as any).name || String(bsId ?? campaignMongoId),
       type: 'campaign' as const,
     };
@@ -103,7 +103,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;
       else if (raw) ids.mongo_id = raw;
       const label = raw || '';
-      return { ids, id: getEntityId(ids) ?? '', name: label, type: 'zone' as const };
+      return { ids, entityId: getEntityId(ids) ?? '', name: label, type: 'zone' as const };
     }).filter(z => z.ids.broadstreet_id !== undefined || z.ids.mongo_id !== undefined);
   }, [selectedZones]);
 
@@ -120,7 +120,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;
       else if (raw) ids.mongo_id = raw;
       const label = raw || '';
-      return { ids, id: getEntityId(ids) ?? '', name: label, type: 'advertisement' as const };
+      return { ids, entityId: getEntityId(ids) ?? '', name: label, type: 'advertisement' as const };
     }).filter(a => a.ids.broadstreet_id !== undefined || a.ids.mongo_id !== undefined);
   }, [selectedAdvertisements]);
 

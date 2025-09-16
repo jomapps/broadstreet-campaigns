@@ -9,6 +9,7 @@ import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { ThemeBadges } from '@/components/themes/ThemeBadge';
 import { useZoneThemes } from '@/hooks/useZoneThemes';
 import { ZoneLean } from '@/lib/types/lean-entities';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 interface ZoneCardProps {
   zone: ZoneLean;
@@ -73,9 +74,10 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, th
               {zone.size_number && zone.size_number}
             </span>
           )}
-          <span className="card-meta text-gray-500">
-            ID: {zone.broadstreet_id || zone._id.slice(-8)}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={zone.broadstreet_id}
+            mongo_id={zone._id?.toString()}
+          />
         </div>
       </div>
       

@@ -352,3 +352,77 @@ We also have create new zones in the local database button. Please ensure you ar
 
 use playwright mcp as required
 *Note* Data has been successfully syncd
+
+#### Findings after success
+
+**✅ TASK 5 COMPLETED SUCCESSFULLY**
+
+**Critical ID Violations Found and Fixed**:
+
+1. **ZonesList.tsx** - **1 FORBIDDEN PATTERN**:
+   ```typescript
+   // ❌ Line 77: Hardcoded ID display with fallback pattern
+   <span className="card-meta text-gray-500">
+     ID: {zone.broadstreet_id || zone._id.slice(-8)}
+   </span>
+
+   // ✅ FIXED: Standardized EntityIdBadge component
+   <EntityIdBadge
+     broadstreet_id={zone.broadstreet_id}
+     mongo_id={zone._id?.toString()}
+   />
+   ```
+
+2. **use-selected-entities.ts** - **5 PROPERTY NAME VIOLATIONS**:
+   ```typescript
+   // ❌ All entity objects using 'id' instead of 'entityId'
+   return { ids, id: typeof bsId === 'number' ? bsId : (networkMongoId as string), ... };
+
+   // ✅ FIXED: Corrected property names for all entity types
+   return { ids, entityId: typeof bsId === 'number' ? bsId : (networkMongoId as string), ... };
+   ```
+
+3. **ZoneCreationForm.tsx** - **1 LOGIC ERROR**:
+   ```typescript
+   // ❌ Line 163: Conditional network_id inclusion causing API failures
+   ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+
+   // ✅ FIXED: Direct Broadstreet ID extraction with validation
+   const networkBroadstreetId = entities.network?.ids.broadstreet_id;
+   if (!networkBroadstreetId) {
+     throw new Error('Network must be synced with Broadstreet to create zones');
+   }
+   const payload = { name: formData.name.trim(), network_id: networkBroadstreetId, ... };
+   ```
+
+**Functional Verification**:
+- ✅ **Zone Count Display**: "Zones: 650 ✅" with "649 synced • 1 local" (updated after zone creation)
+- ✅ **Size Filters**: SQ, PT, LS, CS filters all functional
+- ✅ **Selection Controls**: Select All/Deselect All/Add to Theme buttons working
+- ✅ **Search Functionality**: Zone search box operational
+- ✅ **Zone Creation**: Successfully created "Test Zone - Homepage Banner 728x90" with local badge
+- ✅ **ID Display**: All zones show proper EntityIdBadge format (BS #ID / DB …ID)
+- ✅ **Sidebar Synchronization**: Network filters properly reflect zone counts
+
+**Pattern Consistency**:
+- ✅ **EntityIdBadge adoption**: Zones page now consistent with Networks, Advertisers, Advertisements pages
+- ✅ **Three-tier ID system**: Proper `broadstreet_id`, `mongo_id`, `_id` usage throughout
+- ✅ **Local entity display**: New local zone shows 🏠 Local badge and MongoDB ID only
+- ✅ **No forbidden patterns**: All hardcoded ID displays eliminated
+
+**Key Discovery**: The zones page had the **same forbidden hardcoded ID pattern** (`ID: {entity.broadstreet_id || entity._id.slice(-8)}`) found in previous tasks, confirming this was a **systematic legacy pattern** across all entity pages. Additionally, the `useSelectedEntities` hook had **property name inconsistencies** that broke zone creation functionality.
+
+**Impact**: Zone creation functionality was completely broken due to incorrect property names in the selection hook, preventing network_id from being passed to the API. This was a **critical functional bug** beyond just display inconsistencies.
+
+### Task 6: Campaigns Page
+
+Please go to the campaigns page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
+we should be able to see - Campaigns: 122 ✅
+and any corresponding sidebar filters and selection systems should also reflect this.
+We also have create new campaigns in the local database button. Please ensure you are able to do this also. Test till it is really created.
+You will need to select a network and advertiser to create a campaign.
+
+**CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
+
+use playwright mcp as required
+*Note* Data has been successfully syncd

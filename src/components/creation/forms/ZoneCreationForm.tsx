@@ -157,10 +157,16 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
 
     try {
       // Build payload with only non-empty optional fields
-      const networkIdValue = getEntityId(entities.network);
+      // For zone creation, we need the Broadstreet network ID specifically
+      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
+
+      if (!networkBroadstreetId) {
+        throw new Error('Network must be synced with Broadstreet to create zones');
+      }
+
       const payload: any = {
         name: formData.name.trim(),
-        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network_id: networkBroadstreetId,
         network: {
           broadstreet_id: entities.network?.ids.broadstreet_id,
           mongo_id: entities.network?.ids.mongo_id,
