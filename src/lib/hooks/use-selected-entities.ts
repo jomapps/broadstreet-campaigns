@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 
 type EntityType = 'network' | 'advertiser' | 'campaign' | 'zone' | 'advertisement';
 
@@ -43,7 +44,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
 
   const network = useMemo(() => {
     if (!selectedNetwork) return null;
-    const bsId = (selectedNetwork as any).broadstreet_network_id ?? (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
+    const bsId = (selectedNetwork as any).broadstreet_network_id ?? getEntityId(selectedNetwork);
     const networkMongoId = (selectedNetwork as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
@@ -75,7 +76,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
 
   const campaign = useMemo(() => {
     if (!selectedCampaign) return null;
-    const bsId = (selectedCampaign as any).broadstreet_campaign_id ?? (selectedCampaign as any).broadstreet_id ?? (selectedCampaign as any).id;
+    const bsId = (selectedCampaign as any).broadstreet_campaign_id ?? getEntityId(selectedCampaign);
     const campaignMongoId = (selectedCampaign as any).mongo_id;
     const ids: EntityIds = {};
     if (typeof bsId === 'number') ids.broadstreet_id = bsId;
@@ -102,7 +103,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;
       else if (raw) ids.mongo_id = raw;
       const label = raw || '';
-      return { ids, id: (ids.broadstreet_id as number) ?? (ids.mongo_id as string), name: label, type: 'zone' as const };
+      return { ids, id: getEntityId(ids) ?? '', name: label, type: 'zone' as const };
     }).filter(z => z.ids.broadstreet_id !== undefined || z.ids.mongo_id !== undefined);
   }, [selectedZones]);
 
@@ -119,7 +120,7 @@ export function useSelectedEntities(): SelectedEntitiesResult {
       if (raw && Number.isFinite(asNumber)) ids.broadstreet_id = asNumber;
       else if (raw) ids.mongo_id = raw;
       const label = raw || '';
-      return { ids, id: (ids.broadstreet_id as number) ?? (ids.mongo_id as string), name: label, type: 'advertisement' as const };
+      return { ids, id: getEntityId(ids) ?? '', name: label, type: 'advertisement' as const };
     }).filter(a => a.ids.broadstreet_id !== undefined || a.ids.mongo_id !== undefined);
   }, [selectedAdvertisements]);
 

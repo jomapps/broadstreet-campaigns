@@ -221,7 +221,7 @@ function CampaignsList() {
       const term = searchTerm.toLowerCase();
       const nameMatch = campaign.name.toLowerCase().includes(term);
       const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
-      const idStr = String(campaign.broadstreet_id ?? campaign.mongo_id ?? '');
+      const idStr = String(getEntityId(campaign) ?? '');
       const idMatch = idStr.toLowerCase().includes(term);
       return nameMatch || notesMatch || idMatch;
     });

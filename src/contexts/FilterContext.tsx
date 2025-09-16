@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { Network, Advertiser, Campaign } from '@/lib/types/broadstreet';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 
 /**
  * FilterContext
@@ -175,7 +176,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingAdvertisers(true);
       try {
-        const nid = (selectedNetwork as any).broadstreet_id ?? (selectedNetwork as any).id;
+        const nid = getEntityId(selectedNetwork);
         const response = await fetch(`/api/advertisers?network_id=${nid}`, { cache: 'no-store' });
         if (response.ok) {
           const data = await response.json();
@@ -201,7 +202,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
       setIsLoadingCampaigns(true);
       try {
-        const aid = (selectedAdvertiser as any).broadstreet_id ?? (selectedAdvertiser as any).id;
+        const aid = getEntityId(selectedAdvertiser);
         const response = await fetch(`/api/campaigns?advertiser_id=${aid}`);
         if (response.ok) {
           const data = await response.json();

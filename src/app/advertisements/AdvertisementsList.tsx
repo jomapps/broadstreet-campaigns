@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { AdvertisementLean } from '@/lib/types/lean-entities';
@@ -186,7 +187,7 @@ export default function AdvertisementsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayAdvertisements.map((advertisement) => {
-            const selectionId = String((advertisement as any).broadstreet_id ?? (advertisement as any)._id);
+            const selectionId = String(getEntityId(advertisement));
             return (
               <AdvertisementCard 
                 key={advertisement._id || String(advertisement.broadstreet_id)}
