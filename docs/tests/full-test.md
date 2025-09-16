@@ -174,3 +174,15 @@ getEntityId(entity)
 // Add required import:
 import { getEntityId } from '@/lib/utils/entity-helpers';
 ```
+
+### Task 3: Advertisers Page
+
+Please go to the advertisers page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
+we should be able to see - Advertisers: 48 ✅
+and any corresponding sidebar filters and selection systems should also reflect this.
+We also have create new advertisers in the local database button. Please ensure you are able to do this also.
+
+**CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
+
+use playwright mcp as required
+*Note* Data has been successfully syncd
