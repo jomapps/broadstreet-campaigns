@@ -453,6 +453,8 @@ All phases of the theme feature have been successfully implemented and tested:
 - [x] Bulk zone operations
 - [x] Theme selection modal for zone addition
 - [x] Campaign-to-theme zone copying with custom naming
+- [x] Theme-based zone filtering in sidebar
+- [x] "Show only selected zones" filtering functionality
 
 ### Phase 5: Polish & Optimization ✅ COMPLETED
 - [x] Performance optimization with caching
@@ -460,6 +462,35 @@ All phases of the theme feature have been successfully implemented and tested:
 - [x] UI/UX polish and responsive design
 - [x] Documentation and test coverage
 - [x] Clean up of temporary test files
+
+## Recent Updates (December 2024)
+
+### Theme Selection and Filtering System ✅ COMPLETED
+A comprehensive theme-based filtering system has been implemented to enhance zone management:
+
+#### Theme Selection in Sidebar
+- **Radio Button Interface**: Users can select one theme at a time from the sidebar
+- **"No theme filter" Option**: Default state showing all zones
+- **Automatic Zone Selection**: Selecting a theme automatically selects all zones belonging to that theme
+- **Visual Feedback**: Selected theme shows zone count and "Selected Theme" section
+- **LocalStorage Persistence**: Theme selection persists across page refreshes
+
+#### Enhanced Zone Filtering
+- **"Show only selected zones" Toggle**: Fixed critical filtering bug where selected zones weren't properly displayed
+- **Standardized ID Resolution**: Implemented consistent ID handling using `getEntityId()` utility
+- **Theme-Zone Integration**: Theme selection works seamlessly with existing zone selection system
+- **Filter State Management**: Proper state synchronization between theme selection and zone filtering
+
+#### Technical Implementation
+- **FilterContext Enhancement**: Extended context with theme selection state management
+- **ThemeSelector Component**: New radio group component for theme selection in sidebar
+- **ID System Compliance**: Fixed forbidden fallback patterns and implemented three-tier ID system
+- **ZoneFiltersWrapper Fix**: Corrected zone filtering logic to use standardized ID resolution
+
+#### Bug Fixes
+- **Zone Selection ID Mismatch**: Fixed critical bug where `selectedZones` contained Broadstreet IDs (strings) but filtering compared against MongoDB ObjectIds
+- **Import Path Correction**: Fixed incorrect import path from `@/lib/utils/entity-id` to `@/lib/utils/entity-helpers`
+- **Consistent ID Handling**: Applied same `zoneSelectionKey` logic used in `ZoneSelectionControls.tsx`
 
 ## Final Notes
 
@@ -473,7 +504,9 @@ The theme feature is now fully functional and integrated into the Broadstreet Ca
 3. **View theme associations** through badges on all zone cards
 4. **Clone themes** to quickly create similar zone groupings
 5. **Search and filter themes** for easy management
+6. **Select themes for zone filtering** using the sidebar radio button interface
+7. **Filter zones by theme selection** with automatic zone selection and visual feedback
 
-All functionality respects the core constraint that only synced zones (those with Broadstreet IDs) can be added to themes, ensuring data integrity and proper campaign targeting.
+All functionality respects the core constraint that only synced zones (those with Broadstreet IDs) can be added to themes, ensuring data integrity and proper campaign targeting. The recent updates have resolved critical filtering issues and enhanced the user experience with seamless theme-based zone management.
 
 

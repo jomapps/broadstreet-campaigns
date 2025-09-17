@@ -8,6 +8,7 @@ import ZonesList from './ZonesList';
 import ZoneSelectionControls from './ZoneSelectionControls';
 import { hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { ZoneLean } from '@/lib/types/lean-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 
 interface ZoneFiltersWrapperProps {
   zones: ZoneLean[];
@@ -20,17 +21,23 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
   const entities = useSelectedEntities();
   const { selectedZones, showOnlySelected } = useFilters();
 
+  // Helper: derive selection key using standardized utility (same as ZoneSelectionControls)
+  const zoneSelectionKey = (zone: ZoneLean) => {
+    const entityId = getEntityId(zone);
+    return typeof entityId === 'number' ? String(entityId) : entityId || zone._id;
+  };
+
   // Apply all filters to get the currently visible zones
   const filteredZones = useMemo(() => {
     if (!zones || !Array.isArray(zones)) {
       return [];
     }
-    
+
     let filtered = zones;
-    
+
     // 1. Apply "Only Selected" filter first (highest priority)
     if (showOnlySelected && selectedZones.length > 0) {
-      filtered = filtered.filter(zone => selectedZones.includes(zone._id));
+      filtered = filtered.filter(zone => selectedZones.includes(zoneSelectionKey(zone)));
     }
     
     // 2. Apply size filters
