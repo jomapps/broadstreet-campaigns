@@ -23,6 +23,30 @@ export default function ThemesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
+  const handleEditTheme = async (theme: any) => {
+    const newName = prompt('Enter new theme name:', theme.name);
+    if (!newName || newName.trim() === '' || newName.trim() === theme.name) return;
+
+    const newDescription = prompt('Enter new description (optional):', theme.description || '');
+
+    try {
+      await updateTheme(theme._id, newName.trim(), newDescription?.trim() || undefined);
+    } catch (error) {
+      alert('Failed to update theme. Please try again.');
+    }
+  };
+
+  const handleCloneTheme = async (theme: any) => {
+    const newName = prompt('Enter name for cloned theme:', `${theme.name} (Copy)`);
+    if (!newName || newName.trim() === '') return;
+
+    try {
+      await cloneTheme(theme._id, newName.trim());
+    } catch (error) {
+      alert('Failed to clone theme. Please try again.');
+    }
+  };
+
   const filteredThemes = useMemo(() => {
     if (!searchTerm.trim()) return themes;
     
@@ -133,8 +157,8 @@ export default function ThemesPage() {
               ]}
               actionButtons={[
                 { label: 'View Zones', onClick: () => router.push(`/themes/${theme._id}`), variant: 'default' },
-                { label: 'Edit', onClick: () => updateTheme?.(theme._id, theme.name, theme.description), variant: 'outline' },
-                { label: 'Clone', onClick: () => cloneTheme?.(theme._id, `${theme.name} (Copy)`), variant: 'secondary' },
+                { label: 'Edit', onClick: () => handleEditTheme(theme), variant: 'outline' },
+                { label: 'Clone', onClick: () => handleCloneTheme(theme), variant: 'secondary' },
               ]}
               onCardClick={() => router.push(`/themes/${theme._id}`)}
               onDelete={deleteTheme ? () => deleteTheme(theme._id) : undefined}

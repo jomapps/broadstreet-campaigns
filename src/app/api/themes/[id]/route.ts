@@ -50,7 +50,7 @@ export async function PUT(
     const body = await request.json();
     const { name, description } = body;
 
-    const theme = await Theme.findById(themeId);
+    const theme = await Theme.findById(id);
     
     if (!theme) {
       return NextResponse.json(
@@ -113,7 +113,7 @@ export async function DELETE(
     await connectDB();
     const { id } = await params;
 
-    const theme = await Theme.findById(themeId);
+    const theme = await Theme.findById(id);
 
     if (!theme) {
       return NextResponse.json(
@@ -122,7 +122,7 @@ export async function DELETE(
       );
     }
 
-    await Theme.findByIdAndDelete(themeId);
+    await Theme.findByIdAndDelete(id);
 
     return NextResponse.json({ 
       message: 'Theme deleted successfully' 
