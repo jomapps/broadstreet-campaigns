@@ -68,6 +68,7 @@ interface FilterContextType {
   selectZones: (zoneIds: string[]) => void;
   deselectZones: (zoneIds: string[]) => void;
   toggleZoneSelection: (zoneId: string) => void;
+  clearZones: () => void;
   selectThemeZones: (theme: { _id: string; name: string; zone_ids: number[] } | null) => void;
 
   // Advertisement selection actions
@@ -308,6 +309,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     // Preserve selected network unless the user explicitly changes it
     setSelectedAdvertiser(null);
     setSelectedCampaign(null);
+    // Clear zones and theme together to maintain consistency
     setSelectedZones([]);
     setShowOnlySelected(false);
     setSelectedTheme(null);
@@ -327,20 +329,70 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const selectZones = (zoneIds: string[]) => {
     setSelectedZones(prev => {
       const newSelection = [...new Set([...prev, ...zoneIds])];
+      // Clear theme if manual zone selection doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
       return newSelection;
     });
   };
 
   const deselectZones = (zoneIds: string[]) => {
-    setSelectedZones(prev => prev.filter(currentZoneId => !zoneIds.includes(currentZoneId)));
+    setSelectedZones(prev => {
+      const newSelection = prev.filter(currentZoneId => !zoneIds.includes(currentZoneId));
+      // Clear theme if manual zone deselection doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
+      return newSelection;
+    });
   };
 
   const toggleZoneSelection = (zoneId: string) => {
-    setSelectedZones(prev =>
-      prev.includes(zoneId)
+    setSelectedZones(prev => {
+      const newSelection = prev.includes(zoneId)
         ? prev.filter(currentZoneId => currentZoneId !== zoneId)
-        : [...prev, zoneId]
-    );
+        : [...prev, zoneId];
+
+      // Clear theme if manual zone toggle doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
+      return newSelection;
+    });
+  };
+
+  const clearZones = () => {
+    setSelectedZones([]);
+    setShowOnlySelected(false);
+    // Clear theme when zones are manually cleared
+    if (selectedTheme) {
+      setSelectedTheme(null);
+    }
   };
 
   // Advertisement selection actions
@@ -368,12 +420,15 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     if (theme) {
       // Clear current zone selection and select all zones from the theme
       const themeZoneIds = theme.zone_ids.map(id => String(id));
+
       setSelectedZones(themeZoneIds);
       setSelectedTheme(theme);
       setShowOnlySelected(true); // Automatically show only selected zones
     } else {
-      // Clear theme selection
+      // Clear theme selection AND clear zones to maintain consistency
       setSelectedTheme(null);
+      setSelectedZones([]);
+      setShowOnlySelected(false);
     }
   };
 
@@ -410,6 +465,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     selectZones,
     deselectZones,
     toggleZoneSelection,
+    clearZones,
     selectThemeZones,
     selectAdvertisements,
     deselectAdvertisements,

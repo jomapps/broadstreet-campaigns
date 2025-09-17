@@ -102,8 +102,8 @@ export function useLocalPlacementCreation(): UseLocalPlacementCreationResult {
             advertiser_id: advertiserId,
             advertisement_id: advertisementId,
             zone_id: zoneId,
-            ...(campaignId && { campaign_id: campaignId }),
-            ...(campaignMongoId && { campaign_mongo_id: campaignMongoId }),
+            // XOR constraint: exactly one campaign reference
+            ...(campaignId ? { campaign_id: campaignId } : { campaign_mongo_id: campaignMongoId }),
           };
 
           placementPromises.push(
@@ -122,8 +122,8 @@ export function useLocalPlacementCreation(): UseLocalPlacementCreationResult {
             advertiser_id: advertiserId,
             advertisement_id: advertisementId,
             zone_mongo_id: zoneMongoId,
-            ...(campaignId && { campaign_id: campaignId }),
-            ...(campaignMongoId && { campaign_mongo_id: campaignMongoId }),
+            // XOR constraint: exactly one campaign reference
+            ...(campaignId ? { campaign_id: campaignId } : { campaign_mongo_id: campaignMongoId }),
           };
 
           placementPromises.push(

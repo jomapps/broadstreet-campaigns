@@ -32,11 +32,14 @@ export default function FiltersCard() {
     isLoadingAdvertisers,
     isLoadingCampaigns,
     clearAllFilters,
+    clearZones,
   } = useFilters();
 
   const hasAnyFilter = selectedNetwork || selectedAdvertiser || selectedCampaign;
   const hasZoneSelection = selectedZones.length > 0;
   const hasAdvertisementSelection = selectedAdvertisements.length > 0;
+
+
 
   // Utility function to clean network names for display
   const cleanNetworkName = (name: string) => {
@@ -206,19 +209,16 @@ export default function FiltersCard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setSelectedZones([]); setShowOnlySelected(false); }}
+                onClick={clearZones}
                 className="h-4 w-4 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground"
               >
                 <X className="h-2 w-2" />
               </Button>
             </div>
-            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center justify-between px-3">
-              <span className="text-xs truncate max-w-[140px]">
+            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
+              <span className="text-xs truncate">
                 {selectedZones.length} zone{selectedZones.length !== 1 ? 's' : ''} selected
               </span>
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                {showOnlySelected ? 'Filtered' : 'All'}
-              </Badge>
             </div>
           </div>
         )}
@@ -237,13 +237,10 @@ export default function FiltersCard() {
                 <X className="h-2 w-2" />
               </Button>
             </div>
-            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center justify-between px-3">
-              <span className="text-xs truncate max-w-[140px]">
+            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
+              <span className="text-xs truncate">
                 {selectedAdvertisements.length} ad{selectedAdvertisements.length !== 1 ? 's' : ''} selected
               </span>
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                {showOnlySelectedAds ? 'Filtered' : 'All'}
-              </Badge>
             </div>
           </div>
         )}

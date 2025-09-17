@@ -18,9 +18,12 @@ type PlacementLean = {
   advertisement_id: number | string;
   zone_id: number | string;
   campaign_id: number | string;
+  zone_mongo_id?: string;  // For local zones
+  campaign_mongo_id?: string;  // For local campaigns
   restrictions?: string[];
   createdAt: string;
   updatedAt: string;
+  source?: 'local_collection' | 'local_embedded' | 'synced_embedded';  // Source identification
   advertisement?: {
     broadstreet_id: number;  // Always present - synced entity
     mongo_id: string;        // Also has mongo_id from local DB storage
@@ -71,10 +74,12 @@ function mapPlacementToUniversalProps(
 
   const isLocalCampaign = placement.campaign ? isLocalEntity(placement.campaign) : false;
   const isLocalZone = placement.zone ? isLocalEntity(placement.zone) : false;
-  const hasLocalZoneId = !!(placement as any).zone_mongo_id;
-  const isLocal = isLocalCampaign || isLocalZone || hasLocalZoneId;
+  const hasLocalZoneId = !!placement.zone_mongo_id;
+  const hasLocalCampaignId = !!placement.campaign_mongo_id;
+  const isLocalPlacement = placement.source === 'local_collection' || placement.source === 'local_embedded';
+  const isLocal = isLocalCampaign || isLocalZone || hasLocalZoneId || hasLocalCampaignId || isLocalPlacement;
 
-  const placementId = `${placement.advertisement_id}-${placement.zone_id || (placement as any).zone_mongo_id || ''}`;
+  const placementId = `${placement.advertisement_id}-${placement.zone_id || placement.zone_mongo_id || ''}`;
   const isDeleting = params.deletingIds.has(placementId);
 
   const parentsBreadcrumb = [
@@ -100,7 +105,7 @@ function mapPlacementToUniversalProps(
   const displayData = [
     { label: 'Campaign', value: placement.campaign?.name ?? (placement.campaign_id ?? ''), type: 'string' as const },
     { label: 'Advertisement', value: placement.advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
-    { label: 'Zone', value: placement.zone?.name ?? (hasLocalZoneId ? `…${String((placement as any).zone_mongo_id).slice(-8)}` : String(placement.zone_id)), type: 'string' as const },
+    { label: 'Zone', value: placement.zone?.name ?? (hasLocalZoneId ? `…${String(placement.zone_mongo_id).slice(-8)}` : String(placement.zone_id)), type: 'string' as const },
   ] as any[];
 
   if (startDate) displayData.push({ label: 'Start', value: startDate, type: 'date' as const });
