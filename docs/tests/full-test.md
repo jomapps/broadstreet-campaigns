@@ -486,3 +486,16 @@ if (!advertiserIdValue) {
 - ✅ **No forbidden patterns**: All ID operations use standardized approaches
 
 **Pattern for Other Entity Creation Forms**: Other entity creation forms should verify they're using `entities.{entity}?.entityId` rather than `getEntityId(entities.{entity})` to avoid similar issues.
+
+### Task 7: Placement Page
+
+Please go to the placement page and ensure that all related functions are working correctly, including any filters, selections, display and any other related functions.
+we should be able to see - Placements: 4,358 ✅
+and any corresponding sidebar filters and selection systems should also reflect this.
+We also have create new palcement in the local database button. Please ensure you are able to do this also. Test till it is really created.
+You will need to select a network, advertiser, campaign, advertisement and zone to create a campaign.
+
+**CRITICAL** We recently changed the /docs/database-id-consistency.md and /docs/entity-reference/ids.md Read to ensure that the truth of the two documents is reflected correctly
+
+use playwright mcp as required
+*Note* Data has been successfully syncd
