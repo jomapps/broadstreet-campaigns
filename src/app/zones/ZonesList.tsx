@@ -5,139 +5,59 @@ import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { ThemeBadges } from '@/components/themes/ThemeBadge';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { useZoneThemes } from '@/hooks/useZoneThemes';
 import { ZoneLean } from '@/lib/types/lean-entities';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
-interface ZoneCardProps {
-  zone: ZoneLean;
-  networkName?: string;
-  isSelected?: boolean;
-  onToggleSelection?: (zoneId: string) => void;
-  themes?: Array<{ _id: string; name: string; zone_count?: number }>;
-}
-
-function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, themes = [] }: ZoneCardProps) {
+// Map zone to universal card props
+function mapZoneToUniversalProps(
+  zone: ZoneLean,
+  params: {
+    networkName?: string;
+    isSelected: boolean;
+    onToggleSelection?: (zoneId: string) => void;
+    themes?: Array<{ _id: string; name: string; zone_count?: number }>;
+  }
+) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
   const isLocalZone = zone.source === 'local' || zone.created_locally;
   const isConflictZone = hasMultipleSizeTypes(zone.name);
 
-  const handleCardClick = () => {
-    if (onToggleSelection && zone.broadstreet_id) {
-      onToggleSelection(String(zone.broadstreet_id));
-    }
+  const parentsBreadcrumb = [
+    params.networkName && { name: params.networkName, entityType: 'network' as const },
+    { name: 'Zone', entityType: 'zone' as const },
+  ].filter(Boolean) as any[];
+
+  const displayData = [
+    zone.alias ? { label: 'Alias', value: zone.alias, type: 'string' as const } : null,
+    zone.category ? { label: 'Category', value: zone.category, type: 'string' as const } : null,
+    zone.block ? { label: 'Block', value: zone.block, type: 'string' as const } : null,
+  ].filter(Boolean) as any[];
+
+  if (sizeInfo && !isConflictZone) {
+    displayData.push({ label: 'Dimensions', value: `${sizeInfo.dimensions}px`, type: 'string' as const });
+  }
+
+  if (zone.self_serve) displayData.push({ label: 'Self Serve', value: 'Yes', type: 'badge' as const });
+  if (zone.is_home) displayData.push({ label: 'Home Page', value: 'Yes', type: 'badge' as const });
+
+  return {
+    title: zone.name,
+    broadstreet_id: zone.broadstreet_id,
+    mongo_id: zone.mongo_id || (zone as any)._id,
+    entityType: 'zone' as const,
+    showCheckbox: true,
+    isSelected: params.isSelected,
+    onSelect: (checked: boolean) => params.onToggleSelection?.(String(zone.broadstreet_id ?? (zone as any)._id)),
+    onCardClick: () => params.onToggleSelection?.(String(zone.broadstreet_id ?? (zone as any)._id)),
+    statusBadge: isConflictZone ? { label: 'Conflict Size', variant: 'destructive' as const } : undefined,
+    topTags: zone.size_type && !isConflictZone ? [{ label: `${zone.size_type}${zone.size_number ? ` ${zone.size_number}` : ''}`, variant: 'secondary' as const }] : [],
+    parentsBreadcrumb,
+    displayData,
+    bottomTags: params.themes && params.themes.length > 0 ? params.themes.slice(0, 2).map(t => ({ label: t.name, variant: 'outline' as const })) : [],
   };
-  
-  const slug = zone.name.replace(/\s+/g, '-').toLowerCase();
-
-  return (
-    <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal: !!isLocalZone, isSelected: !!isSelected })}`}
-      onClick={handleCardClick}
-      data-testid={`zone-${slug}`}
-      data-zone-name={zone.name}
-    >
-      <div className="flex items-start justify-between mb-4" data-testid="zone-card">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <h3 className="card-title text-gray-900" data-testid="zone-name">{zone.name}</h3>
-            {isLocalZone && (
-              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500 text-white shadow-sm">
-                🏠 Local
-              </span>
-            )}
-          </div>
-          {networkName && (
-            <p className="card-text text-gray-600 mt-1">Network: {networkName}</p>
-          )}
-          {zone.alias && (
-            <p className="card-text text-gray-500 mt-1">Alias: {zone.alias}</p>
-          )}
-        </div>
-        
-        <div className="flex flex-col items-end space-y-2">
-          {isSelected && (
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
-              ✓ Selected
-            </span>
-          )}
-          {isConflictZone && (
-            <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800 font-semibold">
-              CS
-            </span>
-          )}
-          {zone.size_type && !isConflictZone && (
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-              {zone.size_type}
-              {zone.size_number && zone.size_number}
-            </span>
-          )}
-          <EntityIdBadge
-            broadstreet_id={zone.broadstreet_id}
-            mongo_id={zone._id?.toString()}
-          />
-        </div>
-      </div>
-      
-      {isConflictZone && (
-        <div className={`mb-4 p-3 rounded-lg ${
-          isLocalZone ? 'bg-red-200' : 'bg-red-50'
-        }`}>
-          <p className="card-text font-medium text-red-900">⚠️ Conflict Size</p>
-          <p className="card-text text-red-700">Multiple size types detected in zone name</p>
-        </div>
-      )}
-      
-      {sizeInfo && !isConflictZone && (
-        <div className={`mb-4 p-3 rounded-lg ${
-          isLocalZone ? 'bg-orange-200' : 'bg-gray-50'
-        }`}>
-          <p className="card-text font-medium text-gray-900">{sizeInfo.description}</p>
-          <p className="card-text text-gray-600">Dimensions: {sizeInfo.dimensions}px</p>
-        </div>
-      )}
-      
-      <div className="grid grid-cols-2 gap-4">
-        {zone.category && (
-          <div>
-            <p className="card-text text-gray-600">Category</p>
-            <p className="card-text font-medium text-gray-900">{zone.category}</p>
-          </div>
-        )}
-        {zone.block && (
-          <div>
-            <p className="card-text text-gray-600">Block</p>
-            <p className="card-text font-medium text-gray-900">{zone.block}</p>
-          </div>
-        )}
-      </div>
-      
-      <div className="mt-4 flex items-center space-x-4">
-        {zone.is_home && (
-          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-            Home Page
-          </span>
-        )}
-        {zone.self_serve && (
-          <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
-            Self Serve
-          </span>
-        )}
-      </div>
-
-      {/* Theme badges - only show for synced zones */}
-      {themes.length > 0 && zone.broadstreet_id && (
-        <div className="mt-3 pt-3 border-t border-gray-200">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-gray-500 font-medium">Themes:</span>
-            <ThemeBadges themes={themes} maxDisplay={2} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface ZonesListProps {
@@ -221,13 +141,14 @@ export default function ZonesList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayZones.map((zone) => (
-            <ZoneCard
+            <UniversalEntityCard
               key={zone._id}
-              zone={zone}
-              networkName={networkMap.get(zone.network_id)}
-              isSelected={selectedZones.includes(String(zone.broadstreet_id || zone._id))}
-              onToggleSelection={toggleZoneSelection}
-              themes={zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : []}
+              {...mapZoneToUniversalProps(zone, {
+                networkName: networkMap.get(zone.network_id),
+                isSelected: selectedZones.includes(String(zone.broadstreet_id || zone._id)),
+                onToggleSelection: toggleZoneSelection,
+                themes: zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : [],
+              })}
             />
           ))}
         </div>

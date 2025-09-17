@@ -16,24 +16,24 @@ export async function DELETE(
     let zoneType = '';
 
     // Check if this is a valid MongoDB ObjectId (24 hex characters)
-    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(zoneId);
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
 
     if (isValidObjectId) {
       // Try to delete from local zones first
-      deletedZone = await LocalZone.findByIdAndDelete(zoneId);
+      deletedZone = await LocalZone.findByIdAndDelete(id);
       zoneType = 'local';
     }
 
     // If not found in local zones or not a valid ObjectId, try main zones collection
     if (!deletedZone) {
       // Check if this might be a broadstreet_id (numeric)
-      const numericZoneId = parseInt(zoneId);
+      const numericZoneId = parseInt(id);
       if (!isNaN(numericZoneId)) {
         deletedZone = await Zone.findOneAndDelete({ broadstreet_id: numericZoneId });
         zoneType = 'synced';
       } else if (isValidObjectId) {
         // If it's a valid ObjectId but not found in LocalZone, try Zone collection by _id
-        deletedZone = await Zone.findByIdAndDelete(zoneId);
+        deletedZone = await Zone.findByIdAndDelete(id);
         zoneType = 'synced';
       }
     }

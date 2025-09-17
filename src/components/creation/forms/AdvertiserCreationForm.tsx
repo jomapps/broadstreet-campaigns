@@ -64,11 +64,11 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       }
     });
 
-    // Network selection and ID availability validation
+    // Network selection and Broadstreet ID availability validation (required for advertiser creation)
     if (!entities.network) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
-      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    } else if (!entities.network.ids?.broadstreet_id) {
+      newErrors.network = 'Network must be synced with Broadstreet to create advertisers';
     }
 
     setErrors(newErrors);
@@ -178,10 +178,14 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
 
     try {
       // Build payload with only non-empty optional fields
-      const networkIdValue = getEntityId(entities.network);
+      // For advertiser creation, Broadstreet network ID is required
+      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
+      if (!networkBroadstreetId) {
+        throw new Error('Network must be synced with Broadstreet to create advertisers');
+      }
       const payload: any = {
         name: formData.name.trim(),
-        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network_id: networkBroadstreetId,
         network: {
           broadstreet_id: entities.network?.ids.broadstreet_id,
           mongo_id: entities.network?.ids.mongo_id,
@@ -221,9 +225,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
 
       // Immediately reload advertisers for the current network so the list updates without a full reload
       try {
-        if (entities.network) {
-          const networkId = getEntityId(entities.network);
-          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String(networkId ?? ''))}` , { cache: 'no-store' });
+        if (entities.network?.ids?.broadstreet_id) {
+          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String(entities.network.ids.broadstreet_id))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);
@@ -280,8 +283,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network ||
-            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+            !entities.network?.ids?.broadstreet_id
           }
           className="min-w-[120px]"
           data-testid="submit-button"
@@ -436,8 +438,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network ||
-            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+            !entities.network?.ids?.broadstreet_id
           }
           className="min-w-[120px]"
           data-testid="submit-button"

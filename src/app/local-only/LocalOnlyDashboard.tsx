@@ -11,6 +11,7 @@ import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 
 // Type for local entity data
 type LocalEntity = {
@@ -52,313 +53,58 @@ interface LocalOnlyDashboardProps {
   advertiserMap: Map<number, string>;
 }
 
-interface EntityCardProps {
-  entity: LocalEntity;
+function mapLocalEntityToCardProps(
+  entity: LocalEntity,
+  params: {
   networkName?: string;
   advertiserName?: string;
   onDelete: (entityId: string, type: string) => void;
   isSelected?: boolean;
   onToggleSelection?: (entityId: string) => void;
 }
+) {
+  const parentsBreadcrumb: any[] = [];
+  if (params.networkName) {
+    parentsBreadcrumb.push({ name: params.networkName, entityType: 'network' as const });
+  }
+  if (entity.type === 'campaign' && params.advertiserName) {
+    parentsBreadcrumb.push({ name: params.advertiserName, entityType: 'advertiser' as const });
+  }
 
-function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected = false, onToggleSelection }: EntityCardProps) {
-  const getEntityIcon = (type: string) => {
-    switch (type) {
-      case 'zone': return <Target className="h-4 w-4" />;
-      case 'advertiser': return <Users className="h-4 w-4" />;
-      case 'campaign': return <Calendar className="h-4 w-4" />;
-      case 'network': return <Globe className="h-4 w-4" />;
-      case 'advertisement': return <Image className="h-4 w-4" />;
-      default: return <Target className="h-4 w-4" />;
-    }
+  const displayData: any[] = [
+    { label: 'Created', value: new Date(entity.created_at), type: 'date' as const },
+  ];
+  if (entity.type === 'zone') {
+    if (entity.alias) displayData.push({ label: 'Alias', value: entity.alias, type: 'string' as const });
+    if ((entity as any).width && (entity as any).height) displayData.push({ label: 'Size', value: `${(entity as any).width}x${(entity as any).height}px`, type: 'string' as const });
+  }
+  if (entity.type === 'advertiser' && (entity as any).admins) {
+    displayData.push({ label: 'Admins', value: (entity as any).admins.length || 0, type: 'number' as const });
+  }
+  if (entity.type === 'campaign') {
+    if ((entity as any).start_date) displayData.push({ label: 'Start', value: new Date((entity as any).start_date), type: 'date' as const });
+    if ((entity as any).end_date) displayData.push({ label: 'End', value: new Date((entity as any).end_date), type: 'date' as const });
+    if ((entity as any).max_impression_count) displayData.push({ label: 'Max Impr.', value: (entity as any).max_impression_count, type: 'number' as const });
+  }
+  if (entity.type === 'advertisement' && (entity as any).preview_url) {
+    displayData.push({ label: 'Preview', value: (entity as any).preview_url, type: 'string' as const });
+  }
+
+  return {
+    title: entity.name,
+    broadstreet_id: entity.broadstreet_id ?? (entity as any).original_broadstreet_id,
+    mongo_id: entity.mongo_id ?? entity._id,
+    entityType: (entity.type as any),
+    isLocal: true,
+    topTags: entity.type ? [{ label: entity.type, variant: 'secondary' as const }] : [],
+    parentsBreadcrumb,
+    displayData,
+    showCheckbox: true,
+    isSelected: !!params.isSelected,
+    onSelect: () => params.onToggleSelection?.(entity._id),
+    onCardClick: () => params.onToggleSelection?.(entity._id),
+    onDelete: () => params.onDelete(entity._id, entity.type),
   };
-
-  const getEntityTypeColor = (type: string) => {
-    switch (type) {
-      case 'zone': return 'bg-blue-100 text-blue-800';
-      case 'advertiser': return 'bg-green-100 text-green-800';
-      case 'campaign': return 'bg-purple-100 text-purple-800';
-      case 'network': return 'bg-indigo-100 text-indigo-800';
-      case 'advertisement': return 'bg-pink-100 text-pink-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const handleCardClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    if (target.closest('button, a, input, label')) return;
-    onToggleSelection?.(entity._id);
-  };
-
-  return (
-    <Card 
-      className={`relative p-4 border-2 transition-all duration-200 ${cardStateClasses({ isLocal: true, isSelected })}`}
-      data-testid="entity-card"
-      {...(entity.type === 'campaign' && (entity as any).original_broadstreet_id
-        ? { 'data-testid': `local-campaign-${(entity as any).original_broadstreet_id}` } as any
-        : {})}
-      onClick={handleCardClick}
-    >
-      {/* Delete Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-        onClick={(e) => { e.stopPropagation(); onDelete(entity._id, entity.type); }}
-        data-testid="delete-button"
-      >
-        <X className="h-4 w-4" />
-      </Button>
-
-      {isSelected && (
-        <span className="absolute top-2 left-2 px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
-          ✓ Selected
-        </span>
-      )}
-
-      {/* Header */}
-      <div className="flex items-start space-x-3 mb-3">
-        <div className="flex-shrink-0">
-          {getEntityIcon(entity.type)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 mb-1">
-            <h3 className="text-lg font-semibold text-gray-900 truncate">
-              {entity.name}
-            </h3>
-            <Badge className={`text-xs ${getEntityTypeColor(entity.type)}`}>
-              {entity.type}
-            </Badge>
-            <Badge variant="outline" className="text-xs">
-              NET: {entity.network_id}
-            </Badge>
-            {(() => {
-              const mongo = entity.mongo_id ?? entity._id;
-              const bs = entity.broadstreet_id ?? (entity as any).original_broadstreet_id;
-              const hasMongo = Boolean(mongo);
-              const hasBs = typeof bs === 'number';
-              if (hasBs && hasMongo) {
-                return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Both</Badge>;
-              }
-              if (hasBs) {
-                return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">Synced</Badge>;
-              }
-              return <Badge variant="outline" className="text-xs">Local Only</Badge>;
-            })()}
-          </div>
-          {networkName && (
-            <p className="text-sm text-gray-600">Network: {networkName}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Entity-specific details */}
-      <div className="space-y-2 text-sm">
-        {entity.type === 'zone' && (
-          <>
-            {entity.alias && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Alias:</span>
-                <span className="font-medium">{entity.alias}</span>
-              </div>
-            )}
-            {entity.width && entity.height && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Size:</span>
-                <span className="font-medium">{entity.width}x{entity.height}px</span>
-              </div>
-            )}
-            {entity.self_serve && (
-              <Badge variant="secondary" className="text-xs">Self Serve</Badge>
-            )}
-          </>
-        )}
-
-        {entity.type === 'advertiser' && (
-          <>
-            {entity.web_home_url && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Website:</span>
-                <span className="font-medium truncate max-w-32">{entity.web_home_url}</span>
-              </div>
-            )}
-            {entity.admins && entity.admins.length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Admins:</span>
-                <span className="font-medium">{entity.admins.length}</span>
-              </div>
-            )}
-          </>
-        )}
-
-        {entity.type === 'campaign' && (
-          <>
-            {/* Campaign Dates */}
-            {entity.start_date && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Start Date:</span>
-                <span className="font-medium text-sm">{formatDate(entity.start_date)}</span>
-              </div>
-            )}
-            {entity.end_date && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">End Date:</span>
-                <span className="font-medium text-sm">{formatDate(entity.end_date)}</span>
-              </div>
-            )}
-            
-            {/* Campaign Settings */}
-            {entity.weight !== undefined && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Weight:</span>
-                <span className="font-medium text-sm">
-                  {entity.weight === 0 ? 'Remnant (0)' :
-                   entity.weight === 0.5 ? 'Low (0.5)' :
-                   entity.weight === 1 ? 'Default (1)' :
-                   entity.weight === 1.5 ? 'High (1.5)' :
-                   entity.weight === 127 ? 'Sponsorship (127)' :
-                   entity.weight}
-                </span>
-              </div>
-            )}
-            
-            {/* Advertiser */}
-            {entity.advertiser_id && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Advertiser:</span>
-                <div className="text-right">
-                  <div className="font-medium text-sm">{advertiserName || `ID: ${entity.advertiser_id}`}</div>
-                  {advertiserName && (
-                    <div className="text-xs text-gray-500">ID: {entity.advertiser_id}</div>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {/* Campaign Limits */}
-            {entity.max_impression_count && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Max Impressions:</span>
-                <span className="font-medium text-sm">{entity.max_impression_count.toLocaleString()}</span>
-              </div>
-            )}
-
-            {/* Placement Count */}
-            {Array.isArray((entity as any).placements) && (entity as any).placements.length > 0 && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Placements:</span>
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs"
-                  {...((entity as any).original_broadstreet_id
-                    ? { 'data-testid': `campaign-placements-count-${(entity as any).original_broadstreet_id}` } as any
-                    : {})}
-                >
-                  {(entity as any).placements.length}
-                </Badge>
-              </div>
-            )}
-            
-            {/* Display Settings */}
-            {(entity.display_type || entity.pacing_type) && (
-              <div className="border-t border-orange-200 pt-2 mt-2">
-                <div className="text-xs text-gray-500 mb-1">Display Settings:</div>
-                {entity.display_type && entity.display_type !== 'no_repeat' && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 text-xs">Display:</span>
-                    <Badge variant="outline" className="text-xs">
-                      {entity.display_type.replace(/_/g, ' ')}
-                    </Badge>
-                  </div>
-                )}
-                {entity.pacing_type && entity.pacing_type !== 'asap' && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 text-xs">Pacing:</span>
-                    <Badge variant="outline" className="text-xs">
-                      {entity.pacing_type}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            )}
-            
-            {/* Status Indicators */}
-            <div className="border-t border-orange-200 pt-2 mt-2">
-              <div className="flex flex-wrap gap-1">
-                {entity.active && (
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                    Active
-                  </Badge>
-                )}
-                {entity.paused && (
-                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
-                    Paused
-                  </Badge>
-                )}
-                {entity.archived && (
-                  <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-800">
-                    Archived
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-
-        {entity.type === 'network' && (
-          <>
-            {entity.web_home_url && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Website:</span>
-                <span className="font-medium truncate max-w-32">{entity.web_home_url}</span>
-              </div>
-            )}
-            {entity.valet_active && (
-              <Badge variant="secondary" className="text-xs">Valet Active</Badge>
-            )}
-          </>
-        )}
-
-        {entity.type === 'advertisement' && (
-          <>
-            {entity.type && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Type:</span>
-                <span className="font-medium">{entity.type}</span>
-              </div>
-            )}
-            {entity.preview_url && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Preview:</span>
-                <span className="font-medium truncate max-w-32">{entity.preview_url}</span>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-3 pt-3 border-t border-orange-200">
-        <div className="flex justify-between items-center text-xs text-gray-500">
-          <span>Created: {formatDate(entity.created_at)}</span>
-          <EntityIdBadge
-            broadstreet_id={entity.broadstreet_id ?? (entity as any).original_broadstreet_id}
-            mongo_id={entity.mongo_id ?? entity._id}
-          />
-        </div>
-      </div>
-    </Card>
-  );
 }
 
 interface EntitySectionProps {
@@ -386,22 +132,23 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {entities.map((entity) => (
-          <EntityCard
+          <UniversalEntityCard
             key={entity._id}
-            entity={entity}
-            networkName={networkMap.get(
+            {...mapLocalEntityToCardProps(entity, {
+              networkName: networkMap.get(
               typeof entity.network_id === 'string' ? Number(entity.network_id) : entity.network_id
-            )}
-            advertiserName={entity.type === 'campaign'
+              ),
+              advertiserName: entity.type === 'campaign'
               ? advertiserMap.get(
                   typeof (entity as any).advertiser_id === 'string'
                     ? Number((entity as any).advertiser_id)
                     : (entity as any).advertiser_id
                 )
-              : undefined}
-            onDelete={onDelete}
-            isSelected={selectedIds.has(entity._id)}
-            onToggleSelection={onToggleSelection}
+                : undefined,
+              onDelete,
+              isSelected: selectedIds.has(entity._id),
+              onToggleSelection,
+            })}
           />
         ))}
       </div>
@@ -427,69 +174,20 @@ function LocalPlacementCard({
   const advertiserName = advertiserMap.get(placement.advertiser_id) || `Advertiser ${placement.advertiser_id}`;
 
   return (
-    <Card className={`p-4 border-2 relative ${cardStateClasses({ isLocal: true, isSelected: false })}`}>
-      {/* Delete button */}
-      <button
-        onClick={() => onDelete(placement._id)}
-        disabled={isDeleting}
-        className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 shadow-sm"
-        title="Delete local placement"
-      >
-        {isDeleting ? '⋯' : '×'}
-      </button>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold text-sm">Local Placement</div>
-          <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-            Local
-          </Badge>
-        </div>
-
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">Network:</span>
-            <span className="font-medium">{networkName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Advertiser:</span>
-            <span className="font-medium">{advertiserName}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Advertisement:</span>
-            <span className="font-medium">Ad {placement.advertisement_id}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Campaign:</span>
-            <span className="font-medium">
-              {placement.campaign_id ? `Campaign ${placement.campaign_id}` :
-               placement.campaign_mongo_id ? (
-                 <EntityIdBadge
-                   local_campaign_id={placement.campaign_mongo_id}
-                 />
-               ) : 'N/A'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Zone:</span>
-            <span className="font-medium">
-              {placement.zone_id ? `Zone ${placement.zone_id}` :
-               placement.zone_mongo_id ? (
-                 <EntityIdBadge
-                   local_zone_id={placement.zone_mongo_id}
-                 />
-               ) : 'N/A'}
-            </span>
-          </div>
-          {placement.restrictions && placement.restrictions.length > 0 && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Restrictions:</span>
-              <span className="font-medium">{placement.restrictions.join(', ')}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
+    <UniversalEntityCard
+      title={`Local Placement`}
+      entityType="placement"
+      isLocal={true}
+      displayData={[
+        { label: 'Network', value: networkName, type: 'string' as const },
+        { label: 'Advertiser', value: advertiserName, type: 'string' as const },
+        { label: 'Ad ID', value: String(placement.advertisement_id), type: 'string' as const },
+        { label: 'Campaign', value: placement.campaign_id ? `Campaign ${placement.campaign_id}` : (placement.campaign_mongo_id || 'N/A'), type: 'string' as const },
+        { label: 'Zone', value: placement.zone_id ? `Zone ${placement.zone_id}` : (placement.zone_mongo_id || 'N/A'), type: 'string' as const },
+        placement.restrictions && placement.restrictions.length > 0 ? { label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const } : undefined,
+      ].filter(Boolean) as any}
+      onDelete={() => onDelete(placement._id)}
+    />
   );
 }
 
@@ -599,10 +297,19 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       setStepInProgress('dry-run');
       
       // Use network selection from the sidebar as the single source of truth
+      console.info('[LocalOnly] Debug entities.network:', entities.network);
+      console.info('[LocalOnly] Debug entities.network.ids:', entities.network?.ids);
+      console.info('[LocalOnly] Debug entities.network.entityId:', entities.network?.entityId);
       if (!entities.network) {
         throw new Error('Select a network in the sidebar before syncing');
       }
-      const selectedNetworkId = getEntityId(entities.network);
+      // Use entityId directly since the network object structure is different from StandardEntity
+      const selectedNetworkId = entities.network.entityId;
+      console.info('[LocalOnly] Debug selectedNetworkId from entityId:', selectedNetworkId);
+
+      if (!selectedNetworkId) {
+        throw new Error('Network ID could not be determined');
+      }
 
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',
@@ -696,18 +403,44 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
 
   if (totalEntities === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="h-8 w-8 text-gray-400" />
+      <div className="space-y-8">
+        {/* Audit Trail Button - Always Available */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Local Entities Summary</h2>
+              <p className="text-gray-600 mt-1">
+                No local entities found
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => router.push('/audit')}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+                data-testid="audit-button"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Audit Trail
+              </Button>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
-          <p className="text-gray-600 mb-4">
-            You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
-          </p>
-          <Button onClick={() => router.push('/zones')} variant="outline">
-            Create Your First Entity
-          </Button>
+        </div>
+
+        {/* No Local Entities Message */}
+        <div className="text-center py-12">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Target className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
+            <p className="text-gray-600 mb-4">
+              You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+            </p>
+            <Button onClick={() => router.push('/zones')} variant="outline">
+              Create Your First Entity
+            </Button>
+          </div>
         </div>
       </div>
     );

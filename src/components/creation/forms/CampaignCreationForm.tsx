@@ -87,9 +87,9 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
     if (!entities.network) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
-      // Ensure at least one ID type is available
-      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    } else if (!entities.network.ids?.broadstreet_id) {
+      // Campaign creation requires a Broadstreet network ID
+      newErrors.network = 'Network must be synced with Broadstreet to create campaigns';
     }
 
     if (!entities.advertiser) {
@@ -202,13 +202,12 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
     try {
       // Build payload with required fields
-      // Use the entityId from the entities structure (which is already resolved by useSelectedEntities)
-      const networkIdValue = entities.network?.entityId;
+      // For campaign creation, Broadstreet network ID is required
+      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
       const advertiserIdValue = entities.advertiser?.entityId;
-
-      // Validate that we have the required IDs
-      if (!networkIdValue) {
-        throw new Error('Network ID is required but not available');
+      // Validate that we have the required Broadstreet network ID
+      if (!networkBroadstreetId) {
+        throw new Error('Network must be synced with Broadstreet to create campaigns');
       }
       if (!advertiserIdValue) {
         throw new Error('Advertiser ID is required but not available');
@@ -216,8 +215,8 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
       const payload: any = {
         name: formData.name.trim(),
-        // Send numeric IDs when available for current API expectations
-        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        // Campaign API requires numeric Broadstreet network_id
+        network_id: networkBroadstreetId,
         // Include numeric advertiser_id when present; otherwise include explicit advertiser object with mongo_id
         ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
         // Also include explicit ID objects to avoid ambiguity downstream
@@ -351,7 +350,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network?.ids?.broadstreet_id || !entities.advertiser}
           className="min-w-[120px]"
           data-testid="submit-button"
         >
@@ -582,7 +581,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network || !entities.advertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network?.ids?.broadstreet_id || !entities.advertiser}
           className="min-w-[120px]"
           data-testid="submit-button"
         >

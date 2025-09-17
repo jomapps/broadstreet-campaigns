@@ -5,14 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 
 // Type for advertiser data from filter context
 type AdvertiserLean = {
@@ -27,120 +22,46 @@ type AdvertiserLean = {
   synced_with_api?: boolean;
 };
 
-interface AdvertiserCardProps {
-  advertiser: AdvertiserLean;
-  isSelected: boolean;
-  onSelect: (advertiser: AdvertiserLean) => void;
-  onDelete?: (advertiser: AdvertiserLean) => void;
-}
+// Map advertiser to universal card props
+function mapAdvertiserToUniversalProps(
+  advertiser: AdvertiserLean,
+  params: {
+    isSelected: boolean;
+    onSelect: (a: AdvertiserLean) => void;
+    onDelete?: (a: AdvertiserLean) => void;
+    parentNetwork?: any;
+  }
+) {
+  const isLocal = !!(advertiser.created_locally && !advertiser.synced_with_api);
+  const parent = params.parentNetwork;
+  const parentsBreadcrumb = parent
+    ? [{
+        name: String(parent?.name ?? 'Network'),
+        broadstreet_id: typeof parent?.broadstreet_id === 'number' ? parent.broadstreet_id : undefined,
+        mongo_id: parent?.mongo_id ?? parent?._id,
+        entityType: 'network' as const,
+      }]
+    : [];
 
-function AdvertiserCard({ advertiser, isSelected, onSelect, onDelete }: AdvertiserCardProps) {
-  const isLocal = advertiser.created_locally && !advertiser.synced_with_api;
-  const slug = advertiser.name.replace(/\s+/g, '-').toLowerCase();
-  
-  const handleDelete = async () => {
-    if (!onDelete) return;
-    
-    if (!confirm(`Are you sure you want to delete "${advertiser.name}"? This action cannot be undone.`)) {
-      return;
-    }
-    
-    onDelete(advertiser);
+  return {
+    title: advertiser.name,
+    broadstreet_id: advertiser.broadstreet_id,
+    mongo_id: advertiser.mongo_id,
+    entityType: 'advertiser' as const,
+    imageUrl: advertiser.logo?.url,
+    showCheckbox: true,
+    isSelected: params.isSelected,
+    onSelect: () => params.onSelect(advertiser),
+    onCardClick: () => params.onSelect(advertiser),
+    isLocal,
+    onDelete: isLocal && params.onDelete ? () => params.onDelete!(advertiser) : undefined,
+    parentsBreadcrumb,
+    displayData: [
+      ...(advertiser.web_home_url ? [{ label: 'Website', value: advertiser.web_home_url, type: 'string' as const }] : []),
+      ...(Array.isArray(advertiser.admins) ? [{ label: 'Admins', value: advertiser.admins.length, type: 'number' as const }] : []),
+      ...(advertiser.notes ? [{ label: 'Notes', value: advertiser.notes, type: 'string' as const }] : []),
+    ],
   };
-  
-  return (
-    <div
-      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
-      data-testid="advertiser-card"
-      data-advertiser-slug={slug}
-    >
-      {/* Delete Button for Local Entities */}
-      {isLocal && onDelete && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={handleDelete}
-          data-testid="delete-button"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={() => onSelect(advertiser)}
-              className="mt-1"
-            />
-            {advertiser.logo?.url && (
-              <img
-                src={advertiser.logo.url}
-                alt={`${advertiser.name} logo`}
-                className="w-8 h-8 rounded object-cover"
-              />
-            )}
-            <h3 className="card-title text-gray-900" data-testid="advertiser-name">{advertiser.name}</h3>
-          </div>
-          
-          {advertiser.web_home_url && (
-            <a
-              href={advertiser.web_home_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card-text text-blue-600 hover:text-blue-800 mt-2 inline-block"
-            >
-              {advertiser.web_home_url}
-            </a>
-          )}
-        </div>
-        
-        <div className="flex flex-col items-end space-y-1">
-          {isSelected && (
-            <Badge variant="default" className="text-xs px-2 py-1">
-              Selected
-            </Badge>
-          )}
-          {advertiser.created_locally && !advertiser.synced_with_api && (
-            <Badge variant="secondary" className="text-xs px-2 py-1 bg-orange-100 text-orange-800">
-              Local
-            </Badge>
-          )}
-          <EntityIdBadge
-            broadstreet_id={advertiser.broadstreet_id}
-            mongo_id={advertiser.mongo_id}
-          />
-        </div>
-      </div>
-      
-      {advertiser.notes && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <p className="card-text text-gray-600">Notes</p>
-          <p className="card-text text-gray-900 mt-1">{advertiser.notes}</p>
-        </div>
-      )}
-      
-      {advertiser.admins && advertiser.admins.length > 0 && (
-        <div>
-          <p className="card-text text-gray-600 mb-2">Admins</p>
-          <div className="space-y-1">
-            {advertiser.admins.map((admin, index) => (
-              <div key={index} className="flex items-center justify-between card-text">
-                <span className="text-gray-900">{admin.name}</span>
-                <a
-                  href={`mailto:${admin.email}`}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  {admin.email}
-                </a>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 function LoadingSkeleton() {
@@ -308,17 +229,20 @@ function AdvertisersList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAdvertisers.map((advertiser) => (
-            <AdvertiserCard
-              key={String(getEntityId(advertiser))}
-              advertiser={advertiser}
-              isSelected={
-                String(getEntityId(selectedAdvertiser)) === String(getEntityId(advertiser))
-              }
-              onSelect={handleAdvertiserSelect}
-              onDelete={handleDelete}
-            />
-          ))}
+          {filteredAdvertisers.map((advertiser) => {
+            const isSelected = String(getEntityId(selectedAdvertiser)) === String(getEntityId(advertiser));
+            return (
+              <UniversalEntityCard
+                key={String(getEntityId(advertiser))}
+                {...mapAdvertiserToUniversalProps(advertiser, {
+                  isSelected,
+                  onSelect: handleAdvertiserSelect,
+                  onDelete: handleDelete,
+                  parentNetwork: entities.network,
+                })}
+              />
+            );
+          })}
         </div>
       )}
     </div>

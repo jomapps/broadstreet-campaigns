@@ -53,11 +53,11 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       newErrors.target_url = 'Please enter a valid URL';
     }
 
-    // Network selection and ID availability validation
+    // Network selection and Broadstreet ID availability validation (required for advertisement creation)
     if (!entities.network) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids || (!entities.network.ids.broadstreet_id && !entities.network.ids.mongo_id)) {
-      newErrors.network = 'Network must have at least one ID (broadstreet_id or mongo_id)';
+    } else if (!entities.network.ids?.broadstreet_id) {
+      newErrors.network = 'Network must be synced with Broadstreet to create advertisements';
     }
 
     // Optional advertiser ID availability validation (when advertiser present)
@@ -148,11 +148,15 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
 
     try {
       // Build payload with only non-empty optional fields
-      const networkIdValue = getEntityId(entities.network);
+      // For advertisement creation, Broadstreet network ID is required
+      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
+      if (!networkBroadstreetId) {
+        throw new Error('Network must be synced with Broadstreet to create advertisements');
+      }
       const advertiserIdValue = getEntityId(entities.advertiser);
       const payload: any = {
         name: formData.name.trim(),
-        ...(typeof networkIdValue === 'number' ? { network_id: networkIdValue } : {}),
+        network_id: networkBroadstreetId,
         ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
         network: {
           broadstreet_id: entities.network?.ids.broadstreet_id,
@@ -257,8 +261,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network ||
-            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+            !entities.network?.ids?.broadstreet_id
           }
           className="min-w-[120px]"
         >
@@ -383,8 +386,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network ||
-            !(entities.network?.ids && (entities.network.ids.broadstreet_id || entities.network.ids.mongo_id))
+            !entities.network?.ids?.broadstreet_id
           }
           className="min-w-[120px]"
         >

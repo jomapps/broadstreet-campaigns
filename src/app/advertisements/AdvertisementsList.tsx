@@ -5,102 +5,63 @@ import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { AdvertisementLean } from '@/lib/types/lean-entities';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 
-interface AdvertisementCardProps {
-  advertisement: AdvertisementLean;
-  isSelected?: boolean;
-  onToggleSelection?: (advertisementId: string) => void;
-}
+// Map advertisement to universal card props
+function mapAdToUniversalProps(
+  advertisement: AdvertisementLean,
+  isSelected: boolean,
+  toggleSelection: (id: string) => void,
+  parents: { network?: any; advertiser?: any }
+) {
+  const selectionId = String(getEntityId(advertisement));
+  const parentsBreadcrumb = [
+    parents.network && {
+      name: String(parents.network?.name ?? 'Network'),
+      broadstreet_id: typeof parents.network?.broadstreet_id === 'number' ? parents.network.broadstreet_id : undefined,
+      mongo_id: parents.network?.mongo_id ?? parents.network?._id,
+      entityType: 'network' as const,
+    },
+    parents.advertiser && {
+      name: String(parents.advertiser?.name ?? 'Advertiser'),
+      broadstreet_id: typeof parents.advertiser?.broadstreet_id === 'number' ? parents.advertiser.broadstreet_id : undefined,
+      mongo_id: parents.advertiser?.mongo_id ?? parents.advertiser?._id,
+      entityType: 'advertiser' as const,
+    },
+  ].filter(Boolean) as any[];
 
-function AdvertisementCard({ advertisement, isSelected = false, onToggleSelection }: AdvertisementCardProps) {
-  const updatedDate = new Date(advertisement.updated_at);
-  const isLocal = (advertisement as any).created_locally && !(advertisement as any).synced_with_api;
-
-  const handleCardClick = () => {
-    if (onToggleSelection) {
-      onToggleSelection(String(advertisement.broadstreet_id));
-    }
+  return {
+    title: advertisement.name,
+    broadstreet_id: advertisement.broadstreet_id,
+    mongo_id: advertisement.mongo_id,
+    entityType: 'advertisement' as const,
+    imageUrl: advertisement.active?.url || undefined,
+    subtitle: `Type: ${advertisement.type}`,
+    statusBadge: advertisement.active_placement
+      ? { label: 'Live', variant: 'success' as const }
+      : { label: 'Inactive', variant: 'secondary' as const },
+    topTags: [],
+    parentsBreadcrumb,
+    displayData: [
+      { label: 'Type', value: advertisement.type, type: 'string' as const },
+      { label: 'Last Updated', value: new Date(advertisement.updated_at), type: 'date' as const },
+      { label: 'Preview', value: advertisement.preview_url, type: 'string' as const },
+    ],
+    showCheckbox: true,
+    isSelected,
+    onSelect: () => toggleSelection(selectionId),
+    onCardClick: () => toggleSelection(selectionId),
+    actionButtons: advertisement.preview_url
+      ? [
+          {
+            label: 'Preview',
+            variant: 'default' as const,
+            onClick: () => window.open(advertisement.preview_url, '_blank', 'noopener,noreferrer'),
+          },
+        ]
+      : [],
   };
-  
-  return (
-    <div 
-      className={`rounded-lg shadow-sm border-2 p-6 transition-all duration-200 cursor-pointer ${cardStateClasses({ isLocal, isSelected })}`}
-      onClick={handleCardClick}
-    >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="card-title text-gray-900">{advertisement.name}</h3>
-          <p className="card-text text-gray-600 mt-1">Advertiser: {advertisement.advertiser}</p>
-        </div>
-        
-        <div className="flex flex-col items-end space-y-2">
-          {isSelected && (
-            <span className="px-2 py-1 text-xs rounded-full bg-blue-500 text-white font-semibold">
-              ✓ Selected
-            </span>
-          )}
-          {isLocal && (
-            <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800 font-semibold">
-              Local
-            </span>
-          )}
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            advertisement.active_placement 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {advertisement.active_placement ? 'Active' : 'Inactive'}
-          </span>
-          <EntityIdBadge
-            broadstreet_id={advertisement.broadstreet_id}
-            mongo_id={advertisement.mongo_id}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="card-text text-gray-600">Type</p>
-          <p className="card-text font-medium text-gray-900">{advertisement.type}</p>
-        </div>
-        <div>
-          <p className="card-text text-gray-600">Last Updated</p>
-          <p className="card-text font-medium text-gray-900">
-            {updatedDate.toLocaleDateString()}
-          </p>
-        </div>
-      </div>
-      
-      {advertisement.active.url && (
-        <div className="mb-4">
-          <p className="card-text text-gray-600 mb-2">Active Image</p>
-          <img
-            src={advertisement.active.url}
-            alt={advertisement.name}
-            className="w-full h-32 object-cover rounded border"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
-      
-      <div className="flex space-x-2">
-        <a
-          href={advertisement.preview_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2 px-3 rounded card-text font-medium transition-colors duration-200"
-          onClick={(e) => e.stopPropagation()}
-        >
-          Preview
-        </a>
-      </div>
-    </div>
-  );
 }
 
 interface AdvertisementsListProps {
@@ -192,12 +153,16 @@ export default function AdvertisementsList({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayAdvertisements.map((advertisement) => {
             const selectionId = String(getEntityId(advertisement));
+            const isSelected = selectedAdvertisements.includes(selectionId);
             return (
-              <AdvertisementCard 
+              <UniversalEntityCard
                 key={advertisement._id || String(advertisement.broadstreet_id)}
-                advertisement={advertisement}
-                isSelected={selectedAdvertisements.includes(selectionId)}
-                onToggleSelection={() => toggleAdvertisementSelection(selectionId)}
+                {...mapAdToUniversalProps(
+                  advertisement,
+                  isSelected,
+                  toggleAdvertisementSelection,
+                  { network: entities.network, advertiser: entities.advertiser }
+                )}
               />
             );
           })}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { Search, Filter, Download, Calendar, Users, Target, Globe, ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -45,6 +46,78 @@ interface AuditResponse {
     limit: number;
     offset: number;
     has_more: boolean;
+  };
+}
+
+// Map audit entity to universal card props
+function mapAuditEntityToUniversalProps(entity: AuditEntity) {
+  const entityTypeMap = {
+    'advertiser': 'advertiser' as const,
+    'campaign': 'campaign' as const,
+    'zone': 'zone' as const,
+  };
+
+  // Format dates in dd/mm/yy format according to design specs
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit'
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return {
+    title: entity.name,
+    broadstreet_id: entity.broadstreet_id,
+    mongo_id: entity.entity_id, // entity_id is the MongoDB ID in audit context
+    entityType: entityTypeMap[entity.type],
+    isLocal: false, // Audit entities are always synced
+    statusBadge: {
+      label: 'Synced',
+      variant: 'success' as const,
+    },
+    displayData: [
+      {
+        label: 'Local ID',
+        value: entity.entity_id,
+        type: 'string' as const
+      },
+      {
+        label: 'Broadstreet ID',
+        value: entity.broadstreet_id,
+        type: 'number' as const
+      },
+      {
+        label: 'Network ID',
+        value: entity.network_id,
+        type: 'number' as const
+      },
+      {
+        label: 'Created',
+        value: formatDate(entity.created_at),
+        type: 'string' as const
+      },
+      {
+        label: 'Synced',
+        value: formatDateTime(entity.synced_at),
+        type: 'string' as const,
+        className: 'text-green-600 font-medium'
+      },
+    ],
+    testId: `audit-entity-${entity.entity_id}`,
+    variant: 'compact' as const,
   };
 }
 
@@ -135,33 +208,7 @@ export default function AuditPage() {
     }
   };
 
-  const getEntityIcon = (type: string) => {
-    switch (type) {
-      case 'advertiser': return <Users className="h-4 w-4" />;
-      case 'campaign': return <Calendar className="h-4 w-4" />;
-      case 'zone': return <Target className="h-4 w-4" />;
-      default: return <Globe className="h-4 w-4" />;
-    }
-  };
 
-  const getEntityTypeColor = (type: string) => {
-    switch (type) {
-      case 'advertiser': return 'bg-green-100 text-green-800';
-      case 'campaign': return 'bg-purple-100 text-purple-800';
-      case 'zone': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
@@ -303,56 +350,12 @@ export default function AuditPage() {
               <p className="text-gray-600">No synced entities found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {entities.map((entity) => (
-                <div
+                <UniversalEntityCard
                   key={entity.entity_id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0">
-                        {getEntityIcon(entity.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 truncate">
-                            {entity.name}
-                          </h3>
-                          <Badge className={getEntityTypeColor(entity.type)}>
-                            {entity.type}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div>
-                            <span className="font-medium">Local ID:</span>
-                            <p className="font-mono text-xs">{entity.entity_id}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium">Broadstreet ID:</span>
-                            <p className="font-mono text-xs">{entity.broadstreet_id}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium">Network ID:</span>
-                            <p className="font-mono text-xs">{entity.network_id}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600 mt-2">
-                          <div>
-                            <span className="font-medium">Created:</span>
-                            <p>{formatDate(entity.created_at)}</p>
-                          </div>
-                          <div>
-                            <span className="font-medium">Synced:</span>
-                            <p className="text-green-600 font-medium">{formatDate(entity.synced_at)}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  {...mapAuditEntityToUniversalProps(entity)}
+                />
               ))}
               
               {pagination.has_more && (

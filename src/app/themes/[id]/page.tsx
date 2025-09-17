@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { SearchInput } from '@/components/ui/search-input';
 import { ArrowLeft, Plus, Minus } from 'lucide-react';
 import Link from 'next/link';
@@ -51,48 +52,19 @@ function LoadingSkeleton() {
 
 function ZoneCard({ zone, onRemove }: { zone: Zone; onRemove?: (zoneId: number) => void }) {
   return (
-    <div className="rounded-lg shadow-sm border-2 border-gray-200 bg-white p-4 transition-all duration-200 hover:shadow-md">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{zone.name}</h3>
-          {zone.alias && (
-            <p className="text-sm text-gray-600 mt-1">Alias: {zone.alias}</p>
-          )}
-        </div>
-        
-        {onRemove && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onRemove(zone.broadstreet_id)}
-            className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          >
-            <Minus className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-      
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary" className="text-xs">
-          ID: {zone.broadstreet_id}
-        </Badge>
-        {zone.size_type && (
-          <Badge variant="outline" className="text-xs">
-            {zone.size_type}
-          </Badge>
-        )}
-        {zone.category && (
-          <Badge variant="outline" className="text-xs">
-            {zone.category}
-          </Badge>
-        )}
-        {zone.is_home && (
-          <Badge variant="outline" className="text-xs bg-green-50 border-green-200 text-green-700">
-            Home
-          </Badge>
-        )}
-      </div>
-    </div>
+    <UniversalEntityCard
+      title={zone.name}
+      broadstreet_id={zone.broadstreet_id}
+      entityType="zone"
+      topTags={zone.size_type ? [{ label: zone.size_type, variant: 'secondary' } ] : []}
+      displayData={[
+        zone.alias ? { label: 'Alias', value: zone.alias, type: 'string' as const } : undefined,
+        zone.category ? { label: 'Category', value: zone.category, type: 'string' as const } : undefined,
+      ].filter(Boolean) as any}
+      actionButtons={onRemove ? [
+        { label: 'Remove', variant: 'destructive', onClick: () => onRemove(zone.broadstreet_id) }
+      ] : []}
+    />
   );
 }
 

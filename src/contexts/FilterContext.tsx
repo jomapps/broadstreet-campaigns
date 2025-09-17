@@ -68,6 +68,7 @@ interface FilterContextType {
   selectZones: (zoneIds: string[]) => void;
   deselectZones: (zoneIds: string[]) => void;
   toggleZoneSelection: (zoneId: string) => void;
+  clearZones: () => void;
   selectThemeZones: (theme: { _id: string; name: string; zone_ids: number[] } | null) => void;
 
   // Advertisement selection actions
@@ -87,6 +88,16 @@ const STORAGE_KEYS = {
   SELECTED_THEME: 'broadstreet_selected_theme',
   SELECTED_ADVERTISEMENTS: 'broadstreet_selected_advertisements',
   SHOW_ONLY_SELECTED_ADS: 'broadstreet_show_only_selected_ads',
+};
+
+// Hardcoded default network to ensure the app always has a network immediately.
+// BS #9396 — FASH Medien Verlag GmbH - SCHWULISSIMO image
+const DEFAULT_NETWORK: Network = {
+  broadstreet_id: 9396,
+  broadstreet_network_id: 9396, // Add explicit network ID field for consistency
+  name: 'FASH Medien Verlag GmbH - SCHWULISSIMO image',
+  valet_active: false,
+  path: '',
 };
 
 export function FilterProvider({ children }: { children: React.ReactNode }) {
@@ -122,6 +133,9 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         
         if (storedNetwork) {
           setSelectedNetwork(JSON.parse(storedNetwork));
+        } else {
+          // Ensure a network is immediately available
+          setSelectedNetwork(DEFAULT_NETWORK);
         }
         if (storedAdvertiser) {
           setSelectedAdvertiser(JSON.parse(storedAdvertiser));
@@ -161,10 +175,23 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setNetworks(data.networks || []);
-          
-          // Set first network as default if none selected
-          if (!selectedNetwork && data.networks && data.networks.length > 0) {
-            setSelectedNetwork(data.networks[0]);
+
+          // Respect hardcoded/default selection: if nothing selected yet, prefer the hardcoded
+          // network from the fetched list. Otherwise, enrich the current selection from fetched data.
+          try {
+            const stored = localStorage.getItem(STORAGE_KEYS.NETWORK);
+            const storedParsed = stored ? JSON.parse(stored) : null;
+            const current = storedParsed || selectedNetwork;
+            if (!current) {
+              const match = (data.networks || []).find((n: any) => getEntityId(n) === DEFAULT_NETWORK.broadstreet_id);
+              setSelectedNetwork(match || DEFAULT_NETWORK);
+            } else {
+              const currentId = getEntityId(current);
+              const enriched = (data.networks || []).find((n: any) => getEntityId(n) === currentId);
+              if (enriched) setSelectedNetwork(enriched);
+            }
+          } catch {
+            // fallback: do nothing, selection already set earlier
           }
         }
       } catch (error) {
@@ -280,15 +307,16 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
   // Clear functions
   const clearAllFilters = () => {
-    setSelectedNetwork(null);
+    // Preserve selected network unless the user explicitly changes it
     setSelectedAdvertiser(null);
     setSelectedCampaign(null);
+    // Clear zones and theme together to maintain consistency
     setSelectedZones([]);
     setShowOnlySelected(false);
     setSelectedTheme(null);
     setSelectedAdvertisements([]);
     setShowOnlySelectedAds(false);
-    localStorage.removeItem(STORAGE_KEYS.NETWORK);
+    // Keep network persisted; only clear dependent filters
     localStorage.removeItem(STORAGE_KEYS.ADVERTISER);
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
@@ -302,20 +330,70 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const selectZones = (zoneIds: string[]) => {
     setSelectedZones(prev => {
       const newSelection = [...new Set([...prev, ...zoneIds])];
+      // Clear theme if manual zone selection doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
       return newSelection;
     });
   };
 
   const deselectZones = (zoneIds: string[]) => {
-    setSelectedZones(prev => prev.filter(currentZoneId => !zoneIds.includes(currentZoneId)));
+    setSelectedZones(prev => {
+      const newSelection = prev.filter(currentZoneId => !zoneIds.includes(currentZoneId));
+      // Clear theme if manual zone deselection doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
+      return newSelection;
+    });
   };
 
   const toggleZoneSelection = (zoneId: string) => {
-    setSelectedZones(prev =>
-      prev.includes(zoneId)
+    setSelectedZones(prev => {
+      const newSelection = prev.includes(zoneId)
         ? prev.filter(currentZoneId => currentZoneId !== zoneId)
-        : [...prev, zoneId]
-    );
+        : [...prev, zoneId];
+
+      // Clear theme if manual zone toggle doesn't match current theme
+      if (selectedTheme) {
+        const themeZoneIds = selectedTheme.zone_ids.map(id => String(id));
+        const newSelectionSet = new Set(newSelection);
+        const themeZoneSet = new Set(themeZoneIds);
+
+        // If the new selection doesn't match the theme zones, clear the theme
+        if (newSelectionSet.size !== themeZoneSet.size ||
+            !Array.from(newSelectionSet).every(id => themeZoneSet.has(id))) {
+          setSelectedTheme(null);
+        }
+      }
+      return newSelection;
+    });
+  };
+
+  const clearZones = () => {
+    setSelectedZones([]);
+    setShowOnlySelected(false);
+    // Clear theme when zones are manually cleared
+    if (selectedTheme) {
+      setSelectedTheme(null);
+    }
   };
 
   // Advertisement selection actions
@@ -343,12 +421,15 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     if (theme) {
       // Clear current zone selection and select all zones from the theme
       const themeZoneIds = theme.zone_ids.map(id => String(id));
+
       setSelectedZones(themeZoneIds);
       setSelectedTheme(theme);
       setShowOnlySelected(true); // Automatically show only selected zones
     } else {
-      // Clear theme selection
+      // Clear theme selection AND clear zones to maintain consistency
       setSelectedTheme(null);
+      setSelectedZones([]);
+      setShowOnlySelected(false);
     }
   };
 
@@ -385,6 +466,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     selectZones,
     deselectZones,
     toggleZoneSelection,
+    clearZones,
     selectThemeZones,
     selectAdvertisements,
     deselectAdvertisements,
