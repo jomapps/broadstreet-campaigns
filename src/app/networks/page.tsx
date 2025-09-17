@@ -3,11 +3,8 @@
 import { Suspense } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import CreationButton from '@/components/creation/CreationButton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 
 // Type for network data from filter context
 type NetworkLean = {
@@ -22,81 +19,26 @@ type NetworkLean = {
   zone_count?: number;
 };
 
-interface NetworkCardProps {
-  network: NetworkLean;
-  isSelected: boolean;
-  onSelect: (network: NetworkLean) => void;
-}
-
-function NetworkCard({ network, isSelected, onSelect }: NetworkCardProps) {
-  return (
-    <Card
-      className={`h-full transition-all duration-200 cursor-pointer border-2 ${cardStateClasses({ isLocal: false, isSelected })}`}
-      onClick={() => onSelect(network)}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            {network.logo?.url ? (
-              <img
-                src={network.logo.url}
-                alt={`${network.name} logo`}
-                className="w-12 h-12 rounded-lg object-cover border"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-lg">{network.name.charAt(0)}</span>
-              </div>
-            )}
-            <div>
-              <CardTitle className="card-title">{network.name}</CardTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <EntityIdBadge
-                  broadstreet_id={network.broadstreet_id}
-                  mongo_id={network.mongo_id}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <Badge variant={network.valet_active ? "default" : "secondary"} className="text-xs px-2 py-1">
-            {network.valet_active ? 'Valet Active' : 'Standard'}
-          </Badge>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {network.web_home_url && (
-          <a
-            href={network.web_home_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card-text text-primary hover:text-primary/80 inline-flex items-center space-x-1 transition-colors"
-          >
-            <span>{network.web_home_url}</span>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        )}
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="card-text text-muted-foreground mb-1">Advertisers</p>
-            <p className="card-title font-bold">
-              {network.advertiser_count || 0}
-            </p>
-          </div>
-          <div className="bg-muted/50 rounded-lg p-3">
-            <p className="card-text text-muted-foreground mb-1">Zones</p>
-            <p className="card-title font-bold">
-              {network.zone_count || 0}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+// Map network to universal card props
+function mapNetworkToUniversalProps(network: NetworkLean, isSelected: boolean, toggleSelect: (n: NetworkLean) => void) {
+	return {
+		title: network.name,
+		broadstreet_id: network.broadstreet_id,
+		mongo_id: (network as any).mongo_id,
+		entityType: 'network' as const,
+		imageUrl: network.logo?.url,
+		titleUrl: network.path,
+		showCheckbox: true,
+		isSelected,
+		onSelect: () => toggleSelect(network),
+		onCardClick: () => toggleSelect(network),
+		topTags: network.valet_active ? [{ label: 'Valet Active', variant: 'secondary' as const }] : [],
+		displayData: [
+			{ label: 'Advertisers', value: network.advertiser_count ?? 0, type: 'number' as const },
+			{ label: 'Zones', value: network.zone_count ?? 0, type: 'number' as const },
+			...(network.web_home_url ? [{ label: 'Website', value: network.web_home_url, type: 'string' as const }] : []),
+		],
+	};
 }
 
 function LoadingSkeleton() {
@@ -142,24 +84,26 @@ function NetworksList() {
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {networks.map((network) => (
-        <NetworkCard
-          key={getEntityId(network)}
-          network={network}
-          isSelected={getEntityId(selectedNetwork) === getEntityId(network)}
-          onSelect={(n) => {
-            if (getEntityId(selectedNetwork) === getEntityId(n)) {
-              setSelectedNetwork(null);
-            } else {
-              setSelectedNetwork(n as any);
-            }
-          }}
-        />
-      ))}
-    </div>
-  );
+	return (
+		<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			{networks.map((network) => {
+				const isSelected = getEntityId(selectedNetwork) === getEntityId(network);
+				const toggle = (n: NetworkLean) => {
+					if (getEntityId(selectedNetwork) === getEntityId(n)) {
+						setSelectedNetwork(null);
+					} else {
+						setSelectedNetwork(n as any);
+					}
+				};
+				return (
+					<UniversalEntityCard
+						key={getEntityId(network)}
+						{...mapNetworkToUniversalProps(network, isSelected, toggle)}
+					/>
+				);
+			})}
+		</div>
+	);
 }
 
 export default function NetworksPage() {
