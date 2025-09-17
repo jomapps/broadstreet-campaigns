@@ -6,7 +6,7 @@ We have different cards for different entities and different pages. We want to m
 ## Card Design Reference
 [Card Design Reference](docs/desgin-reference/card-design.md)
 **CRITCAL** no fallbacks, no mockdata, no legacy compatibility.
-**CRITICAL** App is working fine so it should not break.
+**CRITICAL** App is working fine so it should not break.git add 
 
 ## Migration Plan
 Start with phases for each type of entity. Get approval from user for each phase, then move to the next.
