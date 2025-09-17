@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useThemes } from '@/hooks/useThemes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, Palette } from 'lucide-react';
 
 export default function ThemeSelector() {
@@ -79,39 +78,50 @@ export default function ThemeSelector() {
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
-        <RadioGroup
-          value={selectedTheme?._id || 'none'}
-          onValueChange={handleThemeSelection}
-          className="space-y-2"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="none" id="theme-none" />
-            <Label 
-              htmlFor="theme-none" 
-              className="text-xs text-sidebar-foreground/70 cursor-pointer"
-            >
-              No theme filter
-            </Label>
-          </div>
-          
-          {themes.map((theme) => (
-            <div key={theme._id} className="flex items-center justify-between space-x-2">
-              <div className="flex items-center space-x-2 flex-1 min-w-0">
-                <RadioGroupItem value={theme._id} id={`theme-${theme._id}`} />
-                <Label 
-                  htmlFor={`theme-${theme._id}`} 
-                  className="text-xs text-sidebar-foreground cursor-pointer truncate flex-1"
-                  title={theme.name}
-                >
-                  {theme.name}
-                </Label>
-              </div>
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 ml-1 flex-shrink-0">
-                {theme.zone_count || theme.zone_ids?.length || 0}
-              </Badge>
-            </div>
-          ))}
-        </RadioGroup>
+        <div className="space-y-2">
+          <div className="text-xs text-sidebar-foreground/70">Select Theme</div>
+          <Select
+            value={selectedTheme?._id || 'none'}
+            onValueChange={handleThemeSelection}
+          >
+            <SelectTrigger className="h-8 text-xs bg-sidebar-accent/30 border-sidebar-border text-sidebar-foreground">
+              <SelectValue placeholder="No theme filter">
+                {selectedTheme ? (
+                  <div className="flex items-center justify-between w-full">
+                    <span className="truncate" title={selectedTheme.name}>
+                      {selectedTheme.name}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-3 ml-2 flex-shrink-0">
+                      {selectedTheme.zone_ids.length}
+                    </Badge>
+                  </div>
+                ) : (
+                  "No theme filter"
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              <SelectItem value="none" className="text-xs">
+                <div className="flex items-center justify-between w-full">
+                  <span className="text-sidebar-foreground/70">No theme filter</span>
+                </div>
+              </SelectItem>
+
+              {themes.map((theme) => (
+                <SelectItem key={theme._id} value={theme._id} className="text-xs">
+                  <div className="flex items-center justify-between w-full">
+                    <span className="truncate flex-1" title={theme.name}>
+                      {theme.name}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-3 ml-2 flex-shrink-0">
+                      {theme.zone_count || theme.zone_ids?.length || 0}
+                    </Badge>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {selectedTheme && (
           <div className="pt-2 border-t border-sidebar-border">

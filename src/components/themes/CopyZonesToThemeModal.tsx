@@ -95,7 +95,7 @@ export default function CopyZonesToThemeModal({
           <DialogHeader>
             <DialogTitle>Copy Campaign Zones to Theme</DialogTitle>
             <DialogDescription>
-              Create a new theme with all zones from the campaign "{campaign.name}".
+              Create a new theme with all zones from the campaign &quot;{campaign.name}&quot;.
             </DialogDescription>
           </DialogHeader>
           

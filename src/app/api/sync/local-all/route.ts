@@ -45,18 +45,20 @@ export async function POST(request: NextRequest) {
     // Perform full sync
     let syncReport = await syncService.syncAllEntities(networkId);
 
+    // Run fallback syncs if needed
+    const fallbackResults: any[] = [];
+    if (unsyncedCampCount > 0) {
+      console.warn('[local-all] Running campaign-only sync fallback');
+      const campResults = await syncService.syncCampaigns(networkId);
+      fallbackResults.push(...campResults);
+    }
 
-      if (unsyncedCampCount > 0) {
-        console.warn('[local-all] Running campaign-only sync fallback');
-        const campResults = await syncService.syncCampaigns(networkId);
-        fallbackResults.push(...campResults);
-      }
-
+    if (fallbackResults.length > 0) {
       const successful = fallbackResults.filter(r => r.success).length;
       const failed = fallbackResults.length - successful;
       syncReport = {
         ...syncReport,
-        totalEntities: fallbackResults.length,
+        totalEntities: syncReport.totalEntities + fallbackResults.length,
         successfulSyncs: syncReport.successfulSyncs + successful,
         failedSyncs: syncReport.failedSyncs + failed,
         results: [...syncReport.results, ...fallbackResults],
