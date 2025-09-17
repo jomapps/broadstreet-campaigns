@@ -297,10 +297,19 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       setStepInProgress('dry-run');
       
       // Use network selection from the sidebar as the single source of truth
+      console.info('[LocalOnly] Debug entities.network:', entities.network);
+      console.info('[LocalOnly] Debug entities.network.ids:', entities.network?.ids);
+      console.info('[LocalOnly] Debug entities.network.entityId:', entities.network?.entityId);
       if (!entities.network) {
         throw new Error('Select a network in the sidebar before syncing');
       }
-      const selectedNetworkId = getEntityId(entities.network);
+      // Use entityId directly since the network object structure is different from StandardEntity
+      const selectedNetworkId = entities.network.entityId;
+      console.info('[LocalOnly] Debug selectedNetworkId from entityId:', selectedNetworkId);
+
+      if (!selectedNetworkId) {
+        throw new Error('Network ID could not be determined');
+      }
 
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',

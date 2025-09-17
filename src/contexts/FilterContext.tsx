@@ -94,6 +94,7 @@ const STORAGE_KEYS = {
 // BS #9396 — FASH Medien Verlag GmbH - SCHWULISSIMO image
 const DEFAULT_NETWORK: Network = {
   broadstreet_id: 9396,
+  broadstreet_network_id: 9396, // Add explicit network ID field for consistency
   name: 'FASH Medien Verlag GmbH - SCHWULISSIMO image',
   valet_active: false,
   path: '',

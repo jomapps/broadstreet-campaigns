@@ -2,6 +2,7 @@
 
 export interface Network {
   broadstreet_id: number;
+  broadstreet_network_id?: number; // Explicit network ID field added by API response shaping
   mongo_id?: string;
   name: string;
   group_id?: number | null;
