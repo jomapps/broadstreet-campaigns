@@ -101,10 +101,70 @@ function AutoFitText({
   );
 }
 
+// Auto-fit title: try to fit on one line by shrinking, then allow wrapping if still too long
+function AutoFitTitle({
+  text,
+  className,
+  minFontSize = 14,
+  maxFontSize = 20,
+}: {
+  text: string;
+  className?: string;
+  minFontSize?: number;
+  maxFontSize?: number;
+}) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const textRef = React.useRef<HTMLSpanElement | null>(null);
+  const [fontSize, setFontSize] = React.useState<number>(maxFontSize);
+
+  const fit = React.useCallback(() => {
+    const container = containerRef.current;
+    const span = textRef.current;
+    if (!container || !span) return;
+
+    // Measure as single line first
+    span.style.whiteSpace = 'nowrap';
+    let current = maxFontSize;
+    span.style.fontSize = `${current}px`;
+
+    let safety = 24;
+    while (safety-- > 0 && current > minFontSize && span.scrollWidth > container.clientWidth) {
+      current -= 1;
+      span.style.fontSize = `${current}px`;
+    }
+    setFontSize(current);
+    // Allow wrapping if still wider than container at min size
+    span.style.whiteSpace = 'normal';
+  }, [maxFontSize, minFontSize]);
+
+  React.useEffect(() => { fit(); }, [text, fit]);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [fit]);
+
+  return (
+    <div ref={containerRef} className={cn('w-full', className)}>
+      <span
+        ref={textRef}
+        style={{ fontSize: `${fontSize}px`, lineHeight: 1.2, wordBreak: 'break-word' }}
+        className="block"
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 interface ParentCrumb {
   name: string;
   broadstreet_id?: number;
   mongo_id?: string;
+  entityType?: 'network' | 'advertiser' | 'advertisement' | 'campaign' | 'placement' | 'zone' | 'theme';
 }
 
 interface UniversalEntityCardProps {
@@ -335,6 +395,17 @@ export function UniversalEntityCard({
   // Generate fallback text (not rendered when no image)
   const fallbackText = imageFallback || title.charAt(0).toUpperCase();
   const hasImage = !!(imageUrl && !imageError);
+
+  // Format parent crumb name with special shortening for networks
+  const formatCrumbName = (crumb: ParentCrumb, index: number): string => {
+    const original = crumb.name || '';
+    // Apply network shortening either when explicitly marked as network or when it's the first crumb (common case)
+    if (crumb.entityType === 'network' || index === 0) {
+      const part = original.split('-').pop() || original;
+      return part.replace(/\s+/g, '').toUpperCase();
+    }
+    return original;
+  };
   
   return (
     <Card
@@ -430,37 +501,33 @@ export function UniversalEntityCard({
         )}
         
         {/* Title Section */}
-        <div>
+        <div className="flex flex-col gap-0.5">
           {titleUrl ? (
-            <Link 
-              href={titleUrl} 
-              className="font-semibold text-lg hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {title}
+            <Link href={titleUrl} onClick={(e) => e.stopPropagation()} className="hover:underline">
+              <AutoFitTitle text={title} className="font-semibold" />
             </Link>
           ) : (
-            <h3 className="font-semibold text-lg truncate">{title}</h3>
+            <AutoFitTitle text={title} className="font-semibold" />
+          )}
+
+          {/* Parents Breadcrumb */}
+          {parentsBreadcrumb.length > 0 && (
+            <div className="text-[10px] text-gray-600 leading-tight break-words">
+              {parentsBreadcrumb.map((p, idx) => {
+                const idText = typeof p.broadstreet_id === 'number'
+                  ? String(p.broadstreet_id)
+                  : (p.mongo_id ? (p.mongo_id.length > 8 ? `…${p.mongo_id.slice(-8)}` : p.mongo_id) : '');
+                const name = formatCrumbName(p, idx);
+                return (
+                  <span key={idx}>
+                    {name}{idText ? ` (${idText})` : ''}
+                    {idx < parentsBreadcrumb.length - 1 && <span className="mx-1">&gt;</span>}
+                  </span>
+                );
+              })}
+            </div>
           )}
         </div>
-
-        {/* Parents Breadcrumb */}
-        {parentsBreadcrumb.length > 0 && (
-          <div className="text-[11px] text-gray-600">
-            {parentsBreadcrumb.map((p, idx) => {
-              const idText = typeof p.broadstreet_id === 'number'
-                ? String(p.broadstreet_id)
-                : (p.mongo_id ? (p.mongo_id.length > 8 ? `…${p.mongo_id.slice(-8)}` : p.mongo_id) : '');
-              const name = p.name.length > 10 ? `${p.name.slice(0, 10)}…` : p.name;
-              return (
-                <span key={idx} className="whitespace-nowrap">
-                  {name}{idText ? ` (${idText})` : ''}
-                  {idx < parentsBreadcrumb.length - 1 && <span className="mx-1">&gt;</span>}
-                </span>
-              );
-            })}
-          </div>
-        )}
         
         {/* Subtitle */}
         {subtitle && (

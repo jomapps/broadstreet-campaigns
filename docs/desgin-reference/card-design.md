@@ -129,8 +129,8 @@ Each section is conditionally rendered based on available data:
 
 4. **Title Section** (Required)
    - **Primary**: Entity title (clickable if `titleUrl` provided)
-   - **Typography**: font-semibold text-lg
-   - **Truncation**: Single line with ellipsis
+   - **Display Rule**: Title must not be cut or shortened. It should attempt to fit on one line by reducing font size down to a minimum threshold; if still too long, it should wrap to the next line(s). No truncation with ellipsis.
+   - **Typography**: Start from a larger size (e.g., 20px) and auto-reduce to a minimum (e.g., 14px) before wrapping. Bold weight.
 
 4a. **Parents Breadcrumb Row** (Optional)
    - **Data**: `parentsBreadcrumb: ParentCrumb[]`
