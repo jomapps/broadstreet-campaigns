@@ -69,7 +69,8 @@ function mapCampaignToUniversalProps(
     broadstreet_id: campaign.broadstreet_id,
     mongo_id: campaign.mongo_id,
     entityType: 'campaign' as const,
-    titleUrl: campaign.path,
+    // Remove titleUrl to prevent 404 errors from external Broadstreet URLs
+    // titleUrl: campaign.path, // This contains external URLs like "/networks/9396/advertisers/207298/campaigns/810557"
     showCheckbox: true,
     isSelected: params.isSelected,
     onSelect: () => params.onSelect(campaign),

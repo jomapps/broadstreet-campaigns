@@ -52,15 +52,8 @@ function mapAdToUniversalProps(
     isSelected,
     onSelect: () => toggleSelection(selectionId),
     onCardClick: () => toggleSelection(selectionId),
-    actionButtons: advertisement.preview_url
-      ? [
-          {
-            label: 'Preview',
-            variant: 'default' as const,
-            onClick: () => window.open(advertisement.preview_url, '_blank', 'noopener,noreferrer'),
-          },
-        ]
-      : [],
+    // Remove external preview URL navigation - only sync points and modal URLs allowed
+    actionButtons: [],
   };
 }
 
