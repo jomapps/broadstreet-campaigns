@@ -45,6 +45,68 @@ interface ActionButtonConfig {
   loading?: boolean;
 }
 
+// Auto-fit text to container by adjusting font size between bounds
+function AutoFitText({
+  text,
+  className,
+  minFontSize = 10,
+  maxFontSize = 14
+}: {
+  text: string | number;
+  className?: string;
+  minFontSize?: number;
+  maxFontSize?: number;
+}) {
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const textRef = React.useRef<HTMLSpanElement | null>(null);
+  const [fontSize, setFontSize] = React.useState<number>(maxFontSize);
+
+  const fit = React.useCallback(() => {
+    const container = containerRef.current;
+    const span = textRef.current;
+    if (!container || !span) return;
+
+    // Start optimistic: use max, then shrink as needed
+    let current = maxFontSize;
+    span.style.fontSize = `${current}px`;
+
+    // If it overflows, shrink until it fits or reach min
+    // Limit iterations to avoid long loops
+    let safety = 16;
+    while (safety-- > 0 && current > minFontSize && span.scrollWidth > container.clientWidth) {
+      current -= 1;
+      span.style.fontSize = `${current}px`;
+    }
+    setFontSize(current);
+  }, [maxFontSize, minFontSize]);
+
+  React.useEffect(() => {
+    fit();
+  }, [text, fit]);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => fit());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [fit]);
+
+  return (
+    <div ref={containerRef} className={cn("w-full", className)}>
+      <span ref={textRef} style={{ fontSize: `${fontSize}px`, lineHeight: 1.2 }} className="block truncate">
+        {String(text)}
+      </span>
+    </div>
+  );
+}
+
+interface ParentCrumb {
+  name: string;
+  broadstreet_id?: number;
+  mongo_id?: string;
+}
+
 interface UniversalEntityCardProps {
   // === REQUIRED PROPS ===
   title: string;
@@ -80,6 +142,7 @@ interface UniversalEntityCardProps {
   
   // === DYNAMIC DATA DISPLAY ===
   displayData?: DisplayDataItem[];
+  parentsBreadcrumb?: ParentCrumb[]; // New: parent path, rendered under title
   
   // === ACTIONS ===
   actionButtons?: ActionButtonConfig[];
@@ -122,20 +185,59 @@ const isInteractiveElement = (element: EventTarget | null): boolean => {
 const formatDisplayValue = (item: DisplayDataItem): React.ReactNode => {
   const { value, type, format } = item;
 
-  if (type === 'date' && value instanceof Date) {
-    return format ? value.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }) : value.toLocaleDateString();
+  // Helper: format a Date as dd/mm/yy
+  const formatAsDdMmYy = (d: Date) => new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d);
+
+  // Helper: try to coerce strings/numbers into Date if sensible
+  const coerceToDate = (val: unknown): Date | null => {
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    if (typeof val === 'number') {
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof val === 'string') {
+      // ISO-like 2024-01-10 or 2024-01-10T...
+      if (/^\d{4}-\d{2}-\d{2}(?:[T\s].*)?$/.test(val)) {
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      }
+      // dd/mm/yy or dd/mm/yyyy – already formatted or parseable
+      const ddMmYy = val.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+      if (ddMmYy) {
+        const [_, dd, mm, yy] = ddMmYy;
+        const year = yy.length === 2 ? Number(`20${yy}`) : Number(yy);
+        const d = new Date(year, Number(mm) - 1, Number(dd));
+        return isNaN(d.getTime()) ? null : d;
+      }
+      // Fallback generic parse (avoid mis-parsing short strings)
+      if (val.length >= 8) {
+        const parsed = Date.parse(val);
+        if (!isNaN(parsed)) return new Date(parsed);
+      }
+    }
+    return null;
+  };
+
+  // Dates: use dd/mm/yy format universally for display data area
+  if (type === 'date') {
+    const d = coerceToDate(value);
+    if (d) return formatAsDdMmYy(d);
   }
 
   if (type === 'number' && typeof value === 'number') {
+    // Currency formatting (EUR)
+    if (format && /currency|eur|€/i.test(format)) {
+      try {
+        return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(value);
+      } catch {
+        return `€${value.toLocaleString()}`;
+      }
+    }
     return format ? value.toLocaleString() : value.toString();
   }
 
   if (type === 'badge' && typeof value === 'string') {
-    return <Badge variant="outline" className="text-xs">{value}</Badge>;
+    return <Badge variant="outline" className="text-xs">{value.replace(/\$/g, '€')}</Badge>;
   }
 
   if (type === 'progress' && typeof value === 'number') {
@@ -152,9 +254,15 @@ const formatDisplayValue = (item: DisplayDataItem): React.ReactNode => {
     );
   }
 
-  // Handle Date objects that aren't explicitly typed as 'date'
-  if (value instanceof Date) {
-    return value.toLocaleDateString();
+  // Handle Date objects or date-like strings that aren't explicitly typed as 'date'
+  {
+    const d = coerceToDate(value);
+    if (d) return formatAsDdMmYy(d);
+  }
+
+  // Replace dollar signs with Euro for string values
+  if (typeof value === 'string') {
+    return value.replace(/\$/g, '€');
   }
 
   return value;
@@ -180,6 +288,7 @@ export function UniversalEntityCard({
   bottomTags = [],
   statusBadge,
   displayData = [],
+  parentsBreadcrumb = [],
   actionButtons = [],
   onDelete,
   onCopyToTheme,
@@ -220,17 +329,20 @@ export function UniversalEntityCard({
     onDelete?.();
   };
   
-  // Get entity icon
+  // Get entity icon (kept for potential future use, not rendered without image)
   const EntityIcon = entityType ? entityIcons[entityType] : null;
   
-  // Generate fallback text
+  // Generate fallback text (not rendered when no image)
   const fallbackText = imageFallback || title.charAt(0).toUpperCase();
+  const hasImage = !!(imageUrl && !imageError);
   
   return (
     <Card
       className={cn(
         'h-full transition-all duration-200 cursor-pointer border-2',
         cardClasses,
+        // Tighten header-to-content gap when no image
+        !hasImage && 'gap-1',
         variant === 'compact' && 'p-4',
         variant === 'detailed' && 'p-8',
         className
@@ -240,17 +352,10 @@ export function UniversalEntityCard({
       data-testid={testId}
     >
       {/* Header Row */}
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
-            {/* Local Badge */}
-            {isLocal && (
-              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
-                LOCAL
-              </Badge>
-            )}
-            
-            {/* Selection Checkbox */}
+      <CardHeader className={cn(hasImage ? "pb-3" : "pb-0") }>
+        <div className="flex items-center justify-between">
+          {/* Left: Checkbox + ID Badges */}
+          <div className="flex items-center gap-2">
             {showCheckbox && (
               <input
                 type="checkbox"
@@ -260,25 +365,36 @@ export function UniversalEntityCard({
                 aria-label={`Select ${title}`}
               />
             )}
+            <EntityIdBadge 
+              broadstreet_id={broadstreet_id}
+              mongo_id={mongo_id}
+            />
           </div>
-          
-          {/* Delete Button */}
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-              onClick={handleDeleteClick}
-              aria-label={`Delete ${title}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
+
+          {/* Right: Local badge + Delete */}
+          <div className="flex items-center gap-2">
+            {isLocal && (
+              <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                LOCAL
+              </Badge>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                onClick={handleDeleteClick}
+                aria-label={`Delete ${title}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Image Section */}
+        {/* Image Section - collapse fully when no image or on error */}
         {imageUrl && !imageError && (
           <div className="flex justify-center">
             <img
@@ -290,22 +406,15 @@ export function UniversalEntityCard({
           </div>
         )}
         
-        {/* Image Fallback */}
-        {(imageError || (!imageUrl && entityType)) && (
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              {EntityIcon ? (
-                <EntityIcon className="h-8 w-8 text-primary-foreground" />
-              ) : (
-                <span className="text-primary-foreground font-bold text-xl">{fallbackText}</span>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {/* Top Tags */}
-        {topTags.length > 0 && (
+        {/* Top Tags (merge status badge here, remove separate status row) */}
+        {(topTags.length > 0 || statusBadge) && (
           <div className="flex flex-wrap gap-1">
+            {statusBadge && (
+              <Badge variant={statusBadge.variant === 'success' || statusBadge.variant === 'warning' ? 'default' : statusBadge.variant || 'default'} className="text-xs">
+                {statusBadge.icon && <statusBadge.icon className="h-3 w-3 mr-1" />}
+                {statusBadge.label}
+              </Badge>
+            )}
             {topTags.slice(0, 5).map((tag, index) => (
               <Badge key={index} variant={tag.variant || 'secondary'} className="text-xs">
                 {tag.icon && <tag.icon className="h-3 w-3 mr-1" />}
@@ -334,27 +443,33 @@ export function UniversalEntityCard({
             <h3 className="font-semibold text-lg truncate">{title}</h3>
           )}
         </div>
+
+        {/* Parents Breadcrumb */}
+        {parentsBreadcrumb.length > 0 && (
+          <div className="text-[11px] text-gray-600">
+            {parentsBreadcrumb.map((p, idx) => {
+              const idText = typeof p.broadstreet_id === 'number'
+                ? String(p.broadstreet_id)
+                : (p.mongo_id ? (p.mongo_id.length > 8 ? `…${p.mongo_id.slice(-8)}` : p.mongo_id) : '');
+              const name = p.name.length > 10 ? `${p.name.slice(0, 10)}…` : p.name;
+              return (
+                <span key={idx} className="whitespace-nowrap">
+                  {name}{idText ? ` (${idText})` : ''}
+                  {idx < parentsBreadcrumb.length - 1 && <span className="mx-1">&gt;</span>}
+                </span>
+              );
+            })}
+          </div>
+        )}
         
         {/* Subtitle */}
         {subtitle && (
           <p className="text-sm text-gray-600 truncate">{subtitle}</p>
         )}
         
-        {/* ID Badges */}
-        <EntityIdBadge 
-          broadstreet_id={broadstreet_id}
-          mongo_id={mongo_id}
-        />
+        {/* (ID badges moved to header left next to checkbox) */}
         
-        {/* Status Badge */}
-        {statusBadge && (
-          <Badge variant={statusBadge.variant === 'success' || statusBadge.variant === 'warning' ? 'default' : statusBadge.variant || 'default'}>
-            {statusBadge.icon && <statusBadge.icon className="h-3 w-3 mr-1" />}
-            {statusBadge.label}
-          </Badge>
-        )}
-        
-        {/* Description */}
+        {/* Description - no whitespace when collapsed */}
         {description && (
           <div>
             <p className={cn(
@@ -377,19 +492,30 @@ export function UniversalEntityCard({
           </div>
         )}
         
-        {/* Display Data */}
+        {/* Display Data - 4-column tight mini-cards with bold values */}
         {displayData.length > 0 && (
-          <div className="space-y-2">
-            {displayData.map((item, index) => (
-              <div key={index} className="flex justify-between items-center text-sm">
-                {item.label && (
-                  <span className="text-gray-600 font-medium">{item.label}:</span>
-                )}
-                <span className={cn("text-gray-900", item.className)}>
-                  {formatDisplayValue(item)}
-                </span>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {displayData.map((item, index) => {
+              const valueNode = formatDisplayValue(item);
+              const isPlain = typeof valueNode === 'string' || typeof valueNode === 'number';
+              return (
+                <div key={index} className="border rounded-md p-2 bg-white">
+                  <div className="text-[11px] text-gray-600 truncate">{item.label}</div>
+                  {isPlain ? (
+                    <AutoFitText
+                      text={valueNode as string | number}
+                      className={cn("font-semibold text-gray-900", item.className)}
+                      minFontSize={10}
+                      maxFontSize={14}
+                    />
+                  ) : (
+                    <div className={cn("text-sm font-semibold text-gray-900 truncate", item.className)}>
+                      {valueNode}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
         

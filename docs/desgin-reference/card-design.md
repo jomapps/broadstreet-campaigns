@@ -49,6 +49,7 @@ interface UniversalEntityCardProps {
 
   // === DYNAMIC DATA DISPLAY ===
   displayData?: DisplayDataItem[];        // Key-value pairs for entity details
+  parentsBreadcrumb?: ParentCrumb[];      // Parent path displayed under title as breadcrumb
 
   // === ACTIONS ===
   actionButtons?: ActionButtonConfig[];   // Bottom action buttons
@@ -97,6 +98,12 @@ interface ActionButtonConfig {
   disabled?: boolean;
   loading?: boolean;
 }
+
+interface ParentCrumb {
+  name: string;                          // Parent entity name (will be truncated to 10 chars)
+  broadstreet_id?: number;               // If present, shown in parentheses
+  mongo_id?: string;                     // Shown if no broadstreet_id; trimmed to last 8 chars with ellipsis
+}
 ```
 
 ## 2. Card Layout and Display Order
@@ -124,6 +131,13 @@ Each section is conditionally rendered based on available data:
    - **Primary**: Entity title (clickable if `titleUrl` provided)
    - **Typography**: font-semibold text-lg
    - **Truncation**: Single line with ellipsis
+
+4a. **Parents Breadcrumb Row** (Optional)
+   - **Data**: `parentsBreadcrumb: ParentCrumb[]`
+   - **Format**: `Name (ID) > Name (ID) > Name`
+   - **Name Truncation**: Max 10 characters with ellipsis
+   - **ID Rule**: Show one ID per crumb: `broadstreet_id` if present, else `mongo_id` (trim to last 8 chars with leading ellipsis)
+   - **Typography**: very small text, muted color
 
 5. **Subtitle Section** (Optional)
    - **Typography**: text-sm text-gray-600
