@@ -8,13 +8,17 @@ import { Button } from '@/components/ui/button';
 
 export default function QuickActions() {
   const [showSyncProgress, setShowSyncProgress] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const router = useRouter();
 
   const handleSyncAll = () => {
+    if (isSyncing) return; // Prevent multiple sync operations
     setShowSyncProgress(true);
+    setIsSyncing(true);
   };
 
   const handleSyncComplete = (success: boolean) => {
+    setIsSyncing(false);
     if (success) {
       // Refresh server components so stats update immediately
       router.refresh();
@@ -24,6 +28,7 @@ export default function QuickActions() {
 
   const handleCloseSyncProgress = () => {
     setShowSyncProgress(false);
+    setIsSyncing(false);
   };
 
   return (

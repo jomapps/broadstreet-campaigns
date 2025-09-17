@@ -100,10 +100,16 @@ export default function SyncProgress({ onComplete, onClose }: SyncProgressProps)
 
     try {
       // Use full sync endpoint (no network selection required)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
       const response = await fetch('/api/sync/all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
       // Robust body parsing: prefer JSON, fallback to raw text
       const rawText = await response.text();
       let result: any = null;
