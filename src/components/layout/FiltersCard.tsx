@@ -148,13 +148,10 @@ export default function FiltersCard() {
           ) : isLoadingAdvertisers ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : selectedAdvertiser ? (
-            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center justify-between px-3">
-              <span className="text-xs truncate max-w-[140px]" title={selectedAdvertiser.name}>
+            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
+              <span className="text-xs truncate" title={selectedAdvertiser.name}>
                 {selectedAdvertiser.name}
               </span>
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                Selected
-              </Badge>
             </div>
           ) : (
             <div className="h-8 bg-sidebar-accent/20 rounded-md flex items-center justify-center">
@@ -187,13 +184,10 @@ export default function FiltersCard() {
           ) : isLoadingCampaigns ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : selectedCampaign ? (
-            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center justify-between px-3">
-              <span className="text-xs truncate max-w-[140px]" title={selectedCampaign.name}>
+            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
+              <span className="text-xs truncate" title={selectedCampaign.name}>
                 {selectedCampaign.name}
               </span>
-              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
-                Selected
-              </Badge>
             </div>
           ) : (
             <div className="h-8 bg-sidebar-accent/20 rounded-md flex items-center justify-center">
