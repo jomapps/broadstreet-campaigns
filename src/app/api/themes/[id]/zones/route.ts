@@ -21,7 +21,7 @@ export async function POST(
       );
     }
 
-    const theme = await Theme.findById(themeId);
+    const theme = await Theme.findById(id);
     
     if (!theme) {
       return NextResponse.json(
@@ -86,7 +86,7 @@ export async function DELETE(
       );
     }
 
-    const theme = await Theme.findById(themeId);
+    const theme = await Theme.findById(id);
     
     if (!theme) {
       return NextResponse.json(
