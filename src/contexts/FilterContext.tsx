@@ -89,6 +89,15 @@ const STORAGE_KEYS = {
   SHOW_ONLY_SELECTED_ADS: 'broadstreet_show_only_selected_ads',
 };
 
+// Hardcoded default network to ensure the app always has a network immediately.
+// BS #9396 — FASH Medien Verlag GmbH - SCHWULISSIMO image
+const DEFAULT_NETWORK: Network = {
+  broadstreet_id: 9396,
+  name: 'FASH Medien Verlag GmbH - SCHWULISSIMO image',
+  valet_active: false,
+  path: '',
+};
+
 export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [selectedAdvertiser, setSelectedAdvertiser] = useState<Advertiser | null>(null);
@@ -122,6 +131,9 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         
         if (storedNetwork) {
           setSelectedNetwork(JSON.parse(storedNetwork));
+        } else {
+          // Ensure a network is immediately available
+          setSelectedNetwork(DEFAULT_NETWORK);
         }
         if (storedAdvertiser) {
           setSelectedAdvertiser(JSON.parse(storedAdvertiser));
@@ -161,10 +173,23 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         if (response.ok) {
           const data = await response.json();
           setNetworks(data.networks || []);
-          
-          // Set first network as default if none selected
-          if (!selectedNetwork && data.networks && data.networks.length > 0) {
-            setSelectedNetwork(data.networks[0]);
+
+          // Respect hardcoded/default selection: if nothing selected yet, prefer the hardcoded
+          // network from the fetched list. Otherwise, enrich the current selection from fetched data.
+          try {
+            const stored = localStorage.getItem(STORAGE_KEYS.NETWORK);
+            const storedParsed = stored ? JSON.parse(stored) : null;
+            const current = storedParsed || selectedNetwork;
+            if (!current) {
+              const match = (data.networks || []).find((n: any) => getEntityId(n) === DEFAULT_NETWORK.broadstreet_id);
+              setSelectedNetwork(match || DEFAULT_NETWORK);
+            } else {
+              const currentId = getEntityId(current);
+              const enriched = (data.networks || []).find((n: any) => getEntityId(n) === currentId);
+              if (enriched) setSelectedNetwork(enriched);
+            }
+          } catch {
+            // fallback: do nothing, selection already set earlier
           }
         }
       } catch (error) {
@@ -280,7 +305,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
 
   // Clear functions
   const clearAllFilters = () => {
-    setSelectedNetwork(null);
+    // Preserve selected network unless the user explicitly changes it
     setSelectedAdvertiser(null);
     setSelectedCampaign(null);
     setSelectedZones([]);
@@ -288,7 +313,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setSelectedTheme(null);
     setSelectedAdvertisements([]);
     setShowOnlySelectedAds(false);
-    localStorage.removeItem(STORAGE_KEYS.NETWORK);
+    // Keep network persisted; only clear dependent filters
     localStorage.removeItem(STORAGE_KEYS.ADVERTISER);
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
