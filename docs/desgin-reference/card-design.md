@@ -113,19 +113,19 @@ interface ParentCrumb {
 Each section is conditionally rendered based on available data:
 
 1. **Header Row** (Always present)
-   - **Left**: Local badge (if `isLocal === true`)
-   - **Right**: Delete icon (if `onDelete` provided)
-   - **Center**: Selection checkbox (if `showCheckbox === true`)
+   - **Left**: Selection checkbox (if `showCheckbox === true`) + `EntityIdBadge` (Broadstreet then Mongo)
+   - **Right**: Local badge (if `isLocal === true`) + Delete icon (if `onDelete` provided)
+   - **Spacing**: Minimal vertical spacing to the next row; when no image, use tightened gap
 
 2. **Image Section** (Optional)
    - **Size**: 300px width, auto height, max 200px height
-   - **Fallback**: First letter of title in colored circle if image fails
-   - **Loading**: Skeleton placeholder during load
+   - **Behavior**: If `imageUrl` missing or fails to load, omit the image block entirely (no icon/placeholder) to save space
 
 3. **Top Tags Row** (Optional)
    - **Layout**: Horizontal flex wrap
    - **Spacing**: 4px gap between tags
    - **Max**: 5 tags (overflow hidden with "+" indicator)
+   - **Status Badge**: Merge `statusBadge` here; there is no separate status row
 
 4. **Title Section** (Required)
    - **Primary**: Entity title (clickable if `titleUrl` provided)
@@ -135,9 +135,10 @@ Each section is conditionally rendered based on available data:
 4a. **Parents Breadcrumb Row** (Optional)
    - **Data**: `parentsBreadcrumb: ParentCrumb[]`
    - **Format**: `Name (ID) > Name (ID) > Name`
-   - **Name Truncation**: Max 10 characters with ellipsis
+   - **Name Truncation**: Max 10 characters with ellipsis (except special network rule below)
    - **ID Rule**: Show one ID per crumb: `broadstreet_id` if present, else `mongo_id` (trim to last 8 chars with leading ellipsis)
-   - **Typography**: very small text, muted color
+   - **Typography**: very small text, muted color; minimal spacing under the title; allow wrapping to next line as needed
+   - **Network Shortening Rule**: For network crumbs, derive the display name by taking the last segment after `-`, stripping spaces, and uppercasing (e.g., `FASH Medien Verlag GmbH - SCHWULISSIMO` → `SCHWULISSIMO`; `... - Travel M` → `TRAVELM`). This is applied at render time and does not require changing source data.
 
 5. **Subtitle Section** (Optional)
    - **Typography**: text-sm text-gray-600
@@ -158,9 +159,13 @@ Each section is conditionally rendered based on available data:
    - **Max Height**: 4.5rem (3 lines)
 
 9. **Display Data Section** (Optional)
-   - **Layout**: Key-value pairs in 2-column grid
-   - **Formatting**: Auto-format dates, numbers, etc.
-   - **Spacing**: 8px vertical gap between items
+   - **Layout**: Compact mini-cards in a 4-column responsive grid (2 on small, 3 on medium, 4 on large)
+   - **Formatting**:
+     - Dates: dd/mm/yy (en-GB); any date-like values are normalized
+     - Numbers: localized formatting; currency uses Euro symbol (string values replace `$` with `€`; numeric with `format: 'currency'|'eur'|'€'` render via Intl EUR)
+     - Progress: numeric 0–100 renders as a progress bar with percentage
+   - **Value Fitting**: Values auto-shrink text between 14px and 10px to avoid overflow; otherwise wrap if needed
+   - **Spacing**: Tight padding; labels small text; values bold
 
 10. **Action Buttons Row** (Optional)
     - **Layout**: Horizontal flex, left-aligned

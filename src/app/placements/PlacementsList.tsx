@@ -3,8 +3,7 @@
 import { useState, useMemo } from 'react';
 import { SearchInput } from '@/components/ui/search-input';
 import { Badge } from '@/components/ui/badge';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { isEntitySynced } from '@/lib/utils/entity-helpers';
 
 // Client-side version of isLocalEntity using centralized utility
@@ -57,246 +56,69 @@ type PlacementLean = {
   } | null;
 };
 
-interface PlacementCardProps {
-  placement: PlacementLean;
-  onDelete: (placement: PlacementLean) => void;
-  deletingIds: Set<string>;
-}
-
-function PlacementCard({ placement, onDelete, deletingIds }: PlacementCardProps) {
-  const startDate = placement.campaign?.start_date ? new Date(placement.campaign.start_date) : null;
-  const endDate = placement.campaign?.end_date ? new Date(placement.campaign.end_date) : null;
+// Map placement to universal card props
+function mapPlacementToUniversalProps(
+  placement: PlacementLean,
+  params: {
+    onDelete: (p: PlacementLean) => void;
+    deletingIds: Set<string>;
+  }
+) {
+  const startDate = placement.campaign?.start_date ? new Date(placement.campaign.start_date) : undefined;
+  const endDate = placement.campaign?.end_date ? new Date(placement.campaign.end_date) : undefined;
   const now = new Date();
+  const isActive = !!(placement.campaign?.active && startDate && startDate <= now && (!endDate || endDate >= now));
 
-  const isActive = placement.campaign?.active &&
-    startDate && startDate <= now &&
-    (!endDate || endDate >= now);
-
-  // Determine if any of the related entities are local
-  // NOTE: Advertisements and Networks are NEVER local-only - they're always synced entities
-  // NOTE: Advertisers are NEVER local if advertisement exists (rule: can't create ads without advertiser)
   const isLocalCampaign = placement.campaign ? isLocalEntity(placement.campaign) : false;
   const isLocalZone = placement.zone ? isLocalEntity(placement.zone) : false;
-  const isLocalAdvertiser = false; // Advertisers are NEVER local if advertisement exists
-
-  // Check if zone is local by checking for zone_mongo_id (when zone data is null but zone_mongo_id exists)
   const hasLocalZoneId = !!(placement as any).zone_mongo_id;
-
-  // Consider the placement "local" if any of its key entities are local
-  // (excluding advertisements and networks which are never local-only)
   const isLocal = isLocalCampaign || isLocalZone || hasLocalZoneId;
 
   const placementId = `${placement.advertisement_id}-${placement.zone_id || (placement as any).zone_mongo_id || ''}`;
-  const isDeleting = deletingIds.has(placementId);
+  const isDeleting = params.deletingIds.has(placementId);
 
-  return (
-    <div
-      className={`rounded-lg shadow-sm border-2 overflow-hidden hover:shadow-md transition-all duration-200 relative ${cardStateClasses({ isLocal, isSelected: false })}`}
-      data-testid={`placement-card`}
-      data-placement-id={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
-    >
-      {/* Delete button for local-only placements */}
-      {isLocal && (
-        <button
-          onClick={() => onDelete(placement)}
-          disabled={isDeleting}
-          className="absolute top-2 right-2 z-10 w-6 h-6 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-200 shadow-sm"
-          title="Delete local placement"
-        >
-          {isDeleting ? '⋯' : '×'}
-        </button>
-      )}
-      {/* Thumbnail and title */}
-      <div className="relative h-36 bg-gray-50 border-b border-gray-100">
-        {placement.advertisement?.preview_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={placement.advertisement.preview_url}
-            alt={`Preview of ${placement.advertisement.name}`}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Hide the image if it fails to load and show a fallback
-              e.currentTarget.style.display = 'none';
-              const parent = e.currentTarget.parentElement;
-              if (parent && !parent.querySelector('.fallback-content')) {
-                const fallback = document.createElement('div');
-                fallback.className = 'fallback-content w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200';
-                fallback.innerHTML = `
-                  <div class="text-center">
-                    <div class="text-4xl text-gray-400 mb-2">📄</div>
-                    <div class="text-sm text-gray-500">Preview Unavailable</div>
-                    <div class="text-xs text-gray-400 mt-1">${placement.advertisement?.type || 'Advertisement'}</div>
-                  </div>
-                `;
-                parent.appendChild(fallback);
-              }
-            }}
-          />
-        )}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          {isLocal && (
-            <Badge className="text-xs bg-orange-500 text-white px-2 py-0.5">
-              🏠 Local
-            </Badge>
-          )}
-          {isActive ? (
-            <Badge variant="default" className="text-xs bg-green-100 text-green-800 px-2 py-0.5">
-              Active
-            </Badge>
-          ) : (
-            <Badge variant="secondary" className="text-xs px-2 py-0.5">
-              Inactive
-            </Badge>
-          )}
-        </div>
-      </div>
+  const parentsBreadcrumb = [
+    placement.campaign && {
+      name: placement.campaign.name,
+      broadstreet_id: placement.campaign.broadstreet_id,
+      mongo_id: placement.campaign.mongo_id,
+    },
+    placement.advertisement && {
+      name: placement.advertisement.name,
+      broadstreet_id: placement.advertisement.broadstreet_id,
+      mongo_id: placement.advertisement.mongo_id,
+      entityType: 'advertisement' as const,
+    },
+    placement.zone && {
+      name: placement.zone.name,
+      broadstreet_id: placement.zone.broadstreet_id,
+      mongo_id: placement.zone.mongo_id,
+      entityType: 'zone' as const,
+    },
+  ].filter(Boolean) as any[];
 
-      <div className="p-4 space-y-3">
-        <div className="min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="card-title text-gray-900 truncate" data-testid="placement-advertisement-name">
-                {placement.advertisement?.name || `Advertisement ${placement.advertisement_id}`}
-              </h3>
-              {/* Advertisements are never local-only - always synced entities */}
-            </div>
-            {placement.advertisement && (
-              <EntityIdBadge
-                broadstreet_id={placement.advertisement.broadstreet_id}
-                mongo_id={placement.advertisement.mongo_id}
-              />
-            )}
-          </div>
-          <p className="card-meta text-gray-500 mt-0.5">
-            <span className="inline-flex items-center gap-1">
-              {placement.advertiser?.name || 'Advertiser'}
-              {isLocalAdvertiser && (
-                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
-                  Local
-                </Badge>
-              )}
-              {placement.advertiser && (
-                <EntityIdBadge
-                  broadstreet_id={placement.advertiser.broadstreet_id}
-                  mongo_id={placement.advertiser.mongo_id}
-                />
-              )}
-            </span>
-            {' • '}
-            <span className="inline-flex items-center gap-1">
-              {placement.campaign?.name || (placement.campaign_id ? `Campaign ${placement.campaign_id}` : (placement.campaign_mongo_id ? `Campaign ${(placement as any).campaign_mongo_id?.slice(-8) || 'Local'}` : 'Campaign undefined'))}
-              {isLocalCampaign && (
-                <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
-                  Local
-                </Badge>
-              )}
-              {placement.campaign && (
-                <EntityIdBadge
-                  broadstreet_id={placement.campaign.broadstreet_id}
-                  mongo_id={placement.campaign.mongo_id}
-                />
-              )}
-            </span>
-          </p>
-        </div>
+  const displayData = [
+    { label: 'Campaign', value: placement.campaign?.name ?? (placement.campaign_id ?? ''), type: 'string' as const },
+    { label: 'Advertisement', value: placement.advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
+    { label: 'Zone', value: placement.zone?.name ?? (hasLocalZoneId ? `…${String((placement as any).zone_mongo_id).slice(-8)}` : String(placement.zone_id)), type: 'string' as const },
+  ] as any[];
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between card-text">
-            <span className="text-gray-500">Zone</span>
-            <span className="font-medium text-gray-900 inline-flex items-center gap-2">
-              <span className="inline-flex items-center gap-1">
-                {placement.zone?.name || (hasLocalZoneId ? `Zone ${(placement as any).zone_mongo_id?.slice(-8) || 'Local'}` : `Zone ${placement.zone_id || 'undefined'}`)}
-                {(isLocalZone || hasLocalZoneId) && (
-                  <Badge className="text-xs bg-orange-100 text-orange-800 px-1 py-0.5">
-                    Local
-                  </Badge>
-                )}
-              </span>
-              {placement.zone ? (
-                <EntityIdBadge
-                  broadstreet_id={placement.zone.broadstreet_id}
-                  mongo_id={placement.zone.mongo_id}
-                />
-              ) : hasLocalZoneId ? (
-                <EntityIdBadge
-                  broadstreet_id={undefined}
-                  mongo_id={(placement as any).zone_mongo_id}
-                />
-              ) : null}
-              {placement.zone?.alias && (
-                <span className="text-gray-500 ml-1">({placement.zone.alias})</span>
-              )}
-            </span>
-          </div>
+  if (startDate) displayData.push({ label: 'Start', value: startDate, type: 'date' as const });
+  if (endDate) displayData.push({ label: 'End', value: endDate, type: 'date' as const });
 
-          {placement.zone?.size_type && (
-            <div className="flex items-center justify-between card-text">
-              <span className="text-gray-500">Size</span>
-              <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">
-                {placement.zone.size_type}
-                {placement.zone.size_number && ` ${placement.zone.size_number}`}
-              </span>
-            </div>
-          )}
-
-          {placement.campaign && (
-            <div className="flex items-center justify-between card-text">
-              <span className="text-gray-500">Duration</span>
-              <span className="font-medium text-gray-900">
-                {startDate ? startDate.toLocaleDateString() : 'N/A'}
-                {endDate && ` - ${endDate.toLocaleDateString()}`}
-              </span>
-            </div>
-          )}
-
-          {placement.advertisement?.type && (
-            <div className="flex items-center justify-between card-text">
-              <span className="text-gray-500">Type</span>
-              <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800">
-                {placement.advertisement.type}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {placement.restrictions && placement.restrictions.length > 0 && (
-          <div className="pt-2 border-t border-gray-100">
-            <p className="card-text text-gray-500 mb-1">Restrictions</p>
-            <div className="flex flex-wrap gap-1">
-              {placement.restrictions.slice(0, 3).map((restriction, index) => (
-                <span
-                  key={index}
-                  className="px-1.5 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800"
-                >
-                  {restriction}
-                </span>
-              ))}
-              {placement.restrictions.length > 3 && (
-                <span className="px-1.5 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-                  +{placement.restrictions.length - 3} more
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="pt-2 border-t border-gray-100 flex justify-between items-center card-meta text-gray-400">
-          <span className="inline-flex items-center gap-2">
-            {placement.network?.name || 'Network'}
-            {placement.network && (
-              <EntityIdBadge
-                broadstreet_id={placement.network.broadstreet_id}
-                mongo_id={placement.network.mongo_id}
-              />
-            )}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            IDs linked
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+  return {
+    title: placement.advertisement?.name || `Advertisement ${placement.advertisement_id}`,
+    broadstreet_id: placement.advertisement?.broadstreet_id,
+    mongo_id: placement.advertisement?.mongo_id,
+    entityType: 'placement' as const,
+    imageUrl: placement.advertisement?.preview_url,
+    statusBadge: isActive ? { label: 'Active', variant: 'success' as const } : { label: 'Inactive', variant: 'secondary' as const },
+    topTags: placement.advertisement?.type ? [{ label: placement.advertisement.type, variant: 'secondary' as const }] : [],
+    parentsBreadcrumb,
+    displayData,
+    isLocal,
+    onDelete: isLocal ? () => params.onDelete(placement) : undefined,
+  };
 }
 
 interface PlacementsListProps {
@@ -445,11 +267,9 @@ export default function PlacementsList({ placements: initialPlacements, entities
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" data-testid="placements-list">
           {filteredPlacements.map((placement) => (
-            <PlacementCard
+            <UniversalEntityCard
               key={`${placement.advertisement_id}-${placement.zone_id}-${placement.campaign_id}`}
-              placement={placement}
-              onDelete={handleDeletePlacement}
-              deletingIds={deletingIds}
+              {...mapPlacementToUniversalProps(placement, { onDelete: handleDeletePlacement, deletingIds })}
             />
           ))}
         </div>

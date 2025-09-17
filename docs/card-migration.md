@@ -14,7 +14,7 @@ Start with phases for each type of entity. Get approval from user for each phase
 ### Global Constraints
 - Use `src/components/ui/universal-entity-card.tsx` everywhere (no per-entity bespoke card UIs).
 - Do not break the app; keep routes functional as-is.
-- Follow design rules in `card-design.md` (breadcrumb, IDs, dd/mm/yy dates, EUR currency, top badges, compact spacing).
+- Follow design rules in `card-design.md` (breadcrumb, header layout, IDs, dd/mm/yy dates, EUR currency, top badges merged with status, compact spacing, non-truncating titles, image collapse when absent).
 - Remove duplicate/legacy card code incrementally as each phase completes.
 
 ### Definitions
@@ -124,10 +124,11 @@ Acceptance Criteria:
 
 ## Cross-Cutting Cleanup
 Tasks:
-1. Remove any now-unused card components and styles.
+1. Remove any now-unused card components and styles (e.g., bespoke `NetworkCard`, `AdvertiserCard`, `CampaignCard`, `PlacementCard`, `ZoneCard`, `ThemeCard`).
 2. Centralize mapping helpers under `src/lib/ui/card-mappers.ts` (optional if helpful).
-3. Ensure `EntityIdBadge` is only used inside universal card after migration.
+3. Ensure `EntityIdBadge` usage outside the universal card is eliminated for card UIs (kept for forms or non-card contexts).
 4. Run Playwright regression: `tests/*card*.spec.ts` and `/test-page` visual check.
+5. Verify breadcrumbs render for applicable entities, with network crumb shortening occurring at card-render time.
 
 ---
 
@@ -137,6 +138,10 @@ Tasks:
 - [ ] Verified dd/mm/yy and € formatting.
 - [ ] Verified actions (select, click, delete) don’t bubble incorrectly.
 - [ ] No console warnings; lints pass.
+ - [ ] Header row order: left checkbox + IDs, right Local + Delete.
+ - [ ] Status in top tags (no separate status row).
+ - [ ] Image omitted when missing or on error (no placeholder).
+ - [ ] Title auto-shrinks then wraps; never truncated.
 
 ## Rollback Plan
 - Keep branch-per-phase. If issues occur, revert the phase and iterate without affecting others.

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useThemes } from '@/hooks/useThemes';
 import { SearchInput } from '@/components/ui/search-input';
 import ThemeCard from '@/components/themes/ThemeCard';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import ThemeCreateModal from '@/components/themes/ThemeCreateModal';
 
 function LoadingSkeleton() {
@@ -19,6 +21,7 @@ function LoadingSkeleton() {
 export default function ThemesPage() {
   const { themes, isLoading, error, createTheme, updateTheme, deleteTheme, cloneTheme } = useThemes();
   const [searchTerm, setSearchTerm] = useState('');
+  const router = useRouter();
 
   const filteredThemes = useMemo(() => {
     if (!searchTerm.trim()) return themes;
@@ -117,12 +120,24 @@ export default function ThemesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredThemes.map((theme) => (
-            <ThemeCard
+            <UniversalEntityCard
               key={theme._id}
-              theme={theme}
-              onEdit={updateTheme}
-              onDelete={deleteTheme}
-              onClone={cloneTheme}
+              title={theme.name}
+              mongo_id={theme.mongo_id}
+              entityType="theme"
+              subtitle={theme.description}
+              displayData={[
+                { label: 'Zones', value: theme.zone_count, type: 'number' as const },
+                { label: 'Created', value: new Date(theme.createdAt), type: 'date' as const },
+                { label: 'Updated', value: new Date(theme.updatedAt), type: 'date' as const },
+              ]}
+              actionButtons={[
+                { label: 'View Zones', onClick: () => router.push(`/themes/${theme._id}`), variant: 'default' },
+                { label: 'Edit', onClick: () => updateTheme?.(theme._id, theme.name, theme.description), variant: 'outline' },
+                { label: 'Clone', onClick: () => cloneTheme?.(theme._id, `${theme.name} (Copy)`), variant: 'secondary' },
+              ]}
+              onCardClick={() => router.push(`/themes/${theme._id}`)}
+              onDelete={deleteTheme ? () => deleteTheme(theme._id) : undefined}
             />
           ))}
         </div>
