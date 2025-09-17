@@ -12,8 +12,8 @@ export async function GET(
     await connectDB();
     const { id: themeId } = await params;
 
-    const theme = await Theme.findById(themeId).lean();
-    
+    const theme = await Theme.findById(themeId).lean() as any;
+
     if (!theme) {
       return NextResponse.json(
         { error: 'Theme not found' },

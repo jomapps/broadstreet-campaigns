@@ -686,7 +686,7 @@ class SyncService {
 
       // Create enhanced sync log with audit service
       const syncLog = await auditService.createSyncLog(networkId, 'full');
-      syncLogId = syncLog._id.toString();
+      syncLogId = String(syncLog._id);
 
       // Get all unsynced local entities for this network (do not require created_locally)
       const localAdvertisers = await LocalAdvertiser.find({
@@ -768,7 +768,7 @@ class SyncService {
           // Log operation to audit service
           await auditService.logOperation(syncLogId, 'advertisers', {
             entityType: 'advertiser',
-            entityId: advertiser._id.toString(),
+            entityId: String(advertiser._id),
             entityName: advertiser.name,
             operation: result.code === 'LINKED_DUPLICATE' ? 'link' : 'create',
             status: result.success ? 'success' : 'error',
@@ -831,7 +831,7 @@ class SyncService {
           // Log operation to audit service
           await auditService.logOperation(syncLogId, 'zones', {
             entityType: 'zone',
-            entityId: zone._id.toString(),
+            entityId: String(zone._id),
             entityName: zone.name,
             operation: 'create',
             status: result.success ? 'success' : 'error',
@@ -891,7 +891,7 @@ class SyncService {
           // Log operation to audit service
           await auditService.logOperation(syncLogId, 'campaigns', {
             entityType: 'campaign',
-            entityId: campaign._id.toString(),
+            entityId: String(campaign._id),
             entityName: campaign.name,
             operation: result.code === 'LINKED_DUPLICATE' ? 'link' : 'create',
             status: result.success ? 'success' : 'error',
@@ -976,7 +976,7 @@ class SyncService {
           // Log placement operation
           await auditService.logOperation(syncLogId, 'placements', {
             entityType: 'placement',
-            entityId: placement._id.toString(),
+            entityId: String(placement._id),
             entityName: `Advertisement ${placement.advertisement_id} placement`,
             operation: 'create',
             status: result.success ? 'success' : 'error',
@@ -1031,7 +1031,7 @@ class SyncService {
       );
 
       // Cleanup operations
-      let cleanupErrors: string[] = [];
+      const cleanupErrors: string[] = [];
 
       try {
         // Clear any stale sync errors for successfully synced entities

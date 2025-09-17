@@ -57,6 +57,11 @@ export interface Campaign {
   impression_max_type?: 'cap' | 'goal';
   paused?: boolean;
   notes?: string;
+  placements?: Array<{
+    advertisement_id: number;
+    zone_id: number;
+    restrictions?: string[];
+  }>;
 }
 
 export interface Advertisement {

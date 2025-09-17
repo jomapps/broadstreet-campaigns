@@ -65,10 +65,10 @@ export class RateLimiter {
 
       // Set timeout for queued request
       setTimeout(() => {
-        const index = this.queue.findIndex(req => req.requestId === queuedRequest.requestId);
+        const index = this.queue.findIndex(req => req.id === queuedRequest.id);
         if (index !== -1) {
           this.queue.splice(index, 1);
-          reject(new Error(`Request ${queuedRequest.requestId} timed out in queue`));
+          reject(new Error(`Request ${queuedRequest.id} timed out in queue`));
         }
       }, this.config.queueTimeout);
 
@@ -192,7 +192,7 @@ export class RateLimiter {
     // Remove expired requests (in reverse order to maintain indexes)
     expiredIndexes.reverse().forEach(index => {
       const expiredRequest = this.queue.splice(index, 1)[0];
-      expiredRequest.reject(new Error(`Request ${expiredRequest.requestId} expired in queue`));
+      expiredRequest.reject(new Error(`Request ${expiredRequest.id} expired in queue`));
     });
   }
 

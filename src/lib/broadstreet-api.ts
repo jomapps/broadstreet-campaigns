@@ -298,7 +298,7 @@ class BroadstreetAPI {
     let placementData: any;
     if (response && typeof response === 'object') {
       // Try different possible response structures
-      placementData = response.placement || response.data || response;
+      placementData = response.placement || (response as any).data || response;
     } else {
       throw new Error(`Invalid API response structure: ${typeof response}`);
     }

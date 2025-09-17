@@ -278,7 +278,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       if (!entities.network) {
         return { networks: 0, advertisers: 0, zones: 0, advertisements: 0, campaigns: 0 };
       }
-      const nid = getEntityId(entities.network);
+      const nid = entities.network.entityId;
       const advertisers = data.advertisers.filter(a => String(a.network_id) === String(nid) && !a.synced_with_api).length;
       const zones = data.zones.filter(z => String(z.network_id) === String(nid) && !z.synced_with_api).length;
       const campaigns = data.campaigns.filter(c => String(c.network_id) === String(nid) && !c.synced_with_api).length;

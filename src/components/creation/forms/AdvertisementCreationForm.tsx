@@ -153,7 +153,7 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
       if (!networkBroadstreetId) {
         throw new Error('Network must be synced with Broadstreet to create advertisements');
       }
-      const advertiserIdValue = getEntityId(entities.advertiser);
+      const advertiserIdValue = entities.advertiser?.entityId;
       const payload: any = {
         name: formData.name.trim(),
         network_id: networkBroadstreetId,

@@ -325,7 +325,12 @@ const formatDisplayValue = (item: DisplayDataItem): React.ReactNode => {
     return value.replace(/\$/g, '€');
   }
 
-  return value;
+  // Convert any remaining value to string for React rendering
+  if (value instanceof Date) {
+    return formatAsDdMmYy(value);
+  }
+
+  return String(value ?? '');
 };
 
 export function UniversalEntityCard({

@@ -96,6 +96,9 @@ export class PlacementService {
       result.code = 'NETWORK';
       
       // Update placement with error
+      if (!placement.sync_errors) {
+        placement.sync_errors = [];
+      }
       placement.sync_errors.push(result.error);
       await placement.save();
     }
@@ -133,7 +136,7 @@ export class PlacementService {
             const existingPlacement = await Placement.findOne({
               advertisement_id: embeddedPlacement.advertisement_id,
               zone_id: embeddedPlacement.zone_id,
-              campaign_mongo_id: campaign._id.toString()
+              campaign_mongo_id: String(campaign._id)
             });
 
             if (existingPlacement) {
@@ -145,7 +148,7 @@ export class PlacementService {
               network_id: networkId,
               advertiser_id: campaign.advertiser_id as number,
               advertisement_id: embeddedPlacement.advertisement_id,
-              campaign_mongo_id: campaign._id.toString(),
+              campaign_mongo_id: String(campaign._id),
               zone_id: embeddedPlacement.zone_id,
               restrictions: embeddedPlacement.restrictions
             });

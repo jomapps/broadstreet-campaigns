@@ -33,7 +33,7 @@ export async function syncNetworks(): Promise<{ success: boolean; count: number;
     await cleanupLegacyIndexes(Network);
 
     const networkDocs = networks.map(network => {
-      const mapped = mapApiIds(network, { stripId: true });
+      const mapped = mapApiIds(network as any, { stripId: true });
       return {
         broadstreet_id: mapped.broadstreet_id,
         name: mapped.name,
@@ -105,7 +105,7 @@ export async function syncAdvertisers(): Promise<{ success: boolean; count: numb
         const advertisers = await broadstreetAPI.getAdvertisers(network.broadstreet_id);
 
         advertisers.forEach(advertiser => {
-          const mapped = mapApiIds(advertiser, { stripId: true });
+          const mapped = mapApiIds(advertiser as any, { stripId: true });
           // Only add if we haven't seen this advertiser ID before
           if (mapped.broadstreet_id && !allAdvertisers.has(mapped.broadstreet_id)) {
             allAdvertisers.set(mapped.broadstreet_id, {
@@ -189,7 +189,7 @@ export async function syncZones(): Promise<{ success: boolean; count: number; er
         const zones = await broadstreetAPI.getZones(network.broadstreet_id);
 
         zones.forEach(zone => {
-          const mapped = mapApiIds(zone, { stripId: true });
+          const mapped = mapApiIds(zone as any, { stripId: true });
           // Only add if we haven't seen this zone ID before
           if (mapped.broadstreet_id && !allZones.has(mapped.broadstreet_id)) {
             const parsed = parseZoneName(mapped.name);
@@ -274,7 +274,7 @@ export async function syncCampaigns(): Promise<{ success: boolean; count: number
         const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(advertiser.broadstreet_id);
 
         campaigns.forEach(campaign => {
-          const mapped = mapApiIds(campaign, { stripId: true });
+          const mapped = mapApiIds(campaign as any, { stripId: true });
           // Only add if we haven't seen this campaign ID before
           if (mapped.broadstreet_id && !allCampaigns.has(mapped.broadstreet_id)) {
             // Preserve raw payload for round-trip safety
@@ -397,7 +397,7 @@ export async function syncAdvertisements(): Promise<{ success: boolean; count: n
         const advertisements = await broadstreetAPI.getAdvertisements({ networkId: network.broadstreet_id });
 
         advertisements.forEach(advertisement => {
-          const mapped = mapApiIds(advertisement, { stripId: true });
+          const mapped = mapApiIds(advertisement as any, { stripId: true });
           // Only add if we haven't seen this advertisement ID before
           if (mapped.broadstreet_id && !allAdvertisements.has(mapped.broadstreet_id)) {
             allAdvertisements.set(mapped.broadstreet_id, {
@@ -489,7 +489,7 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
           // Update the campaign with placements using MongoDB _id
           const coerced = apiPlacements
             .map((placement: any) => {
-              const mapped = mapApiIds(placement, { stripId: true });
+              const mapped = mapApiIds(placement as any, { stripId: true });
               const adId = Number(mapped.advertisement_id ?? mapped.advertisement_broadstreet_id);
               const zoneId = Number(mapped.zone_id ?? mapped.zone_broadstreet_id);
               if (!Number.isFinite(adId) || !Number.isFinite(zoneId)) {

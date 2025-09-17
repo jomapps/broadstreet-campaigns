@@ -91,7 +91,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
               {entities.zones.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
                   {entities.zones.slice(0, 5).map((zone) => (
-                    <li key={String(zone.broadstreet_id)}>Zone {String(zone.broadstreet_id)}</li>
+                    <li key={String(zone.entityId)}>Zone {String(zone.ids.broadstreet_id || zone.ids.mongo_id || zone.entityId)}</li>
                   ))}
                   {entities.zones.length > 5 && (
                     <li>+{entities.zones.length - 5} more</li>

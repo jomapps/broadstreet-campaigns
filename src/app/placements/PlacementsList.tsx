@@ -129,11 +129,11 @@ function mapPlacementToUniversalProps(
 interface PlacementsListProps {
   placements: PlacementLean[];
   entities?: {
-    network: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
-    advertiser: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
-    campaign: { ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string } | null;
-    zones: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string }>;
-    advertisements: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; id: number | string; name: string }>;
+    network: { ids: { broadstreet_id?: number; mongo_id?: string }; entityId: number | string; name: string } | null;
+    advertiser: { ids: { broadstreet_id?: number; mongo_id?: string }; entityId: number | string; name: string } | null;
+    campaign: { ids: { broadstreet_id?: number; mongo_id?: string }; entityId: number | string; name: string } | null;
+    zones: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; entityId: number | string; name: string }>;
+    advertisements: Array<{ ids: { broadstreet_id?: number; mongo_id?: string }; entityId: number | string; name: string }>;
   };
 }
 

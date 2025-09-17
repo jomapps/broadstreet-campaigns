@@ -129,10 +129,10 @@ export interface CampaignLean extends BaseLeanEntity {
 
 /**
  * Advertisement entity from lean queries
- * Advertisements are always synced - cannot be created locally
+ * Advertisements can be synced or local (created locally before sync)
  */
 export interface AdvertisementLean extends BaseLeanEntity {
-  broadstreet_id: number; // Always present - advertisements are always synced
+  broadstreet_id?: number; // Present for synced advertisements, may be missing for local ones
   name: string;
   updated_at: string;
   type: string;

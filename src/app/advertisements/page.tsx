@@ -57,8 +57,12 @@ async function AdvertisementsData() {
     active: advertisement.active,
     active_placement: advertisement.active_placement,
     preview_url: advertisement.preview_url,
-    createdAt: advertisement.createdAt.toISOString(),
-    updatedAt: advertisement.updatedAt.toISOString(),
+    createdAt: typeof advertisement.createdAt === 'object' && advertisement.createdAt && 'toISOString' in advertisement.createdAt
+      ? (advertisement.createdAt as Date).toISOString()
+      : advertisement.createdAt as string,
+    updatedAt: typeof advertisement.updatedAt === 'object' && advertisement.updatedAt && 'toISOString' in advertisement.updatedAt
+      ? (advertisement.updatedAt as Date).toISOString()
+      : advertisement.updatedAt as string,
   }));
   
   return <AdvertisementFiltersWrapper advertisements={serializedAdvertisements} />;

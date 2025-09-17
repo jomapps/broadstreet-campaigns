@@ -4,26 +4,9 @@ import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 import AdvertisementSelectionControls from './AdvertisementSelectionControls';
 import AdvertisementsList from './AdvertisementsList';
-
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  broadstreet_id?: number;
-  mongo_id: string;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
 interface AdvertisementFiltersWrapperProps {
   advertisements: AdvertisementLean[];

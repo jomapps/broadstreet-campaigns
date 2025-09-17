@@ -296,7 +296,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       // Immediately reload campaigns for the current advertiser so the list updates without a full reload
       try {
         if (entities.advertiser) {
-          const advId = getEntityId(entities.advertiser);
+          const advId = entities.advertiser.entityId;
           const listRes = await fetch(`/api/campaigns?advertiser_id=${encodeURIComponent(String(advId ?? ''))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();

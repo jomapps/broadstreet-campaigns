@@ -43,7 +43,7 @@ export class AuditService {
     syncLog.currentPhase = phase;
     
     // Add or update phase
-    const existingPhaseIndex = syncLog.phases.findIndex(p => p.phase === phase);
+    const existingPhaseIndex = syncLog.phases.findIndex((p: ISyncPhase) => p.phase === phase);
     const phaseData: ISyncPhase = {
       phase,
       status: 'running',
@@ -78,7 +78,7 @@ export class AuditService {
     const syncLog = await SyncLog.findById(syncLogId);
     if (!syncLog) throw new Error('Sync log not found');
     
-    const phaseIndex = syncLog.phases.findIndex(p => p.phase === phase);
+    const phaseIndex = syncLog.phases.findIndex((p: ISyncPhase) => p.phase === phase);
     if (phaseIndex === -1) throw new Error(`Phase ${phase} not found`);
     
     // Add operation to phase
@@ -130,7 +130,7 @@ export class AuditService {
     const syncLog = await SyncLog.findById(syncLogId);
     if (!syncLog) throw new Error('Sync log not found');
     
-    const phaseIndex = syncLog.phases.findIndex(p => p.phase === phase);
+    const phaseIndex = syncLog.phases.findIndex((p: ISyncPhase) => p.phase === phase);
     if (phaseIndex === -1) throw new Error(`Phase ${phase} not found`);
     
     const phaseData = syncLog.phases[phaseIndex];
@@ -233,7 +233,7 @@ export class AuditService {
       SyncLog.countDocuments(filter)
     ]);
     
-    return { logs: logs as ISyncLog[], total };
+    return { logs: logs as unknown as ISyncLog[], total };
   }
 
   /**
@@ -281,7 +281,7 @@ export class AuditService {
       
       // Error breakdown
       logs.forEach(log => {
-        log.phases.forEach(phase => {
+        log.phases.forEach((phase: ISyncPhase) => {
           phase.operations.forEach(op => {
             if (op.status === 'error' && op.errorCode) {
               stats.errorBreakdown[op.errorCode] = (stats.errorBreakdown[op.errorCode] || 0) + 1;
