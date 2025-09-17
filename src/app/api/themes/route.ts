@@ -10,7 +10,7 @@ export async function GET() {
     
     const themes = await Theme.find({})
       .sort({ createdAt: -1 })
-      .lean();
+      .lean({ virtuals: true });
     
     return NextResponse.json({ themes });
   } catch (error) {
