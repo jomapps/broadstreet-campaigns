@@ -5,15 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import CreationButton from '@/components/creation/CreationButton';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { SearchInput } from '@/components/ui/search-input';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-import CopyZonesToThemeModal from '@/components/themes/CopyZonesToThemeModal';
+import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 
 // Type for campaign data from filter context
 type CampaignLean = {
@@ -38,141 +32,64 @@ type CampaignLean = {
   }>;
 };
 
-interface CampaignCardProps {
-  campaign: CampaignLean;
-  advertiserName?: string;
-  isSelected: boolean;
-  onSelect: (campaign: CampaignLean) => void;
-  onDelete?: (campaign: CampaignLean) => void;
-  onCopyZonesToTheme?: (campaignName: string, themeName: string, description?: string) => Promise<void>;
-}
-
-function CampaignCard({ campaign, advertiserName, isSelected, onSelect, onDelete, onCopyZonesToTheme }: CampaignCardProps) {
-  const isLocal = campaign.created_locally && !campaign.synced_with_api;
+// Map campaign to universal card props
+function mapCampaignToUniversalProps(
+  campaign: CampaignLean,
+  params: {
+    isSelected: boolean;
+    onSelect: (c: CampaignLean) => void;
+    onDelete?: (c: CampaignLean) => void;
+    onCopyZonesToTheme?: (campaignName: string, themeName: string, description?: string) => Promise<void>;
+    parents: { network?: any; advertiser?: any };
+  }
+) {
+  const isLocal = !!(campaign.created_locally && !campaign.synced_with_api);
   const startDate = new Date(campaign.start_date);
-  const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
+  const endDate = campaign.end_date ? new Date(campaign.end_date) : undefined;
   const now = new Date();
-  
-  const isActive = campaign.active && startDate <= now && (!endDate || endDate >= now);
-  
-  const handleDelete = async () => {
-    if (!onDelete) return;
-    
-    if (!confirm(`Are you sure you want to delete "${campaign.name}"? This action cannot be undone.`)) {
-      return;
-    }
-    
-    onDelete(campaign);
+  const isActive = !!(campaign.active && startDate <= now && (!endDate || endDate >= now));
+
+  const parentsBreadcrumb = [
+    params.parents.network && {
+      name: String(params.parents.network?.name ?? 'Network'),
+      broadstreet_id: typeof params.parents.network?.broadstreet_id === 'number' ? params.parents.network.broadstreet_id : undefined,
+      mongo_id: params.parents.network?.mongo_id ?? params.parents.network?._id,
+      entityType: 'network' as const,
+    },
+    params.parents.advertiser && {
+      name: String(params.parents.advertiser?.name ?? 'Advertiser'),
+      broadstreet_id: typeof params.parents.advertiser?.broadstreet_id === 'number' ? params.parents.advertiser.broadstreet_id : undefined,
+      mongo_id: params.parents.advertiser?.mongo_id ?? params.parents.advertiser?._id,
+      entityType: 'advertiser' as const,
+    },
+  ].filter(Boolean) as any[];
+
+  return {
+    title: campaign.name,
+    broadstreet_id: campaign.broadstreet_id,
+    mongo_id: campaign.mongo_id,
+    entityType: 'campaign' as const,
+    titleUrl: campaign.path,
+    showCheckbox: true,
+    isSelected: params.isSelected,
+    onSelect: () => params.onSelect(campaign),
+    onCardClick: () => params.onSelect(campaign),
+    isLocal,
+    onDelete: isLocal && params.onDelete ? () => params.onDelete!(campaign) : undefined,
+    statusBadge: isActive ? { label: 'Running', variant: 'success' as const } : { label: 'Paused', variant: 'secondary' as const },
+    parentsBreadcrumb,
+    displayData: [
+      { label: 'Start Date', value: startDate, type: 'date' as const },
+      { label: 'End Date', value: endDate ? endDate : 'No end date', type: endDate ? 'date' as const : 'string' as const },
+      { label: 'Weight', value: campaign.weight, type: 'number' as const },
+      { label: 'Max Impressions', value: campaign.max_impression_count ?? 'Unlimited', type: typeof campaign.max_impression_count === 'number' ? 'number' as const : 'string' as const },
+    ],
+    onCopyToTheme: params.onCopyZonesToTheme
+      ? async (themeName: string, description?: string) => {
+          await params.onCopyZonesToTheme!(campaign.name, themeName, description);
+        }
+      : undefined,
   };
-  
-  const slug = campaign.name.replace(/\s+/g, '-').toLowerCase();
-
-  return (
-    <div
-      className={`relative rounded-lg shadow-sm border-2 p-6 transition-all duration-200 ${cardStateClasses({ isLocal: !!isLocal, isSelected })}`}
-      data-testid="campaign-card"
-      data-campaign-slug={slug}
-    >
-      {/* Delete Button for Local Entities */}
-      {isLocal && onDelete && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-          onClick={(e) => { e.stopPropagation(); handleDelete(); }}
-          data-testid="delete-button"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      )}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center space-x-3">
-            <Checkbox
-              checked={isSelected}
-              onCheckedChange={() => onSelect(campaign)}
-              className="mt-1"
-            />
-            <div>
-              <h3 className="card-title text-gray-900" data-testid="campaign-name">{campaign.name}</h3>
-              {advertiserName && (
-                <p className="card-text text-gray-600 mt-1">Advertiser: {advertiserName}</p>
-              )}
-            </div>
-          </div>
-        </div>
-        
-        <div className="flex flex-col items-end space-y-1">
-          {isSelected && (
-            <Badge variant="default" className="text-xs px-2 py-1">
-              Selected
-            </Badge>
-          )}
-          {campaign.created_locally && !campaign.synced_with_api && (
-            <Badge variant="secondary" className="text-xs px-2 py-1 bg-orange-100 text-orange-800">
-              Local
-            </Badge>
-          )}
-          <span className={`px-2 py-1 text-xs rounded-full ${
-            isActive 
-              ? 'bg-green-100 text-green-800' 
-              : 'bg-gray-100 text-gray-800'
-          }`}>
-            {isActive ? 'Active' : 'Inactive'}
-          </span>
-          <EntityIdBadge
-            broadstreet_id={campaign.broadstreet_id}
-            mongo_id={campaign.mongo_id}
-          />
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <p className="card-text text-gray-600">Start Date</p>
-          <p className="card-text font-medium text-gray-900">
-            {startDate.toLocaleDateString()}
-          </p>
-        </div>
-        <div>
-          <p className="card-text text-gray-600">End Date</p>
-          <p className="card-text font-medium text-gray-900">
-            {endDate ? endDate.toLocaleDateString() : 'No end date'}
-          </p>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="card-text text-gray-600">Weight</p>
-          <p className="card-text font-medium text-gray-900">{campaign.weight}</p>
-        </div>
-        <div>
-          <p className="card-text text-gray-600">Max Impressions</p>
-          <p className="card-text font-medium text-gray-900">
-            {campaign.max_impression_count?.toLocaleString() || 'Unlimited'}
-          </p>
-        </div>
-      </div>
-      
-      {campaign.notes && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <p className="card-text text-gray-600">Notes</p>
-          <p className="card-text text-gray-900 mt-1">{campaign.notes}</p>
-        </div>
-      )}
-
-      {/* Copy Zones to Theme Button */}
-      {onCopyZonesToTheme && campaign.placements && campaign.placements.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <CopyZonesToThemeModal
-            campaign={campaign}
-            onCopyZonesToTheme={onCopyZonesToTheme}
-          />
-        </div>
-      )}
-    </div>
-  );
 }
 
 function LoadingSkeleton() {
@@ -398,19 +315,21 @@ function CampaignsList() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCampaigns.map((campaign) => (
-            <CampaignCard
-              key={String(getEntityId(campaign as any))}
-              campaign={campaign}
-              advertiserName={entities.advertiser?.name}
-              isSelected={
-                String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any))
-              }
-              onSelect={handleCampaignSelect}
-              onDelete={handleDelete}
-              onCopyZonesToTheme={handleCopyZonesToTheme}
-            />
-          ))}
+          {filteredCampaigns.map((campaign) => {
+            const isSelected = String(getEntityId(selectedCampaign as any)) === String(getEntityId(campaign as any));
+            return (
+              <UniversalEntityCard
+                key={String(getEntityId(campaign as any))}
+                {...mapCampaignToUniversalProps(campaign, {
+                  isSelected,
+                  onSelect: handleCampaignSelect,
+                  onDelete: handleDelete,
+                  onCopyZonesToTheme: handleCopyZonesToTheme,
+                  parents: { network: entities.network, advertiser: entities.advertiser },
+                })}
+              />
+            );
+          })}
         </div>
       )}
     </div>
