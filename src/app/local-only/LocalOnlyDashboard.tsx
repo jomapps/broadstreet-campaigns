@@ -403,18 +403,44 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
 
   if (totalEntities === 0) {
     return (
-      <div className="text-center py-12">
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Target className="h-8 w-8 text-gray-400" />
+      <div className="space-y-8">
+        {/* Audit Trail Button - Always Available */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Local Entities Summary</h2>
+              <p className="text-gray-600 mt-1">
+                No local entities found
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              <Button
+                onClick={() => router.push('/audit')}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50"
+                data-testid="audit-button"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                View Audit Trail
+              </Button>
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
-          <p className="text-gray-600 mb-4">
-            You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
-          </p>
-          <Button onClick={() => router.push('/zones')} variant="outline">
-            Create Your First Entity
-          </Button>
+        </div>
+
+        {/* No Local Entities Message */}
+        <div className="text-center py-12">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Target className="h-8 w-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Local Entities</h3>
+            <p className="text-gray-600 mb-4">
+              You haven&apos;t created any local entities yet. Create zones, advertisers, campaigns, networks, or advertisements to see them here.
+            </p>
+            <Button onClick={() => router.push('/zones')} variant="outline">
+              Create Your First Entity
+            </Button>
+          </div>
         </div>
       </div>
     );
