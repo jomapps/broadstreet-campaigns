@@ -19,11 +19,14 @@ interface FilterContextType {
   selectedNetwork: Network | null;
   selectedAdvertiser: Advertiser | null;
   selectedCampaign: Campaign | null;
-  
+
   // Zone selection
   selectedZones: string[]; // Array of zone IDs
   showOnlySelected: boolean;
-  
+
+  // Theme selection for zones
+  selectedTheme: { _id: string; name: string; zone_ids: number[] } | null;
+
   // Advertisement selection
   selectedAdvertisements: string[]; // Array of advertisement IDs
   showOnlySelectedAds: boolean;
@@ -34,6 +37,7 @@ interface FilterContextType {
   setSelectedCampaign: (campaign: any | null) => void;
   setSelectedZones: (zones: string[]) => void;
   setShowOnlySelected: (show: boolean) => void;
+  setSelectedTheme: (theme: { _id: string; name: string; zone_ids: number[] } | null) => void;
   setSelectedAdvertisements: (advertisements: string[]) => void;
   setShowOnlySelectedAds: (show: boolean) => void;
   
@@ -64,7 +68,8 @@ interface FilterContextType {
   selectZones: (zoneIds: string[]) => void;
   deselectZones: (zoneIds: string[]) => void;
   toggleZoneSelection: (zoneId: string) => void;
-  
+  selectThemeZones: (theme: { _id: string; name: string; zone_ids: number[] } | null) => void;
+
   // Advertisement selection actions
   selectAdvertisements: (advertisementIds: string[]) => void;
   deselectAdvertisements: (advertisementIds: string[]) => void;
@@ -79,6 +84,7 @@ const STORAGE_KEYS = {
   CAMPAIGN: 'broadstreet_selected_campaign',
   SELECTED_ZONES: 'broadstreet_selected_zones',
   SHOW_ONLY_SELECTED: 'broadstreet_show_only_selected',
+  SELECTED_THEME: 'broadstreet_selected_theme',
   SELECTED_ADVERTISEMENTS: 'broadstreet_selected_advertisements',
   SHOW_ONLY_SELECTED_ADS: 'broadstreet_show_only_selected_ads',
 };
@@ -89,6 +95,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [selectedZones, setSelectedZones] = useState<string[]>([]);
   const [showOnlySelected, setShowOnlySelected] = useState<boolean>(false);
+  const [selectedTheme, setSelectedTheme] = useState<{ _id: string; name: string; zone_ids: number[] } | null>(null);
   const [selectedAdvertisements, setSelectedAdvertisements] = useState<string[]>([]);
   const [showOnlySelectedAds, setShowOnlySelectedAds] = useState<boolean>(false);
   
@@ -109,6 +116,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         const storedCampaign = localStorage.getItem(STORAGE_KEYS.CAMPAIGN);
         const storedSelectedZones = localStorage.getItem(STORAGE_KEYS.SELECTED_ZONES);
         const storedShowOnlySelected = localStorage.getItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+        const storedSelectedTheme = localStorage.getItem(STORAGE_KEYS.SELECTED_THEME);
         const storedSelectedAdvertisements = localStorage.getItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
         const storedShowOnlySelectedAds = localStorage.getItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
         
@@ -126,6 +134,9 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         }
         if (storedShowOnlySelected) {
           setShowOnlySelected(JSON.parse(storedShowOnlySelected));
+        }
+        if (storedSelectedTheme) {
+          setSelectedTheme(JSON.parse(storedSelectedTheme));
         }
         if (storedSelectedAdvertisements) {
           setSelectedAdvertisements(JSON.parse(storedSelectedAdvertisements));
@@ -252,6 +263,14 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   }, [showOnlySelected]);
 
   useEffect(() => {
+    if (selectedTheme) {
+      localStorage.setItem(STORAGE_KEYS.SELECTED_THEME, JSON.stringify(selectedTheme));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.SELECTED_THEME);
+    }
+  }, [selectedTheme]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS, JSON.stringify(selectedAdvertisements));
   }, [selectedAdvertisements]);
 
@@ -266,6 +285,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setSelectedCampaign(null);
     setSelectedZones([]);
     setShowOnlySelected(false);
+    setSelectedTheme(null);
     setSelectedAdvertisements([]);
     setShowOnlySelectedAds(false);
     localStorage.removeItem(STORAGE_KEYS.NETWORK);
@@ -273,6 +293,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEYS.CAMPAIGN);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ZONES);
     localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED);
+    localStorage.removeItem(STORAGE_KEYS.SELECTED_THEME);
     localStorage.removeItem(STORAGE_KEYS.SELECTED_ADVERTISEMENTS);
     localStorage.removeItem(STORAGE_KEYS.SHOW_ONLY_SELECTED_ADS);
   };
@@ -317,12 +338,27 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  // Theme selection function that replaces current zone selection
+  const selectThemeZones = (theme: { _id: string; name: string; zone_ids: number[] } | null) => {
+    if (theme) {
+      // Clear current zone selection and select all zones from the theme
+      const themeZoneIds = theme.zone_ids.map(id => String(id));
+      setSelectedZones(themeZoneIds);
+      setSelectedTheme(theme);
+      setShowOnlySelected(true); // Automatically show only selected zones
+    } else {
+      // Clear theme selection
+      setSelectedTheme(null);
+    }
+  };
+
   const value = useMemo<FilterContextType>(() => ({
     selectedNetwork,
     selectedAdvertiser,
     selectedCampaign,
     selectedZones,
     showOnlySelected,
+    selectedTheme,
     selectedAdvertisements,
     showOnlySelectedAds,
     setSelectedNetwork,
@@ -330,6 +366,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setSelectedCampaign,
     setSelectedZones,
     setShowOnlySelected,
+    setSelectedTheme,
     setSelectedAdvertisements,
     setShowOnlySelectedAds,
     networks,
@@ -348,6 +385,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     selectZones,
     deselectZones,
     toggleZoneSelection,
+    selectThemeZones,
     selectAdvertisements,
     deselectAdvertisements,
     toggleAdvertisementSelection,
@@ -357,6 +395,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     selectedCampaign,
     selectedZones,
     showOnlySelected,
+    selectedTheme,
     selectedAdvertisements,
     showOnlySelectedAds,
     networks,

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import FiltersCard from './FiltersCard';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
+import ThemeSelector from '@/components/themes/ThemeSelector';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -64,7 +65,12 @@ export default function Sidebar() {
             <div className="mb-4">
               <FiltersCard />
             </div>
-            
+
+            {/* Theme Selector */}
+            <div className="mb-4">
+              <ThemeSelector />
+            </div>
+
             <Card className="bg-sidebar-accent/50 border-sidebar-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sidebar-foreground text-lg">Utilities</CardTitle>

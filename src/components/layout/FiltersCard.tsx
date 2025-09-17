@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { X, Filter } from 'lucide-react';
 import { getEntityId } from '@/lib/utils/entity-helpers';
+import ThemeSelector from '@/components/themes/ThemeSelector';
 
 export default function FiltersCard() {
   const {
