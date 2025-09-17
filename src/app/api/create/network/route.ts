@@ -41,13 +41,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate a unique ID
-    const maxId = await Network.findOne({}, { id: 1 }).sort({ id: -1 });
-    const newId = maxId ? maxId.id + 1 : 1;
+    // Generate a unique Broadstreet ID
+    const maxId = await Network.findOne({}, { broadstreet_id: 1 }).sort({ broadstreet_id: -1 });
+    const newBroadstreetId = maxId ? maxId.broadstreet_id + 1 : 1;
 
     // Create new network
     const newNetwork = new Network({
-      id: newId,
+      broadstreet_id: newBroadstreetId,
       name: name.trim(),
       group_id: null,
       web_home_url: web_home_url || undefined,
@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: 'Network created successfully',
       network: {
-        id: newNetwork.id,
+        broadstreet_id: newNetwork.broadstreet_id,
+        mongo_id: newNetwork._id?.toString(),
         name: newNetwork.name,
         group_id: newNetwork.group_id,
         web_home_url: newNetwork.web_home_url,

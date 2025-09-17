@@ -7,44 +7,8 @@ import ZoneSizeFilters from './ZoneSizeFilters';
 import ZonesList from './ZonesList';
 import ZoneSelectionControls from './ZoneSelectionControls';
 import { hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
-
-type ZoneLean = {
-  _id: string;
-  __v: number;
-  id?: number;
-  name: string;
-  network_id: number;
-  alias?: string | null;
-  self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
-  size_number?: number | null;
-  category?: string | null;
-  block?: string | null;
-  is_home?: boolean;
-  // LocalZone specific fields
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-  created_at?: string;
-  synced_at?: string;
-  original_broadstreet_id?: number;
-  sync_errors?: string[];
-  // Additional LocalZone fields
-  advertisement_count?: number;
-  allow_duplicate_ads?: boolean;
-  concurrent_campaigns?: number;
-  advertisement_label?: string;
-  archived?: boolean;
-  display_type?: 'standard' | 'rotation';
-  rotation_interval?: number;
-  animation_type?: string;
-  width?: number;
-  height?: number;
-  rss_shuffle?: boolean;
-  style?: string;
-  source?: 'api' | 'local';
-  createdAt: string;
-  updatedAt: string;
-};
+import { ZoneLean } from '@/lib/types/lean-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 
 interface ZoneFiltersWrapperProps {
   zones: ZoneLean[];
@@ -57,17 +21,23 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
   const entities = useSelectedEntities();
   const { selectedZones, showOnlySelected } = useFilters();
 
+  // Helper: derive selection key using standardized utility (same as ZoneSelectionControls)
+  const zoneSelectionKey = (zone: ZoneLean) => {
+    const entityId = getEntityId(zone);
+    return typeof entityId === 'number' ? String(entityId) : entityId || zone._id;
+  };
+
   // Apply all filters to get the currently visible zones
   const filteredZones = useMemo(() => {
     if (!zones || !Array.isArray(zones)) {
       return [];
     }
-    
+
     let filtered = zones;
-    
+
     // 1. Apply "Only Selected" filter first (highest priority)
     if (showOnlySelected && selectedZones.length > 0) {
-      filtered = filtered.filter(zone => selectedZones.includes(zone._id));
+      filtered = filtered.filter(zone => selectedZones.includes(zoneSelectionKey(zone)));
     }
     
     // 2. Apply size filters
@@ -109,7 +79,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         (zone.block && zone.block.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (zone.size_type && zone.size_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (networkMap.get(zone.network_id) && networkMap.get(zone.network_id)!.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (zone.id && zone.id.toString().includes(searchTerm)) ||
+        (zone.broadstreet_id && zone.broadstreet_id.toString().includes(searchTerm)) ||
         zone._id.includes(searchTerm)
       );
     }

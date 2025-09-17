@@ -6,6 +6,8 @@ import CreationButton from '@/components/creation/CreationButton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
+import { getEntityId } from '@/lib/utils/entity-helpers';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 // Type for network data from filter context
 type NetworkLean = {
@@ -48,7 +50,12 @@ function NetworkCard({ network, isSelected, onSelect }: NetworkCardProps) {
             )}
             <div>
               <CardTitle className="card-title">{network.name}</CardTitle>
-              <CardDescription className="card-meta">BS ID: {network.broadstreet_id}</CardDescription>
+              <div className="flex items-center gap-2 mt-1">
+                <EntityIdBadge
+                  broadstreet_id={network.broadstreet_id}
+                  mongo_id={network.mongo_id}
+                />
+              </div>
             </div>
           </div>
           
@@ -139,11 +146,11 @@ function NetworksList() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {networks.map((network) => (
         <NetworkCard
-          key={network.broadstreet_id}
+          key={getEntityId(network)}
           network={network}
-          isSelected={(selectedNetwork as any)?.broadstreet_id === network.broadstreet_id}
+          isSelected={getEntityId(selectedNetwork) === getEntityId(network)}
           onSelect={(n) => {
-            if ((selectedNetwork as any)?.broadstreet_id === (n as any).broadstreet_id) {
+            if (getEntityId(selectedNetwork) === getEntityId(n)) {
               setSelectedNetwork(null);
             } else {
               setSelectedNetwork(n as any);

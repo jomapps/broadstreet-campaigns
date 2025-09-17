@@ -106,9 +106,9 @@ function PlacementsData() {
         }
         
         if (entities.campaign) {
-          const mongoId = entities.campaign.ids.mongo_id;
+          const campaignMongoId = entities.campaign.ids.mongo_id;
           const bsId = entities.campaign.ids.broadstreet_id;
-          if (mongoId) params.append('campaign_mongo_id', mongoId);
+          if (campaignMongoId) params.append('campaign_mongo_id', campaignMongoId);
           else if (bsId != null) params.append('campaign_id', String(bsId));
         }
 

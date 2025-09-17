@@ -56,9 +56,9 @@ interface EntityCardProps {
   entity: LocalEntity;
   networkName?: string;
   advertiserName?: string;
-  onDelete: (id: string, type: string) => void;
+  onDelete: (entityId: string, type: string) => void;
   isSelected?: boolean;
-  onToggleSelection?: (id: string) => void;
+  onToggleSelection?: (entityId: string) => void;
 }
 
 function EntityCard({ entity, networkName, advertiserName, onDelete, isSelected = false, onToggleSelection }: EntityCardProps) {
@@ -366,9 +366,9 @@ interface EntitySectionProps {
   entities: LocalEntity[];
   networkMap: Map<number, string>;
   advertiserMap: Map<number, string>;
-  onDelete: (id: string, type: string) => void;
+  onDelete: (entityId: string, type: string) => void;
   selectedIds: Set<string>;
-  onToggleSelection: (id: string) => void;
+  onToggleSelection: (entityId: string) => void;
 }
 
 function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, selectedIds, onToggleSelection }: EntitySectionProps) {
@@ -420,7 +420,7 @@ function LocalPlacementCard({
   placement: LocalOnlyData['placements'][0];
   networkMap: Map<number, string>;
   advertiserMap: Map<number, string>;
-  onDelete: (id: string) => void;
+  onDelete: (entityId: string) => void;
   isDeleting: boolean;
 }) {
   const networkName = networkMap.get(placement.network_id) || `Network ${placement.network_id}`;
@@ -520,38 +520,38 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
 
   const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length + data.placements.length;
 
-  const toggleSelection = (id: string) => {
+  const toggleSelection = (entityId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
+      if (next.has(entityId)) {
+        next.delete(entityId);
       } else {
-        next.add(id);
+        next.add(entityId);
       }
       return next;
     });
   };
 
-  const handleDelete = async (id: string, type?: string) => {
+  const handleDelete = async (entityId: string, type?: string) => {
     // Determine type from the placement data if not provided
-    const entityType = type || (data.placements.find(p => p._id === id) ? 'placement' : 'unknown');
+    const entityType = type || (data.placements.find(p => p._id === entityId) ? 'placement' : 'unknown');
 
     if (!confirm(`Are you sure you want to delete this ${entityType}? This action cannot be undone.`)) {
       return;
     }
 
-    setIsDeleting(id);
+    setIsDeleting(entityId);
     try {
       let response;
 
       if (entityType === 'placement') {
         // Use the local placement deletion endpoint
-        response = await fetch(`/api/local-placements/${id}`, {
+        response = await fetch(`/api/local-placements/${entityId}`, {
           method: 'DELETE',
         });
       } else {
         // Use the existing entity deletion endpoint
-        response = await fetch(`/api/delete/${entityType}/${id}`, {
+        response = await fetch(`/api/delete/${entityType}/${entityId}`, {
           method: 'DELETE',
         });
       }
@@ -626,22 +626,22 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
 
       // Simulate step-by-step progress based on API response
       const syncSteps = [
-        { id: 'networks', count: result.synced?.networks || 0 },
-        { id: 'advertisers', count: result.synced?.advertisers || 0 },
-        { id: 'zones', count: result.synced?.zones || 0 },
-        { id: 'advertisements', count: result.synced?.advertisements || 0 },
-        { id: 'campaigns', count: result.synced?.campaigns || 0 }
+        { stepName: 'networks', count: result.synced?.networks || 0 },
+        { stepName: 'advertisers', count: result.synced?.advertisers || 0 },
+        { stepName: 'zones', count: result.synced?.zones || 0 },
+        { stepName: 'advertisements', count: result.synced?.advertisements || 0 },
+        { stepName: 'campaigns', count: result.synced?.campaigns || 0 }
       ];
 
       // Simulate progress for each step
       for (const step of syncSteps) {
-        setStepInProgress(step.id);
+        setStepInProgress(step.stepName);
         await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
-        
+
         if (step.count > 0) {
-          setStepCompleted(step.id, `Successfully synced ${step.count} ${step.id}`);
+          setStepCompleted(step.stepName, `Successfully synced ${step.count} ${step.stepName}`);
         } else {
-          setStepCompleted(step.id, `No ${step.id} to sync`);
+          setStepCompleted(step.stepName, `No ${step.stepName} to sync`);
         }
       }
 

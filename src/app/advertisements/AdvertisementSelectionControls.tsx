@@ -3,28 +3,13 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckSquare, Square, Filter } from 'lucide-react';
-
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  id: number;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: string;
-  updatedAt: string;
-};
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 interface AdvertisementSelectionControlsProps {
   advertisements: AdvertisementLean[];
@@ -47,16 +32,16 @@ export default function AdvertisementSelectionControls({
   // The advertisements prop now contains the filtered advertisements from AdvertisementFiltersWrapper
   const visibleAdvertisements = advertisements;
 
-  // Get currently selected advertisements that are visible (use Broadstreet numeric id)
+  // Get currently selected advertisements that are visible (use standardized ID)
   const visibleSelectedAdvertisements = useMemo(() => {
-    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(ad.id)));
+    return visibleAdvertisements.filter(ad => selectedAdvertisements.includes(String(getEntityId(ad))));
   }, [visibleAdvertisements, selectedAdvertisements]);
 
-  // Get all visible advertisement IDs (use Broadstreet numeric id)
-  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(ad.id));
+  // Get all visible advertisement IDs (use standardized ID)
+  const visibleAdvertisementIds = visibleAdvertisements.map(ad => String(getEntityId(ad)));
 
   // Check if all visible advertisements are selected
-  const allVisibleSelected = visibleAdvertisementIds.length > 0 && visibleAdvertisementIds.every(id => selectedAdvertisements.includes(id));
+  const allVisibleSelected = visibleAdvertisementIds.length > 0 && visibleAdvertisementIds.every(adId => selectedAdvertisements.includes(adId));
 
   // Handle select all visible advertisements
   const handleSelectAll = () => {

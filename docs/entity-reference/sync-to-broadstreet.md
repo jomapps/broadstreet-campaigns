@@ -37,33 +37,39 @@ Local Creation → Local Storage → Manual Sync Trigger → Broadstreet API →
 These entities can be created and synced independently:
 
 #### **Advertisers**
-- **Broadstreet ID**: `advertiser_id`
+- **Broadstreet ID**: `broadstreet_id` (number)
+- **MongoDB ID**: `mongo_id` (string)
 - **Dependencies**: Only `network_id` (always exists)
 - **Local Creation**: ✅ Supported
 - **Sync Direction**: Local → Broadstreet
 - **Required Fields**: `name`, `network_id`
 - **Optional Fields**: `web_home_url`, `notes`, `logo`, `admins`
+- **Business Rule**: Advertisements cannot exist without synced advertisers
 
 #### **Zones**
-- **Broadstreet ID**: `zone_id`
+- **Broadstreet ID**: `broadstreet_id` (number)
+- **MongoDB ID**: `mongo_id` (string)
 - **Dependencies**: Only `network_id` (always exists)
 - **Local Creation**: ✅ Supported
 - **Sync Direction**: Local → Broadstreet
 - **Required Fields**: `name`, `network_id`
 - **Optional Fields**: `alias`, `self_serve`, display settings
+- **Display Rule**: Local zones should display MongoDB IDs with local badges when `broadstreet_id` is undefined
 
 ### Read-Only Entities (Import Only)
 These entities are created in Broadstreet and imported to local system:
 
 #### **Networks**
-- **Broadstreet ID**: `network_id`
+- **Broadstreet ID**: `broadstreet_id` (number)
+- **MongoDB ID**: `mongo_id` (string)
 - **Dependencies**: None
 - **Local Creation**: ❌ Not supported
 - **Sync Direction**: Broadstreet → Local (import only)
 - **Global Requirement**: All entities require a valid `network_id`
 
 #### **Advertisements**
-- **Broadstreet ID**: `advertisement_id`
+- **Broadstreet ID**: `broadstreet_id` (number)
+- **MongoDB ID**: `mongo_id` (string)
 - **Dependencies**: `advertiser_id` (must exist in Broadstreet)
 - **Local Creation**: ❌ Not supported
 - **Sync Direction**: Broadstreet → Local (import only)
@@ -73,7 +79,8 @@ These entities are created in Broadstreet and imported to local system:
 These entities require parent entities to exist before creation:
 
 #### **Campaigns**
-- **Broadstreet ID**: `campaign_id`
+- **Broadstreet ID**: `broadstreet_id` (number)
+- **MongoDB ID**: `mongo_id` (string)
 - **Dependencies**: `advertiser_id`, `network_id`
 - **Local Creation**: ✅ Supported
 - **Sync Direction**: Local → Broadstreet
@@ -82,10 +89,12 @@ These entities require parent entities to exist before creation:
 
 #### **Placements**
 - **Broadstreet ID**: Composite (`campaign_id` + `advertisement_id` + `zone_id`)
+- **Flexible References**: `campaign_id` OR `campaign_mongo_id`, `zone_id` OR `zone_mongo_id`
 - **Dependencies**: `campaign_id`, `advertisement_id`, `zone_id`
 - **Local Creation**: ✅ Supported (dual storage)
 - **Sync Direction**: Local → Broadstreet
 - **Parent Requirements**: Campaign, advertisement, and zone must all exist
+- **Display Rule**: Placement cards should show campaign name/id, advertisement name/id, and zone name/id
 
 ## Dual Storage Architecture
 
@@ -241,7 +250,7 @@ async function syncEntity<T>(localEntity: T): Promise<SyncResult> {
     const broadstreetEntity = await broadstreetAPI.createEntity(payload);
 
     // 4. Update local entity with Broadstreet ID
-    localEntity.original_broadstreet_id = broadstreetEntity.id;
+    localEntity.broadstreet_id = broadstreetEntity.id;
     localEntity.synced_with_api = true;
     localEntity.synced_at = new Date();
     localEntity.sync_errors = [];
@@ -1122,7 +1131,7 @@ The comprehensive sync-to-Broadstreet system has been successfully implemented a
 
 #### **Key Technical Achievements:**
 1. **Broadstreet API Integration**: Handles all API quirks including empty response bodies for placement creation
-2. **MongoDB ID Resolution**: Seamless conversion between MongoDB ObjectIds and Broadstreet numeric IDs
+2. **Three-Tier ID System**: Seamless conversion between MongoDB ObjectIds (`mongo_id`) and Broadstreet numeric IDs (`broadstreet_id`)
 3. **Dependency Management**: Automatic resolution of entity dependencies during sync
 4. **Clean Production Code**: All debug logs removed, no legacy/fallback code
 5. **Robust Error Handling**: Comprehensive error classification and recovery mechanisms

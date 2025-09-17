@@ -8,44 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CheckSquare, Square, Filter } from 'lucide-react';
-
-type ZoneLean = {
-  _id: string;
-  __v: number;
-  id?: number;
-  name: string;
-  network_id: number;
-  alias?: string | null;
-  self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
-  size_number?: number | null;
-  category?: string | null;
-  block?: string | null;
-  is_home?: boolean;
-  // LocalZone specific fields
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-  created_at?: string;
-  synced_at?: string;
-  original_broadstreet_id?: number;
-  sync_errors?: string[];
-  // Additional LocalZone fields
-  advertisement_count?: number;
-  allow_duplicate_ads?: boolean;
-  concurrent_campaigns?: number;
-  advertisement_label?: string;
-  archived?: boolean;
-  display_type?: 'standard' | 'rotation';
-  rotation_interval?: number;
-  animation_type?: string;
-  width?: number;
-  height?: number;
-  rss_shuffle?: boolean;
-  style?: string;
-  source?: 'api' | 'local';
-  createdAt: string;
-  updatedAt: string;
-};
+import AddToThemeModal from '@/components/themes/AddToThemeModal';
+import { ZoneLean } from '@/lib/types/lean-entities';
+import { getEntityId, isEntitySynced } from '@/lib/utils/entity-helpers';
 
 interface ZoneSelectionControlsProps {
   zones: ZoneLean[];
@@ -64,8 +29,11 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   // The zones prop now contains the filtered zones from ZoneFiltersWrapper
   const visibleZones = zones;
 
-  // Helper: derive selection key (prefer Broadstreet numeric id)
-  const zoneSelectionKey = (zone: ZoneLean) => (zone.id != null ? String(zone.id) : zone._id);
+  // Helper: derive selection key using standardized utility
+  const zoneSelectionKey = (zone: ZoneLean) => {
+    const entityId = getEntityId(zone);
+    return typeof entityId === 'number' ? String(entityId) : entityId || zone._id;
+  };
 
   // Get currently selected zones that are visible
   const visibleSelectedZones = useMemo(() => {
@@ -76,7 +44,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   const visibleZoneIds = visibleZones.map(zone => zoneSelectionKey(zone));
 
   // Check if all visible zones are selected
-  const allVisibleSelected = visibleZoneIds.length > 0 && visibleZoneIds.every(id => selectedZones.includes(id));
+  const allVisibleSelected = visibleZoneIds.length > 0 && visibleZoneIds.every(zoneId => selectedZones.includes(zoneId));
 
   // Handle select all visible zones
   const handleSelectAll = () => {
@@ -91,6 +59,49 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
   // Handle toggle only selected filter
   const handleToggleOnlySelected = () => {
     setShowOnlySelected(!showOnlySelected);
+  };
+
+  // Get synced zone IDs for theme operations using standardized utility
+  const syncedSelectedZoneIds = useMemo(() => {
+    return visibleSelectedZones
+      .filter(zone => isEntitySynced(zone) && zone.synced_with_api)
+      .map(zone => zone.broadstreet_id!)
+      .filter(broadstreetId => broadstreetId != null);
+  }, [visibleSelectedZones]);
+
+  // Handle adding zones to themes
+  const handleAddToThemes = async (themeIds: string[], zoneIds: number[]) => {
+    try {
+      const promises = themeIds.map(themeId =>
+        fetch(`/api/themes/${themeId}/zones`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ zone_ids: zoneIds }),
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const results = await Promise.all(responses.map(r => r.json()));
+
+      // Check for errors
+      const errors = results.filter((result, index) => !responses[index].ok);
+      if (errors.length > 0) {
+        throw new Error(`Failed to add zones to ${errors.length} theme(s)`);
+      }
+
+      // Show success message
+      const totalAdded = results.reduce((sum, result) => sum + (result.added_zones?.length || 0), 0);
+      alert(`Successfully added ${totalAdded} zone assignments to ${themeIds.length} theme(s)`);
+
+      // Optionally refresh the page to show updated theme badges
+      window.location.reload();
+    } catch (error) {
+      console.error('Error adding zones to themes:', error);
+      alert('Failed to add zones to themes. Please try again.');
+      throw error;
+    }
   };
 
   if (!entities.network) {
@@ -119,7 +130,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Selection Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -130,7 +141,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
             <CheckSquare className="h-4 w-4" />
             Select All Visible
           </Button>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -141,7 +152,20 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
             <Square className="h-4 w-4" />
             Deselect All Visible
           </Button>
+
+          <AddToThemeModal
+            selectedZoneIds={syncedSelectedZoneIds}
+            onAddToThemes={handleAddToThemes}
+            disabled={syncedSelectedZoneIds.length === 0}
+          />
         </div>
+
+        {/* Theme operation info */}
+        {selectedZones.length > 0 && syncedSelectedZoneIds.length !== selectedZones.length && (
+          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+            <strong>Note:</strong> Only {syncedSelectedZoneIds.length} of {selectedZones.length} selected zones can be added to themes (synced zones only).
+          </div>
+        )}
 
         {/* Only Selected Toggle */}
         <div className="flex items-center space-x-2">

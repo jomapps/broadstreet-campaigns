@@ -103,19 +103,11 @@ LocalNetworkSchema.index({ name: 1 }, { unique: true });
 LocalNetworkSchema.index({ created_locally: 1 });
 LocalNetworkSchema.index({ synced_with_api: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 LocalNetworkSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
 LocalNetworkSchema.virtual('broadstreet_id').get(function (this: any) {
-  return this.original_broadstreet_id ?? undefined;
-});
-
-// New explicit ID naming per entity
-LocalNetworkSchema.virtual('local_network_id').get(function (this: any) {
-  return this._id?.toString();
-});
-LocalNetworkSchema.virtual('broadstreet_network_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 

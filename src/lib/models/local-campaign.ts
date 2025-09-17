@@ -157,19 +157,11 @@ LocalCampaignSchema.index({ advertiser_id: 1 });
 LocalCampaignSchema.index({ created_locally: 1 });
 LocalCampaignSchema.index({ synced_with_api: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 LocalCampaignSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
 LocalCampaignSchema.virtual('broadstreet_id').get(function (this: any) {
-  return this.original_broadstreet_id ?? undefined;
-});
-
-// New explicit ID naming per entity
-LocalCampaignSchema.virtual('local_campaign_id').get(function (this: any) {
-  return this._id?.toString();
-});
-LocalCampaignSchema.virtual('broadstreet_campaign_id').get(function (this: any) {
   return this.original_broadstreet_id ?? undefined;
 });
 

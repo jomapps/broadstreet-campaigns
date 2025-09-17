@@ -9,10 +9,10 @@ export async function DELETE(
   try {
     await connectDB();
 
-    const { id } = await context.params;
+    const { id: campaignId } = await context.params;
 
     // Find and delete the local campaign
-    const deletedCampaign = await LocalCampaign.findByIdAndDelete(id);
+    const deletedCampaign = await LocalCampaign.findByIdAndDelete(campaignId);
 
     if (!deletedCampaign) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function DELETE(
     return NextResponse.json({
       message: 'Local campaign deleted successfully',
       campaign: {
-        id: deletedCampaign._id,
+        mongo_id: deletedCampaign._id?.toString(),
         name: deletedCampaign.name,
       }
     });

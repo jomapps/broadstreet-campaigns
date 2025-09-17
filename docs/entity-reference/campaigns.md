@@ -4,6 +4,13 @@
 
 Campaigns represent advertising campaigns that run on a network. Each campaign belongs to a single network and a single advertiser.
 
+## ID Management
+
+Campaigns follow the standardized three-tier ID system:
+- **`broadstreet_id`**: Broadstreet API identifier (number) - for synced campaigns
+- **`mongo_id`**: MongoDB ObjectId (string) - for local storage and local-only campaigns
+- **`_id`**: MongoDB native ObjectId - for internal database operations only
+
 ## Parents relationship
 Campaigns are children of advertisers and networks.
 Campaigns are parents of placements (combinations of advertisements and zones).
@@ -123,7 +130,7 @@ curl -X POST http://localhost:3000/api/create/campaign \
 Notes about local advertisers
 - The creation endpoint accepts either `advertiser_id` (number) or `advertiser` object with `broadstreet_id` or `mongo_id`.
 - If the advertiser is local, pass `advertiser.mongo_id`. We store `advertiser_id` internally as that string until sync.
-- The campaigns list endpoint `GET /api/campaigns?advertiser_id=...` accepts a numeric Broadstreet ID or a MongoDB `_id` string and filters accordingly.
+- The campaigns list endpoint `GET /api/campaigns?advertiser_id=...` accepts a numeric Broadstreet ID or a MongoDB ObjectId string and filters accordingly.
 
 What you should see after creating locally
 - Campaigns page: the new campaign card shows a "🏠 Local" badge and uses local card styling.
@@ -161,7 +168,7 @@ curl -X POST http://localhost:3000/api/sync/local-all \
 What happens
 - A dry run validates duplicates and dependencies.
 - If valid, the service creates missing entities in Broadstreet. For campaigns, it sends `name`, `advertiser_id`, and optional fields like `start_date`, `weight`, `pacing_type`, etc., when present.
-- On success, the local campaign is updated with `original_broadstreet_id`, `synced_with_api: true`, and `synced_at`.
+- On success, the local campaign is updated with `broadstreet_id`, `synced_with_api: true`, and `synced_at`.
 
 ## How to update a campaign
 
@@ -179,7 +186,7 @@ What happens
 - in campaign duplicate names are allowed.
 
 **HANDLING LOCAL ADVERTISERS AND CAMPAIGNS**
-- we may create local advertisers. they will not have an id, being local. so we just use the mongodb _id. later the sync will update the id.
+- we may create local advertisers. they will not have a broadstreet_id, being local. so we just use the mongo_id. later the sync will update the broadstreet_id.
 
 ## Implementation Status
 

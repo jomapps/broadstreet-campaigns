@@ -3,6 +3,8 @@
 ## Overview
 This document summarizes the consolidation work performed to eliminate duplicate ID management implementations and establish a single source of truth for entity identification patterns.
 
+**Status**: ✅ **COMPLETED** - All entity reference documentation has been synchronized with the updated truth documents (`docs/database-id-consistency.md` and `docs/entity-reference/ids.md`).
+
 ## Consolidated Functions
 
 ### 1. **Legacy Index Cleanup** 
@@ -151,8 +153,8 @@ Consolidated imports across files to use the centralized utilities.
 
 ### Backward Compatibility
 - Entity-specific resolver functions still exist but now delegate to the consolidated function
-- Virtual getters in models still provide explicit naming (e.g., `local_advertiser_id`)
-- `EntityIdBadge` component still supports explicit naming props
+- **Legacy virtual getters removed**: Entity-specific virtuals (e.g., `local_advertiser_id`) have been eliminated
+- `EntityIdBadge` component still supports explicit naming props for display purposes
 
 ## Testing Recommendations
 

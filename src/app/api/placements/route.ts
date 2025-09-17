@@ -17,14 +17,14 @@ export async function GET(request: NextRequest) {
     const networkId = searchParams.get('network_id');
     const advertiserId = searchParams.get('advertiser_id');
     const campaignId = searchParams.get('campaign_id');
-    const campaignMongoId = searchParams.get('campaign_mongo_id');
+    const campaignMongoIdParam = searchParams.get('campaign_mongo_id');
     const advertisementIdFilter = searchParams.get('advertisement_id');
     const zoneIdFilter = searchParams.get('zone_id');
     const limitParam = searchParams.get('limit');
     const hardLimit = Number.isFinite(Number(limitParam)) ? Math.max(1, Math.min(1000, parseInt(limitParam as string))) : 0;
 
     // Guardrails in production to avoid heavy unfiltered queries
-    const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoId || advertisementIdFilter || zoneIdFilter);
+    const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoIdParam || advertisementIdFilter || zoneIdFilter);
     if (process.env.NODE_ENV === 'production' && !hasAnyFilter && !hardLimit) {
       return NextResponse.json({
         success: false,
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
     }
     
     // Validate ObjectId-like campaign_mongo_id early to avoid CastError
-    if (campaignMongoId) {
+    if (campaignMongoIdParam) {
       const { isValidObjectId } = await import('mongoose');
-      if (!isValidObjectId(campaignMongoId)) {
+      if (!isValidObjectId(campaignMongoIdParam)) {
         return NextResponse.json({
           success: false,
           message: 'Invalid campaign_mongo_id. Must be a valid Mongo ObjectId.',
@@ -45,18 +45,18 @@ export async function GET(request: NextRequest) {
 
     // Build campaign query based on filters
     const campaignQuery: Record<string, unknown> = {};
-    if (campaignId) campaignQuery.id = parseInt(campaignId);
+    if (campaignId) campaignQuery.broadstreet_id = parseInt(campaignId);
     if (advertiserId) campaignQuery.advertiser_id = parseInt(advertiserId);
     if (networkId) campaignQuery.network_id = parseInt(networkId);
 
     // Fetch synced campaigns unless a specific local campaign is requested
-    const campaigns = campaignMongoId ? [] : await Campaign.find(campaignQuery).lean();
+    const campaigns = campaignMongoIdParam ? [] : await Campaign.find(campaignQuery).lean();
 
-    // Also fetch local campaigns that match filters and optionally map to a specific campaign id via original_broadstreet_id
+    // Also fetch local campaigns that match filters and optionally map to a specific campaign broadstreet_id via original_broadstreet_id
     const localQuery: Record<string, unknown> = {};
     if (advertiserId) localQuery.advertiser_id = parseInt(advertiserId);
     if (campaignId) localQuery.original_broadstreet_id = parseInt(campaignId);
-    if (campaignMongoId) (localQuery as any)._id = campaignMongoId; // could use new Types.ObjectId(campaignMongoId)
+    if (campaignMongoIdParam) (localQuery as any)._id = campaignMongoIdParam; // could use new Types.ObjectId(campaignMongoIdParam)
     if (networkId) (localQuery as any).network_id = parseInt(networkId);
     const localCampaigns = await LocalCampaign.find(localQuery).lean();
 
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     if (networkId) localPlacementQuery.network_id = parseInt(networkId);
     if (advertiserId) localPlacementQuery.advertiser_id = parseInt(advertiserId);
     if (campaignId) localPlacementQuery.campaign_id = parseInt(campaignId);
-    if (campaignMongoId) localPlacementQuery.campaign_mongo_id = campaignMongoId;
+    if (campaignMongoIdParam) localPlacementQuery.campaign_mongo_id = campaignMongoIdParam;
     if (advertisementIdFilter) localPlacementQuery.advertisement_id = parseInt(advertisementIdFilter);
     if (zoneIdFilter) localPlacementQuery.zone_id = parseInt(zoneIdFilter);
 
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     // Log campaign details
     campaigns.forEach((c: any, i) => {
-      console.log(`[Placements API] Synced Campaign ${i}: ID=${c.id}, name="${c.name}", placements=${c.placements?.length || 0}`);
+      console.log(`[Placements API] Synced Campaign ${i}: ID=${c.broadstreet_id}, name="${c.name}", placements=${c.placements?.length || 0}`);
     });
     localCampaigns.forEach((c: any, i) => {
       console.log(`[Placements API] Local Campaign ${i}: ID=${c._id}, name="${c.name}", placements=${c.placements?.length || 0}`);
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     if (networkId) {
       const nid = parseInt(networkId);
       const advertisersInNetwork = await Advertiser.find({ network_id: nid }).lean();
-      const advertiserIds = advertisersInNetwork.map((a: any) => a.id).filter((v: any) => typeof v === 'number');
+      const advertiserIds = advertisersInNetwork.map((a: any) => a.broadstreet_id).filter((v: any) => typeof v === 'number');
       if (advertiserIds.length > 0) {
         const inferred = await Campaign.find({ advertiser_id: { $in: advertiserIds } }).lean();
         const existing = new Set((campaigns as any[]).map(c => (c as any).id));
@@ -145,16 +145,16 @@ export async function GET(request: NextRequest) {
         console.log(`[Placements API] Processing local campaign "${lc.name}" with ${lc.placements.length} placements`);
         for (const placement of lc.placements as any[]) {
           const numericId = (lc as any).original_broadstreet_id;
-          const mongoId = (lc as any)._id.toString();
+          const campaignMongoId = (lc as any)._id.toString();
           const placementData = {
             advertisement_id: (placement as any).advertisement_id,
             zone_id: (placement as any).zone_id,
             ...(typeof (placement as any).zone_mongo_id === 'string' ? { zone_mongo_id: (placement as any).zone_mongo_id } : {}),
             restrictions: (placement as any).restrictions,
             ...(typeof numericId === 'number' ? { campaign_id: numericId } : {}),
-            campaign_mongo_id: mongoId,
+            campaign_mongo_id: campaignMongoId,
             _localCampaign: {
-              mongo_id: mongoId,
+              mongo_id: campaignMongoId,
               ...(typeof numericId === 'number' ? { broadstreet_id: numericId } : {}),
               name: (lc as any).name,
               start_date: (lc as any).start_date,
@@ -235,10 +235,10 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Placements API] After deduplication: ${deduped.length} placements`);
     
-    // Build unique id sets for batch fetching
+    // Build unique advertisement ID sets for batch fetching
     const adIds = Array.from(new Set(deduped.map(p => p.advertisement_id)));
     const zoneIds = Array.from(new Set(deduped.map(p => p.zone_id).filter((v): v is number => typeof v === 'number')));
-    const zoneMongoIds = Array.from(new Set(
+    const zoneMongoIdList = Array.from(new Set(
       deduped
         .map((p: any) => p.zone_mongo_id)
         .filter((v): v is string => typeof v === 'string')
@@ -246,7 +246,7 @@ export async function GET(request: NextRequest) {
     const campaignIds = Array.from(new Set(deduped
       .map(p => (p as any).campaign_id)
       .filter((v): v is number => typeof v === 'number')));
-    const campaignMongoIds = Array.from(new Set(
+    const campaignMongoIdList = Array.from(new Set(
       deduped
         .map((p: any) => p.campaign_mongo_id)
         .filter((v): v is string => typeof v === 'string')
@@ -256,16 +256,16 @@ export async function GET(request: NextRequest) {
     const [ads, zones, localZones, campaignsById, localCampaignsById] = await Promise.all([
       Advertisement.find({ broadstreet_id: { $in: adIds } }).lean(),
       Zone.find({ id: { $in: zoneIds } }).lean(),
-      (await import('@/lib/models/local-zone')).default.find({ _id: { $in: zoneMongoIds } }).lean(),
+      (await import('@/lib/models/local-zone')).default.find({ _id: { $in: zoneMongoIdList } }).lean(),
       Campaign.find({ id: { $in: campaignIds } }).lean(),
-      LocalCampaign.find({ _id: { $in: campaignMongoIds } }).lean(),
+      LocalCampaign.find({ _id: { $in: campaignMongoIdList } }).lean(),
     ]);
 
     // Build lookup maps
     const adMap = new Map<number, any>(ads.map((a: any) => [a.broadstreet_id, a]));
-    const zoneMap = new Map<number, any>(zones.map((z: any) => [z.id, z]));
+    const zoneMap = new Map<number, any>(zones.map((z: any) => [z.broadstreet_id, z]));
     const zoneLocalMap = new Map<string, any>(localZones.map((z: any) => [z._id?.toString?.(), z]));
-    const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.id, c]));
+    const campaignMap = new Map<number, any>(campaignsById.map((c: any) => [c.broadstreet_id, c]));
     const localCampaignMap = new Map<string, any>(localCampaignsById.map((c: any) => [c._id?.toString?.(), c]));
 
     console.log(`[Placements API] Built maps - campaigns: ${campaignMap.size}, local campaigns: ${localCampaignMap.size}`);
@@ -443,8 +443,6 @@ export async function GET(request: NextRequest) {
         advertiser: advertiser ? {
           broadstreet_id: (advertiser as any).id,
           mongo_id: (advertiser as any)._id?.toString?.(),
-          broadstreet_advertiser_id: (advertiser as any).id,
-          local_advertiser_id: (advertiser as any)._id?.toString?.(),
           name: (advertiser as any).name,
         } : null,
         network: network ? {

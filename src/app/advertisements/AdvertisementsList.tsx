@@ -3,28 +3,11 @@
 import { useState, useMemo } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-
-// Type for serialized advertisement data (plain object without Mongoose methods)
-type AdvertisementLean = {
-  _id: string;
-  __v: number;
-  id: number;
-  name: string;
-  updated_at: string;
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement: boolean;
-  preview_url: string;
-  createdAt: string;
-  updatedAt: string;
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-};
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
+import { AdvertisementLean } from '@/lib/types/lean-entities';
 
 interface AdvertisementCardProps {
   advertisement: AdvertisementLean;
@@ -38,7 +21,7 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
 
   const handleCardClick = () => {
     if (onToggleSelection) {
-      onToggleSelection(String(advertisement.id));
+      onToggleSelection(String(advertisement.broadstreet_id));
     }
   };
   
@@ -71,7 +54,10 @@ function AdvertisementCard({ advertisement, isSelected = false, onToggleSelectio
           }`}>
             {advertisement.active_placement ? 'Active' : 'Inactive'}
           </span>
-          <span className="card-meta text-gray-500">ID: {advertisement.id}</span>
+          <EntityIdBadge
+            broadstreet_id={advertisement.broadstreet_id}
+            mongo_id={advertisement.mongo_id}
+          />
         </div>
       </div>
       
@@ -205,10 +191,10 @@ export default function AdvertisementsList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayAdvertisements.map((advertisement) => {
-            const selectionId = String((advertisement as any).id ?? (advertisement as any)._id);
+            const selectionId = String(getEntityId(advertisement));
             return (
               <AdvertisementCard 
-                key={advertisement._id || String(advertisement.id)} 
+                key={advertisement._id || String(advertisement.broadstreet_id)}
                 advertisement={advertisement}
                 isSelected={selectedAdvertisements.includes(selectionId)}
                 onToggleSelection={() => toggleAdvertisementSelection(selectionId)}

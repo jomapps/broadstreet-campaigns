@@ -243,8 +243,8 @@ function AdvertisersList() {
   }
 
   const handleAdvertiserSelect = (advertiser: AdvertiserLean) => {
-    const currentId = (selectedAdvertiser as any)?.broadstreet_id ?? (selectedAdvertiser as any)?.mongo_id ?? (selectedAdvertiser as any)?.name;
-    const nextId = advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name;
+    const currentId = getEntityId(selectedAdvertiser);
+    const nextId = getEntityId(advertiser);
     if (String(currentId ?? '') === String(nextId ?? '')) {
       setSelectedAdvertiser(null);
     } else {
@@ -253,7 +253,7 @@ function AdvertisersList() {
   };
 
   const handleDelete = async (advertiser: AdvertiserLean) => {
-    const advId = advertiser.broadstreet_id ?? advertiser.mongo_id;
+    const advId = getEntityId(advertiser);
     if (advId == null) {
       alert('Missing advertiser ID. Cannot delete.');
       return;
@@ -309,11 +309,11 @@ function AdvertisersList() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredAdvertisers.map((advertiser) => (
-            <AdvertiserCard 
-              key={String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)}
+            <AdvertiserCard
+              key={String(getEntityId(advertiser))}
               advertiser={advertiser}
               isSelected={
-                String(getEntityId(selectedAdvertiser as any)) === String(advertiser.broadstreet_id ?? advertiser.mongo_id ?? advertiser.name)
+                String(getEntityId(selectedAdvertiser)) === String(getEntityId(advertiser))
               }
               onSelect={handleAdvertiserSelect}
               onDelete={handleDelete}

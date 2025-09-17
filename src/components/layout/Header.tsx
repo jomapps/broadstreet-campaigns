@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Zones', href: '/zones' },
   { name: 'Campaigns', href: '/campaigns' },
   { name: 'Placements', href: '/placements' },
+  { name: 'Themes', href: '/themes' },
   { name: 'Local Only', href: '/local-only' },
 ];
 

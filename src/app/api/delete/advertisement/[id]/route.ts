@@ -9,10 +9,10 @@ export async function DELETE(
   try {
     await connectDB();
 
-    const { id } = await context.params;
+    const { id: advertisementId } = await context.params;
 
     // Find and delete the local advertisement
-    const deletedAdvertisement = await LocalAdvertisement.findByIdAndDelete(id);
+    const deletedAdvertisement = await LocalAdvertisement.findByIdAndDelete(advertisementId);
 
     if (!deletedAdvertisement) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function DELETE(
     return NextResponse.json({
       message: 'Local advertisement deleted successfully',
       advertisement: {
-        id: deletedAdvertisement._id,
+        mongo_id: deletedAdvertisement._id?.toString(),
         name: deletedAdvertisement.name,
       }
     });

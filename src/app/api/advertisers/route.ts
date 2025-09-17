@@ -41,9 +41,6 @@ export async function GET(request: NextRequest) {
         ...rest,
         ...(typeof broadstreetId === 'number' ? { broadstreet_id: broadstreetId } : {}),
         mongo_id: _id?.toString?.() ?? String(_id),
-        // Explicit names
-        ...(typeof broadstreetId === 'number' ? { broadstreet_advertiser_id: broadstreetId } : {}),
-        local_advertiser_id: _id?.toString?.() ?? String(_id),
       };
     });
 
@@ -53,11 +50,9 @@ export async function GET(request: NextRequest) {
       const shaped: any = {
         ...rest,
         mongo_id: _id?.toString?.() ?? String(_id),
-        local_advertiser_id: _id?.toString?.() ?? String(_id),
       };
       if (typeof original_broadstreet_id === 'number') {
         shaped.broadstreet_id = original_broadstreet_id;
-        shaped.broadstreet_advertiser_id = original_broadstreet_id;
       }
       return shaped;
     });

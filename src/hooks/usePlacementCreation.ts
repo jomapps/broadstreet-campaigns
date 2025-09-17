@@ -31,7 +31,7 @@ export function usePlacementCreation(): UsePlacementCreationResult {
   const toNumericIds = (items: { ids: { broadstreet_id?: number } }[]) =>
     items
       .map((x) => x.ids.broadstreet_id)
-      .filter((id): id is number => typeof id === 'number');
+      .filter((broadstreetId): broadstreetId is number => typeof broadstreetId === 'number');
 
   const adIds = useMemo(() => toNumericIds(entities.advertisements as any), [entities.advertisements]);
 

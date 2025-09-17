@@ -4,6 +4,15 @@
 
 Zones represent ad slots/placements within a network where advertisements can be displayed. Each zone belongs to a single network.
 
+## ID Management
+
+Zones follow the standardized three-tier ID system:
+- **`broadstreet_id`**: Broadstreet API identifier (number) - for synced zones
+- **`mongo_id`**: MongoDB ObjectId (string) - for local storage and local-only zones
+- **`_id`**: MongoDB native ObjectId - for internal database operations only
+
+**Display Rule**: Local zones should display MongoDB IDs with local badges when `broadstreet_id` is undefined.
+
 ## How to create a zone
 
 Use the Broadstreet API to create a zone on a specific network.
@@ -109,7 +118,7 @@ curl -X POST http://localhost:3000/api/sync/local-all \\
 What happens
 - A dry run validates duplicates and dependencies.
 - If valid, the service creates missing entities in Broadstreet. For zones, it uses `name`, `network_id`, and optional fields like `alias` and `self_serve` if present.
-- On success, the local zone is updated with `original_broadstreet_id`, `synced_with_api: true`, and `synced_at`.
+- On success, the local zone is updated with `broadstreet_id`, `synced_with_api: true`, and `synced_at`.
 
 ## How to update a zone
 

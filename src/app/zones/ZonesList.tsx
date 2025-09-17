@@ -1,66 +1,32 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useFilters } from '@/contexts/FilterContext';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-
-// Type for serialized zone data (plain object without Mongoose methods)
-type ZoneLean = {
-  _id: string;
-  __v: number;
-  id?: number;
-  name: string;
-  network_id: number;
-  alias?: string | null;
-  self_serve: boolean;
-  size_type?: 'SQ' | 'PT' | 'LS' | 'CS' | null;
-  size_number?: number | null;
-  category?: string | null;
-  block?: string | null;
-  is_home?: boolean;
-  // LocalZone specific fields
-  created_locally?: boolean;
-  synced_with_api?: boolean;
-  created_at?: string;
-  synced_at?: string;
-  original_broadstreet_id?: number;
-  sync_errors?: string[];
-  // Additional LocalZone fields
-  advertisement_count?: number;
-  allow_duplicate_ads?: boolean;
-  concurrent_campaigns?: number;
-  advertisement_label?: string;
-  archived?: boolean;
-  display_type?: 'standard' | 'rotation';
-  rotation_interval?: number;
-  animation_type?: string;
-  width?: number;
-  height?: number;
-  rss_shuffle?: boolean;
-  style?: string;
-  source?: 'api' | 'local';
-  createdAt: string;
-  updatedAt: string;
-};
+import { ThemeBadges } from '@/components/themes/ThemeBadge';
+import { useZoneThemes } from '@/hooks/useZoneThemes';
+import { ZoneLean } from '@/lib/types/lean-entities';
+import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 
 interface ZoneCardProps {
   zone: ZoneLean;
   networkName?: string;
   isSelected?: boolean;
   onToggleSelection?: (zoneId: string) => void;
+  themes?: Array<{ _id: string; name: string; zone_count?: number }>;
 }
 
-function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: ZoneCardProps) {
+function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection, themes = [] }: ZoneCardProps) {
   const sizeInfo = zone.size_type ? getSizeInfo(zone.size_type) : null;
   const isLocalZone = zone.source === 'local' || zone.created_locally;
   const isConflictZone = hasMultipleSizeTypes(zone.name);
 
   const handleCardClick = () => {
-    if (onToggleSelection && typeof zone.id === 'number') {
-      onToggleSelection(String(zone.id));
+    if (onToggleSelection && zone.broadstreet_id) {
+      onToggleSelection(String(zone.broadstreet_id));
     }
   };
   
@@ -108,9 +74,10 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
               {zone.size_number && zone.size_number}
             </span>
           )}
-          <span className="card-meta text-gray-500">
-            ID: {zone.id || zone._id.slice(-8)}
-          </span>
+          <EntityIdBadge
+            broadstreet_id={zone.broadstreet_id}
+            mongo_id={zone._id?.toString()}
+          />
         </div>
       </div>
       
@@ -159,6 +126,16 @@ function ZoneCard({ zone, networkName, isSelected = false, onToggleSelection }: 
           </span>
         )}
       </div>
+
+      {/* Theme badges - only show for synced zones */}
+      {themes.length > 0 && zone.broadstreet_id && (
+        <div className="mt-3 pt-3 border-t border-gray-200">
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-500 font-medium">Themes:</span>
+            <ThemeBadges themes={themes} maxDisplay={2} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -187,9 +164,20 @@ export default function ZonesList({
 }: ZonesListProps) {
   const entities = useSelectedEntities();
   const { toggleZoneSelection } = useFilters();
-  
+
   // Use filtered zones if provided, otherwise fall back to local filtering
   const displayZones = filteredZones || zones;
+
+  // Get zone IDs for theme fetching (only synced zones)
+  const syncedZoneIds = useMemo(() => {
+    return displayZones
+      .filter(zone => zone.broadstreet_id && (zone.source === 'api' || !zone.created_locally))
+      .map(zone => zone.broadstreet_id!)
+      .filter(broadstreetId => broadstreetId != null);
+  }, [displayZones]);
+
+  // Fetch themes for zones
+  const { themesByZone } = useZoneThemes(syncedZoneIds);
 
   // Check if network is selected
   if (!entities.network) {
@@ -233,12 +221,13 @@ export default function ZonesList({
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayZones.map((zone) => (
-            <ZoneCard 
-              key={zone._id} 
-              zone={zone} 
+            <ZoneCard
+              key={zone._id}
+              zone={zone}
               networkName={networkMap.get(zone.network_id)}
-              isSelected={selectedZones.includes(String(zone.id))}
+              isSelected={selectedZones.includes(String(zone.broadstreet_id || zone._id))}
               onToggleSelection={toggleZoneSelection}
+              themes={zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : []}
             />
           ))}
         </div>

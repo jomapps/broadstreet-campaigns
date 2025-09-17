@@ -4,6 +4,17 @@
 
 Placements represent combinations of advertisements and zones within campaigns. The system supports both embedded placements (within campaigns) and standalone placement collections with comprehensive sync capabilities.
 
+## ID Management
+
+Placements use a flexible ID system to support both local and synced entities:
+- **Required Broadstreet IDs**: `network_id`, `advertiser_id`, `advertisement_id` (always numbers)
+- **Flexible Campaign Reference**: Either `campaign_id` (number) OR `campaign_mongo_id` (string) - XOR constraint
+- **Flexible Zone Reference**: Either `zone_id` (number) OR `zone_mongo_id` (string) - XOR constraint
+
+**Business Rules**:
+- Placement cards should show campaign name/id, advertisement name/id, and zone name/id
+- Local-only entities should be displayed with yellowish styling cards
+
 ## Parents relationship
 Placements are children of campaigns.
 Placements combinations of zone and advertisement.
@@ -20,8 +31,8 @@ Advertisements are children of Advertisers.
 - We do not create networks or advertisements. They need to be present in the broadstreet api, and will be synced before start of the placement creation process.
 
 **HANDLING LOCAL ADVERTISERS AND CAMPAIGNS**
-- we may create local advertisers. they will not have an id, being local. so we just use the mongodb _id. later the sync will update the id.
-- we may create local campaigns. they will not have an id, being local. so we just use the mongodb _id. later the sync will update the id.
+- we may create local advertisers. they will not have a broadstreet_id, being local. so we just use the mongo_id. later the sync will update the broadstreet_id.
+- we may create local campaigns. they will not have a broadstreet_id, being local. so we just use the mongo_id. later the sync will update the broadstreet_id.
 
 **CRITICAL: LOCAL-ONLY ENTITIES AND MONGODB IDS**
 - **Local-only entities are NOT synced back to Broadstreet** until explicitly uploaded via "Local-Only > Upload to Broadstreet"
@@ -34,7 +45,7 @@ Advertisements are children of Advertisers.
   - `zone_id` (number) - Broadstreet ID for synced zones
   - `zone_mongo_id` (string) - MongoDB ObjectId for local-only zones
   - `campaign_mongo_id` (string) - MongoDB ObjectId of parent local campaign
-- **During sync/upload**: Local MongoDB IDs are resolved to Broadstreet numeric IDs
+- **During sync/upload**: Local MongoDB ObjectIds are resolved to Broadstreet numeric IDs
 - **API filtering**: The `/api/placements` endpoint handles both ID types for proper network filtering
 
 

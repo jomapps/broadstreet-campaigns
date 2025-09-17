@@ -29,9 +29,7 @@ export async function GET() {
       return {
         ...rest,
         mongo_id: _id.toString(),
-        local_advertiser_id: _id.toString(),
         ...(typeof advertiser.original_broadstreet_id === 'number' ? { broadstreet_id: advertiser.original_broadstreet_id } : {}),
-        ...(typeof advertiser.original_broadstreet_id === 'number' ? { broadstreet_advertiser_id: advertiser.original_broadstreet_id } : {}),
         created_at: (advertiser.created_at || new Date()).toISOString(),
         type: 'advertiser' as const,
       };
@@ -56,9 +54,7 @@ export async function GET() {
         return {
           ...rest,
           mongo_id: _id.toString(),
-          local_advertiser_id: _id.toString(),
           ...(typeof a.original_broadstreet_id === 'number' ? { broadstreet_id: a.original_broadstreet_id } : {}),
-          ...(typeof a.original_broadstreet_id === 'number' ? { broadstreet_advertiser_id: a.original_broadstreet_id } : {}),
           created_at: (created_at || new Date()).toISOString(),
           type: 'advertiser' as const,
         };

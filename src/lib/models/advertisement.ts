@@ -96,23 +96,9 @@ AdvertisementSchema.index({ type: 1 });
 AdvertisementSchema.index({ active_placement: 1 });
 AdvertisementSchema.index({ network_id: 1 });
 
-// Virtual getters for IDs
+// Virtual getters for standardized three-tier ID system
 AdvertisementSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
-});
-
-// New explicit ID naming per entity
-AdvertisementSchema.virtual('local_advertisement_id').get(function (this: any) {
-  return this._id?.toString();
-});
-AdvertisementSchema.virtual('broadstreet_advertisement_id').get(function (this: any) {
-  return this.broadstreet_id;
-});
-
-// Relationship aliasing to explicit naming
-AdvertisementSchema.virtual('broadstreet_advertiser_id').get(function (this: any) {
-  // The advertisement model has advertiser as string field; no numeric relation stored.
-  return undefined;
 });
 
 // Ensure virtuals are present in lean() results

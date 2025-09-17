@@ -76,8 +76,8 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
               <p className="font-medium">{entities.advertisements.length}</p>
               {adIds.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
-                  {adIds.slice(0, 5).map((id) => (
-                    <li key={String(id)}>Ad {String(id)}</li>
+                  {adIds.slice(0, 5).map((adId) => (
+                    <li key={String(adId)}>Ad {String(adId)}</li>
                   ))}
                   {adIds.length > 5 && (
                     <li>+{adIds.length - 5} more</li>
@@ -91,7 +91,7 @@ export default function CreatePlacementsModal({ isOpen, onClose }: CreatePlaceme
               {entities.zones.length > 0 && (
                 <ul className="list-disc pl-5 text-sm text-gray-700">
                   {entities.zones.slice(0, 5).map((zone) => (
-                    <li key={String(zone.id)}>Zone {String(zone.id)}</li>
+                    <li key={String(zone.broadstreet_id)}>Zone {String(zone.broadstreet_id)}</li>
                   ))}
                   {entities.zones.length > 5 && (
                     <li>+{entities.zones.length - 5} more</li>

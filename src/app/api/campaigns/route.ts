@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     // Get all campaigns for the selected advertiser from local collections only
     const [syncedCampaigns, localCampaigns] = await Promise.all([
       // Get previously synced campaigns stored locally (no live API calls)
-      // For synced campaigns, advertiser_id is numeric Broadstreet ID
+      // For synced campaigns, advertiser_id is numeric broadstreet_id
       Campaign.find({ 
         advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : -99999999
       }).sort({ start_date: -1 }).lean(),
@@ -33,9 +33,9 @@ export async function GET(request: NextRequest) {
       }).sort({ start_date: -1 }).lean()
     ]);
     
-    // Shape synced campaigns to expose explicit ID fields
+    // Shape synced campaigns to expose explicit broadstreet_id and mongo_id fields
     const shapedSyncedCampaigns = (syncedCampaigns as any[]).map((c: any) => {
-      const { id: broadstreetId, _id, ...rest } = c;
+      const { broadstreet_id: broadstreetId, _id, ...rest } = c;
       return {
         ...rest,
         broadstreet_id: broadstreetId,
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       return shaped;
     });
     
-    // Combine both collections with explicit IDs only and filter by advertiser id (supports string or number)
+    // Combine both collections with explicit broadstreet_id/mongo_id only and filter by advertiser_id (supports string or number)
     const allCampaigns = [...shapedSyncedCampaigns, ...convertedLocalCampaigns];
     const campaigns = allCampaigns
       .filter((c: any) => {
