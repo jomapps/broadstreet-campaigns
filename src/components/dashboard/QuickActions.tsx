@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StreamingSyncProgress from '@/components/dashboard/StreamingSyncProgress';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function QuickActions() {
   const [showSyncProgress, setShowSyncProgress] = useState(false);

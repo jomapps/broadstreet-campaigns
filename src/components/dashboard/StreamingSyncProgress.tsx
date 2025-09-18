@@ -25,7 +25,7 @@ interface StreamingSyncProgressProps {
 export default function StreamingSyncProgress({ onComplete, onClose }: StreamingSyncProgressProps) {
   const [isConnecting, setIsConnecting] = useState(true);
   const [overallProgress, setOverallProgress] = useState(0);
-  const [currentPhase, setCurrentPhase] = useState('connecting');
+  const [, setCurrentPhase] = useState('connecting');
   const [currentMessage, setCurrentMessage] = useState('Connecting to Broadstreet API...');
   const [isComplete, setIsComplete] = useState(false);
   const [hasErrors, setHasErrors] = useState(false);
