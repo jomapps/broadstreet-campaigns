@@ -1,25 +1,11 @@
-'use client';
+/**
+ * LOADING SKELETON - LOCAL-ONLY PAGE
+ * 
+ * Loading skeleton component for the local-only page.
+ * Provides visual feedback while data is being fetched.
+ */
 
-import { useEffect, useState } from 'react';
-import LocalOnlyDashboard from './LocalOnlyDashboard';
-
-// Type definitions
-type LocalOnlyData = {
-  zones: any[];
-  advertisers: any[];
-  campaigns: any[];
-  networks: any[];
-  advertisements: any[];
-  placements: any[];
-};
-
-interface ClientDashboardWrapperProps {
-  data: LocalOnlyData;
-  networkMap: Record<number, string>;
-  advertiserMap: Record<number, string>;
-}
-
-function LoadingSkeleton() {
+export default function LoadingSkeleton() {
   return (
     <div className="space-y-8">
       {[...Array(3)].map((_, i) => (
@@ -54,25 +40,5 @@ function LoadingSkeleton() {
         </div>
       ))}
     </div>
-  );
-}
-
-export default function ClientDashboardWrapper({ data, networkMap, advertiserMap }: ClientDashboardWrapperProps) {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  if (!isClient) {
-    return <LoadingSkeleton />;
-  }
-
-  return (
-    <LocalOnlyDashboard 
-      data={data}
-      networkMap={networkMap}
-      advertiserMap={advertiserMap}
-    />
   );
 }

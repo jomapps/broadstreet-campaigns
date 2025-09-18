@@ -1,3 +1,11 @@
+/**
+ * LOCAL-ONLY DASHBOARD - ZUSTAND INTEGRATION
+ *
+ * Updated to use Zustand stores instead of props.
+ * Reads local entities and networks from entity store.
+ * All variable names follow docs/variable-origins.md registry.
+ */
+
 'use client';
 
 import { useState } from 'react';
@@ -7,11 +15,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
+import { useAllEntities } from '@/stores';
 
 // Type for local entity data
 type LocalEntity = {
@@ -47,11 +55,7 @@ type LocalOnlyData = {
   }>;
 };
 
-interface LocalOnlyDashboardProps {
-  data: LocalOnlyData;
-  networkMap: Record<number, string>;
-  advertiserMap: Record<number, string>;
-}
+// No props needed - component reads from Zustand stores
 
 function mapLocalEntityToCardProps(
   entity: LocalEntity,
@@ -191,9 +195,39 @@ function LocalPlacementCard({
   );
 }
 
-export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
+export default function LocalOnlyDashboard() {
   const router = useRouter();
-  const entities = useSelectedEntities();
+
+  // Get data from Zustand stores using exact names from variable registry
+  const {
+    localZones,
+    localAdvertisers,
+    localCampaigns,
+    localNetworks,
+    localAdvertisements,
+    localPlacements,
+    networks
+  } = useAllEntities();
+
+  // Create network and advertiser maps from store data
+  const networkMap = networks.reduce((map: Record<number, string>, network: any) => {
+    map[network.broadstreet_id] = network.name;
+    return map;
+  }, {} as Record<number, string>);
+
+  // For advertiser map, we would need advertisers from the store
+  // For now, using empty object as placeholder
+  const advertiserMap = {} as Record<number, string>;
+
+  // Reconstruct data object to match expected structure
+  const data = {
+    zones: localZones,
+    advertisers: localAdvertisers,
+    campaigns: localCampaigns,
+    networks: localNetworks,
+    advertisements: localAdvertisements,
+    placements: localPlacements
+  };
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
