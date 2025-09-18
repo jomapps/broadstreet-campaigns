@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { SyncStatus } from '@/lib/types/api';
 
 // Simple toast notification function
 const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -41,20 +42,8 @@ const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info')
   }, 5000);
 };
 
-export interface SyncStatusData {
-  status: 'connected' | 'syncing' | 'validating' | 'error';
-  message: string;
-  details?: {
-    syncInProgress?: boolean;
-    validationInProgress?: boolean;
-    validationStatus?: any;
-    error?: string;
-  };
-  timestamp: string;
-}
-
 export interface UseSyncStatusReturn {
-  status: SyncStatusData;
+  status: SyncStatus;
   isLoading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -63,14 +52,14 @@ export interface UseSyncStatusReturn {
   triggerSyncMonitoring: () => void; // New function to start monitoring after sync
 }
 
-const DEFAULT_STATUS: SyncStatusData = {
+const DEFAULT_STATUS: SyncStatus = {
   status: 'connected',
   message: 'API Connected',
   timestamp: new Date().toISOString()
 };
 
 export function useSyncStatus(pollInterval: number = 30000): UseSyncStatusReturn {
-  const [status, setStatus] = useState<SyncStatusData>(DEFAULT_STATUS);
+  const [status, setStatus] = useState<SyncStatus>(DEFAULT_STATUS);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);

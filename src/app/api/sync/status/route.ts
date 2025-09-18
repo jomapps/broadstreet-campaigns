@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { themeValidationService } from '@/lib/theme-validation-service';
-
-export interface SyncStatus {
-  status: 'connected' | 'syncing' | 'validating' | 'error';
-  message: string;
-  details?: {
-    syncInProgress?: boolean;
-    validationInProgress?: boolean;
-    validationStatus?: any;
-    error?: string;
-  };
-  timestamp: string;
-}
+import type { SyncStatus } from '@/lib/types/api';
 
 /**
  * GET /api/sync/status
