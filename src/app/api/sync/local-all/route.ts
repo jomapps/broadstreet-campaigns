@@ -3,7 +3,11 @@ import syncService from '@/lib/sync-service';
 import LocalZone from '@/lib/models/local-zone';
 import LocalAdvertiser from '@/lib/models/local-advertiser';
 import LocalCampaign from '@/lib/models/local-campaign';
+import LocalNetwork from '@/lib/models/local-network';
+import LocalAdvertisement from '@/lib/models/local-advertisement';
 import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
+import { syncAll } from '@/lib/utils/sync-helpers';
+import connectDB from '@/lib/mongodb';
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,23 +76,128 @@ export async function POST(request: NextRequest) {
       failedSyncs: syncReport.failedSyncs,
     });
 
-    const responsePayload = {
-      success: syncReport.success,
-      report: syncReport,
-      dryRun
-    };
-    console.log('[local-all] Response payload:', {
-      success: responsePayload.success,
-      report: {
-        totalEntities: responsePayload.report.totalEntities,
-        successfulSyncs: responsePayload.report.successfulSyncs,
-        failedSyncs: responsePayload.report.failedSyncs,
-      },
-      dryRun: {
-        valid: (responsePayload.dryRun as any)?.valid,
+    // NEW WORKFLOW: If sync was successful, delete all local-only entities and trigger dashboard sync
+    if (syncReport.success) {
+      console.log('[local-all] Sync successful, starting cleanup and dashboard sync...');
+
+      try {
+        // Step 1: Delete all local-only entities
+        console.log('[local-all] Deleting all local-only entities...');
+        await connectDB();
+
+        const deleteResults = await Promise.allSettled([
+          LocalAdvertiser.deleteMany({ synced_with_api: false }),
+          LocalCampaign.deleteMany({ synced_with_api: false }),
+          LocalZone.deleteMany({ synced_with_api: false }),
+          LocalAdvertisement.deleteMany({ synced_with_api: false }),
+          LocalNetwork.deleteMany({ synced_with_api: false }),
+        ]);
+
+        let totalDeleted = 0;
+        const deleteErrors: string[] = [];
+        const entityTypes = ['advertisers', 'campaigns', 'zones', 'advertisements', 'networks'];
+
+        deleteResults.forEach((result, index) => {
+          if (result.status === 'fulfilled') {
+            const deletedCount = result.value.deletedCount || 0;
+            totalDeleted += deletedCount;
+            console.log(`[local-all] Deleted ${deletedCount} local ${entityTypes[index]}`);
+          } else {
+            const error = `Failed to delete local ${entityTypes[index]}: ${result.reason}`;
+            deleteErrors.push(error);
+            console.error(`[local-all] ${error}`);
+          }
+        });
+
+        console.log(`[local-all] Cleanup completed: ${totalDeleted} entities deleted, ${deleteErrors.length} errors`);
+
+        // Step 2: Trigger dashboard sync to refresh all data from Broadstreet
+        console.log('[local-all] Starting dashboard sync...');
+        const dashboardSyncResult = await syncAll();
+
+        console.log('[local-all] Dashboard sync completed:', {
+          success: dashboardSyncResult.success,
+          error: dashboardSyncResult.error
+        });
+
+        // Return comprehensive response
+        const responsePayload = {
+          success: syncReport.success && dashboardSyncResult.success,
+          report: syncReport,
+          dryRun,
+          cleanup: {
+            success: deleteErrors.length === 0,
+            totalDeleted,
+            errors: deleteErrors
+          },
+          dashboardSync: {
+            success: dashboardSyncResult.success,
+            results: dashboardSyncResult.results,
+            error: dashboardSyncResult.error
+          }
+        };
+
+        console.log('[local-all] Final response payload:', {
+          success: responsePayload.success,
+          report: {
+            totalEntities: responsePayload.report.totalEntities,
+            successfulSyncs: responsePayload.report.successfulSyncs,
+            failedSyncs: responsePayload.report.failedSyncs,
+          },
+          cleanup: {
+            success: responsePayload.cleanup.success,
+            totalDeleted: responsePayload.cleanup.totalDeleted,
+            errorCount: responsePayload.cleanup.errors.length
+          },
+          dashboardSync: {
+            success: responsePayload.dashboardSync.success,
+            error: responsePayload.dashboardSync.error
+          }
+        });
+
+        return NextResponse.json(responsePayload);
+
+      } catch (cleanupError) {
+        console.error('[local-all] Cleanup/dashboard sync failed:', cleanupError);
+
+        // Return partial success - sync worked but cleanup failed
+        const responsePayload = {
+          success: false, // Overall failure due to cleanup issues
+          report: syncReport,
+          dryRun,
+          cleanup: {
+            success: false,
+            totalDeleted: 0,
+            errors: [cleanupError instanceof Error ? cleanupError.message : 'Unknown cleanup error']
+          },
+          dashboardSync: {
+            success: false,
+            error: 'Cleanup failed, dashboard sync not attempted'
+          }
+        };
+
+        return NextResponse.json(responsePayload);
       }
-    });
-    return NextResponse.json(responsePayload);
+    } else {
+      // Original behavior for failed syncs
+      const responsePayload = {
+        success: syncReport.success,
+        report: syncReport,
+        dryRun
+      };
+      console.log('[local-all] Sync failed, skipping cleanup. Response payload:', {
+        success: responsePayload.success,
+        report: {
+          totalEntities: responsePayload.report.totalEntities,
+          successfulSyncs: responsePayload.report.successfulSyncs,
+          failedSyncs: responsePayload.report.failedSyncs,
+        },
+        dryRun: {
+          valid: (responsePayload.dryRun as any)?.valid,
+        }
+      });
+      return NextResponse.json(responsePayload);
+    }
 
   } catch (error) {
     console.error('Sync error:', error);

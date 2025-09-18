@@ -268,8 +268,14 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
     }
   };
 
+  // Initialize steps with the new workflow including cleanup and dashboard sync
+  const initializeStepsWithCleanup = (entityCounts: Record<string, number>) => {
+    // Start with the standard initialization
+    initializeSteps(entityCounts);
+  };
+
   const handleSyncAll = async () => {
-    if (!confirm(`Are you sure you want to sync all ${totalEntities} local entities to Broadstreet? This may take a few minutes.`)) {
+    if (!confirm(`Are you sure you want to sync all ${totalEntities} local entities to Broadstreet? This will also clean up local data and refresh from Broadstreet. This may take several minutes.`)) {
       return;
     }
 
@@ -288,8 +294,8 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       console.info('[LocalOnly] Computed unsynced counts', { nid, advertisers, zones, campaigns, networks, advertisements });
       return { advertisers, zones, campaigns, networks, advertisements };
     })();
-    
-    initializeSteps(entityCounts);
+
+    initializeStepsWithCleanup(entityCounts);
     setProgressModalOpen(true);
 
     try {
@@ -331,30 +337,73 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
         setStepCompleted('dry-run', 'No name conflicts found');
       }
 
-      // Simulate step-by-step progress based on API response
+      // Handle the new workflow response format
+      console.log('[LocalOnly] Processing sync result:', {
+        success: result.success,
+        hasCleanup: !!result.cleanup,
+        hasDashboardSync: !!result.dashboardSync
+      });
+
+      // Process initial sync steps
       const syncSteps = [
-        { stepName: 'networks', count: result.synced?.networks || 0 },
-        { stepName: 'advertisers', count: result.synced?.advertisers || 0 },
-        { stepName: 'zones', count: result.synced?.zones || 0 },
-        { stepName: 'advertisements', count: result.synced?.advertisements || 0 },
-        { stepName: 'campaigns', count: result.synced?.campaigns || 0 }
+        { stepName: 'networks', count: result.report?.successfulSyncs || 0 },
+        { stepName: 'advertisers', count: result.report?.successfulSyncs || 0 },
+        { stepName: 'zones', count: result.report?.successfulSyncs || 0 },
+        { stepName: 'advertisements', count: result.report?.successfulSyncs || 0 },
+        { stepName: 'campaigns', count: result.report?.successfulSyncs || 0 }
       ];
 
-      // Simulate progress for each step
+      // Simulate progress for sync steps
       for (const step of syncSteps) {
         setStepInProgress(step.stepName);
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
+        await new Promise(resolve => setTimeout(resolve, 300)); // Faster simulation
 
         if (step.count > 0) {
-          setStepCompleted(step.stepName, `Successfully synced ${step.count} ${step.stepName}`);
+          setStepCompleted(step.stepName, `Successfully synced entities`);
         } else {
           setStepCompleted(step.stepName, `No ${step.stepName} to sync`);
         }
       }
 
-      // Complete the sync
-      const hasErrors = result.errors && result.errors.length > 0;
-      completeSync(!hasErrors, result.errors);
+      // Handle cleanup step if present in response
+      if (result.cleanup) {
+        // Since we can't add steps dynamically, we'll show cleanup status in the final step message
+        console.log('[LocalOnly] Processing cleanup result:', result.cleanup);
+
+        if (result.cleanup.success) {
+          console.log(`[LocalOnly] Cleanup successful: ${result.cleanup.totalDeleted} entities deleted`);
+        } else {
+          console.log('[LocalOnly] Cleanup had errors:', result.cleanup.errors);
+        }
+      }
+
+      // Handle dashboard sync step if present in response
+      if (result.dashboardSync) {
+        console.log('[LocalOnly] Processing dashboard sync result:', {
+          success: result.dashboardSync.success,
+          error: result.dashboardSync.error
+        });
+      }
+
+      // Complete the sync with comprehensive error handling
+      const syncErrors = result.report?.errors || [];
+      const cleanupErrors = result.cleanup?.errors || [];
+      const dashboardSyncError = result.dashboardSync?.error ? [result.dashboardSync.error] : [];
+
+      const allErrors = [...syncErrors, ...cleanupErrors, ...dashboardSyncError];
+      const hasErrors = allErrors.length > 0;
+
+      // Create a comprehensive completion message
+      let completionMessage = 'Sync completed';
+      if (result.cleanup?.totalDeleted > 0) {
+        completionMessage += `, cleaned up ${result.cleanup.totalDeleted} local entities`;
+      }
+      if (result.dashboardSync?.success) {
+        completionMessage += ', refreshed data from Broadstreet';
+      }
+
+      console.log('[LocalOnly] Completing sync with message:', completionMessage);
+      completeSync(!hasErrors, allErrors.length > 0 ? allErrors : undefined);
       
     } catch (error) {
       console.error('Error syncing entities:', error);
@@ -604,7 +653,7 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       <ProgressModal
         isOpen={isProgressModalOpen}
         onClose={() => setProgressModalOpen(false)}
-        title="Syncing to Broadstreet"
+        title="Sync & Refresh Workflow"
         steps={steps}
         currentStep={currentStep}
         overallProgress={overallProgress}
