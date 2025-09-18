@@ -286,12 +286,26 @@ export class RateLimiter {
   }
 }
 
+// Get rate limit from environment variable (seconds to wait between requests)
+const REQUEST_RATE_LIMIT = process.env.REQUEST_RATE_LIMIT;
+if (!REQUEST_RATE_LIMIT) {
+  throw new Error('REQUEST_RATE_LIMIT environment variable is required');
+}
+
+const waitSeconds = parseInt(REQUEST_RATE_LIMIT);
+if (isNaN(waitSeconds) || waitSeconds <= 0) {
+  throw new Error('REQUEST_RATE_LIMIT must be a positive number (seconds to wait between requests)');
+}
+
+// Convert wait time to requests per second (e.g., 1 second wait = 1 request per second, 5 seconds wait = 0.2 requests per second)
+const maxRequestsPerSecond = 1 / waitSeconds;
+
 // Singleton instance for Broadstreet API
 export const broadstreetRateLimiter = new RateLimiter({
-  maxRequestsPerSecond: 0.2, // 1 request every 5 seconds (very conservative)
+  maxRequestsPerSecond, // Calculated from REQUEST_RATE_LIMIT
   maxConcurrentRequests: 1, // Only 1 concurrent request to prevent overload
   queueTimeout: 0, // No timeout - infinite queue for sync operations
-  retryDelay: 5000, // 5 second initial delay for rate limit retries
+  retryDelay: waitSeconds * 1000, // Use the same wait time for retries (convert to milliseconds)
   maxRetries: 3,
   enableInfiniteQueue: true // Enable infinite queue for long-running sync operations
 });
