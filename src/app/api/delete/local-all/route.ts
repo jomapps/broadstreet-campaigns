@@ -5,6 +5,7 @@ import LocalAdvertiser from '@/lib/models/local-advertiser';
 import LocalCampaign from '@/lib/models/local-campaign';
 import LocalNetwork from '@/lib/models/local-network';
 import LocalAdvertisement from '@/lib/models/local-advertisement';
+import Placement from '@/lib/models/placement';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -17,12 +18,13 @@ export async function DELETE(request: NextRequest) {
       LocalZone.deleteMany({ synced_with_api: false }),
       LocalAdvertisement.deleteMany({ synced_with_api: false }),
       LocalNetwork.deleteMany({ synced_with_api: false }),
+      Placement.deleteMany({ created_locally: true, synced_with_api: false }),
     ]);
 
     // Count successful deletions
     let totalDeleted = 0;
     const errors: string[] = [];
-    const entityTypes = ['advertisers', 'campaigns', 'zones', 'advertisements', 'networks'];
+    const entityTypes = ['advertisers', 'campaigns', 'zones', 'advertisements', 'networks', 'placements'];
 
     deleteResults.forEach((result, index) => {
       if (result.status === 'fulfilled') {
@@ -53,6 +55,7 @@ export async function DELETE(request: NextRequest) {
         zones: deleteResults[2].status === 'fulfilled' ? deleteResults[2].value.deletedCount || 0 : 0,
         advertisements: deleteResults[3].status === 'fulfilled' ? deleteResults[3].value.deletedCount || 0 : 0,
         networks: deleteResults[4].status === 'fulfilled' ? deleteResults[4].value.deletedCount || 0 : 0,
+        placements: deleteResults[5].status === 'fulfilled' ? deleteResults[5].value.deletedCount || 0 : 0,
       }
     });
 

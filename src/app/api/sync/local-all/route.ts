@@ -5,6 +5,7 @@ import LocalAdvertiser from '@/lib/models/local-advertiser';
 import LocalCampaign from '@/lib/models/local-campaign';
 import LocalNetwork from '@/lib/models/local-network';
 import LocalAdvertisement from '@/lib/models/local-advertisement';
+import Placement from '@/lib/models/placement';
 import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 import { syncAll } from '@/lib/utils/sync-helpers';
 import connectDB from '@/lib/mongodb';
@@ -91,11 +92,12 @@ export async function POST(request: NextRequest) {
           LocalZone.deleteMany({ synced_with_api: false }),
           LocalAdvertisement.deleteMany({ synced_with_api: false }),
           LocalNetwork.deleteMany({ synced_with_api: false }),
+          Placement.deleteMany({ created_locally: true, synced_with_api: false }),
         ]);
 
         let totalDeleted = 0;
         const deleteErrors: string[] = [];
-        const entityTypes = ['advertisers', 'campaigns', 'zones', 'advertisements', 'networks'];
+        const entityTypes = ['advertisers', 'campaigns', 'zones', 'advertisements', 'networks', 'placements'];
 
         deleteResults.forEach((result, index) => {
           if (result.status === 'fulfilled') {
