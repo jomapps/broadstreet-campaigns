@@ -3,7 +3,7 @@ import { syncAll } from '@/lib/utils/sync-helpers';
 import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
 import { themeValidationService } from '@/lib/theme-validation-service';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   // Set up Server-Sent Events response
   const encoder = new TextEncoder();
   
@@ -199,6 +199,6 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
   }
 }
 
-export async function GET() {
+export async function POST() {
   return new Response('Method Not Allowed', { status: 405 });
 }

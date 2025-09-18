@@ -7,7 +7,7 @@ const options = {
   hostname: 'localhost',
   port: 3005,
   path: '/api/sync/stream',
-  method: 'POST',
+  method: 'GET',
   headers: {
     'Accept': 'text/event-stream',
     'Cache-Control': 'no-cache'
