@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
-
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
@@ -193,6 +193,7 @@ function LocalPlacementCard({
 
 export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: LocalOnlyDashboardProps) {
   const router = useRouter();
+  const entities = useSelectedEntities();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -278,15 +279,21 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       return;
     }
 
-    // Initialize progress modal with entity counts for all unsynced local entities
+    // Initialize progress modal with entity counts for the selected network
+    if (!entities.network) {
+      alert('Please select a network in the sidebar before syncing');
+      return;
+    }
+
+    const networkId = entities.network.entityId;
     const entityCounts = {
-      networks: data.networks.filter(n => !n.synced_with_api).length,
-      advertisers: data.advertisers.filter(a => !a.synced_with_api).length,
-      zones: data.zones.filter(z => !z.synced_with_api).length,
-      advertisements: data.advertisements.filter(ad => !ad.synced_with_api).length,
-      campaigns: data.campaigns.filter(c => !c.synced_with_api).length,
+      networks: data.networks.filter(n => !n.synced_with_api && String(n.network_id || n._id) === String(networkId)).length,
+      advertisers: data.advertisers.filter(a => !a.synced_with_api && String(a.network_id) === String(networkId)).length,
+      zones: data.zones.filter(z => !z.synced_with_api && String(z.network_id) === String(networkId)).length,
+      advertisements: data.advertisements.filter(ad => !ad.synced_with_api && String(ad.network_id) === String(networkId)).length,
+      campaigns: data.campaigns.filter(c => !c.synced_with_api && String(c.network_id) === String(networkId)).length,
     };
-    console.info('[LocalOnly] Computed unsynced counts', entityCounts);
+    console.info('[LocalOnly] Computed unsynced counts for network', networkId, entityCounts);
 
     initializeStepsWithCleanup(entityCounts);
     setProgressModalOpen(true);
@@ -295,15 +302,20 @@ export default function LocalOnlyDashboard({ data, networkMap, advertiserMap }: 
       // Start dry run validation
       setStepInProgress('dry-run');
 
-      // Sync all local entities regardless of network selection
-      console.info('[LocalOnly] Starting sync of all local entities');
+      // Use the selected network from the sidebar
+      if (!entities.network) {
+        throw new Error('Please select a network in the sidebar before syncing');
+      }
+
+      const networkId = entities.network.entityId;
+      console.info('[LocalOnly] Starting sync for network:', networkId);
 
       const response = await fetch('/api/sync/local-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ networkId }),
       });
-      console.info('[LocalOnly] Sent sync request for all local entities');
+      console.info('[LocalOnly] Sent sync request for network:', networkId);
 
       if (!response.ok) {
         throw new Error('Failed to sync entities');
