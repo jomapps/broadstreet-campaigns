@@ -6,6 +6,7 @@ import Zone from '@/lib/models/zone';
 import Campaign from '@/lib/models/campaign';
 import Advertisement from '@/lib/models/advertisement';
 import broadstreetAPI from '@/lib/broadstreet-api';
+import { withRateLimit } from '@/lib/rate-limiter';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,28 +37,49 @@ export async function POST(request: NextRequest) {
     ]);
 
     // 2) Pull fresh data from Broadstreet scoped to this network
-    const [remoteAdvertisers, remoteZones, remoteCampaigns, remoteAds] = await Promise.all([
-      broadstreetAPI.getAdvertisers(networkId).catch(() => []),
-      broadstreetAPI.getZones(networkId).catch(() => []),
-      // Campaigns require advertiser context; fetch per advertiser
-      (async () => {
-        try {
-          const advertisers = await broadstreetAPI.getAdvertisers(networkId);
-          const all: any[] = [];
-          for (const a of advertisers) {
-            const aid = (a as any).broadstreet_id ?? (a as any).id;
-            if (typeof aid === 'number') {
-              const campaigns = await broadstreetAPI.getCampaignsByAdvertiser(aid);
-              all.push(...campaigns.map(c => ({ ...c, network_id: networkId })));
-            }
+    // Use sequential calls with rate limiting instead of parallel to prevent API overload
+    console.log('[sync/network] Fetching advertisers with rate limiting...');
+    const remoteAdvertisers = await withRateLimit(
+      () => broadstreetAPI.getAdvertisers(networkId),
+      2, // High priority
+      `sync-advertisers-${networkId}`
+    ).catch(() => []);
+
+    console.log('[sync/network] Fetching zones with rate limiting...');
+    const remoteZones = await withRateLimit(
+      () => broadstreetAPI.getZones(networkId),
+      2, // High priority
+      `sync-zones-${networkId}`
+    ).catch(() => []);
+
+    console.log('[sync/network] Fetching campaigns with rate limiting...');
+    const remoteCampaigns = await (async () => {
+      try {
+        const advertisers = remoteAdvertisers; // Use already fetched advertisers
+        const all: any[] = [];
+        for (const a of advertisers) {
+          const aid = (a as any).broadstreet_id ?? (a as any).id;
+          if (typeof aid === 'number') {
+            const campaigns = await withRateLimit(
+              () => broadstreetAPI.getCampaignsByAdvertiser(aid),
+              1, // Normal priority
+              `sync-campaigns-${aid}`
+            ).catch(() => []);
+            all.push(...campaigns.map(c => ({ ...c, network_id: networkId })));
           }
-          return all;
-        } catch {
-          return [];
         }
-      })(),
-      broadstreetAPI.getAdvertisements({ networkId }).catch(() => []),
-    ]);
+        return all;
+      } catch {
+        return [];
+      }
+    })();
+
+    console.log('[sync/network] Fetching advertisements with rate limiting...');
+    const remoteAds = await withRateLimit(
+      () => broadstreetAPI.getAdvertisements({ networkId }),
+      1, // Normal priority
+      `sync-advertisements-${networkId}`
+    ).catch(() => []);
 
     // 3) Insert fresh copies with normalized IDs
     //    Drop any legacy unique index on `id` to avoid dup key on null

@@ -10,9 +10,10 @@ interface QueuedRequest {
 interface RateLimitConfig {
   maxRequestsPerSecond: number;
   maxConcurrentRequests: number;
-  queueTimeout: number; // milliseconds
+  queueTimeout: number; // milliseconds (0 = no timeout)
   retryDelay: number; // milliseconds for rate limit errors
   maxRetries: number;
+  enableInfiniteQueue: boolean; // Allow queue to run indefinitely
 }
 
 export class RateLimiter {
@@ -24,11 +25,12 @@ export class RateLimiter {
   private processing: boolean = false;
   
   private config: RateLimitConfig = {
-    maxRequestsPerSecond: 10, // Broadstreet API limit
-    maxConcurrentRequests: 5,
-    queueTimeout: 30000, // 30 seconds
-    retryDelay: 1000, // 1 second
-    maxRetries: 3
+    maxRequestsPerSecond: 0.2, // 1 request every 5 seconds (1/5 = 0.2)
+    maxConcurrentRequests: 1, // Only 1 concurrent request
+    queueTimeout: 0, // No timeout - allow infinite queue for sync operations
+    retryDelay: 5000, // 5 second delay for retries
+    maxRetries: 3,
+    enableInfiniteQueue: true // Enable infinite queue for sync operations
   };
 
   constructor(config?: Partial<RateLimitConfig>) {
@@ -63,14 +65,16 @@ export class RateLimiter {
         this.queue.splice(insertIndex, 0, queuedRequest);
       }
 
-      // Set timeout for queued request
-      setTimeout(() => {
-        const index = this.queue.findIndex(req => req.id === queuedRequest.id);
-        if (index !== -1) {
-          this.queue.splice(index, 1);
-          reject(new Error(`Request ${queuedRequest.id} timed out in queue`));
-        }
-      }, this.config.queueTimeout);
+      // Set timeout for queued request (only if timeout is configured)
+      if (this.config.queueTimeout > 0 && !this.config.enableInfiniteQueue) {
+        setTimeout(() => {
+          const index = this.queue.findIndex(req => req.id === queuedRequest.id);
+          if (index !== -1) {
+            this.queue.splice(index, 1);
+            reject(new Error(`Request ${queuedRequest.id} timed out in queue`));
+          }
+        }, this.config.queueTimeout);
+      }
 
       // Start processing if not already running
       if (!this.processing) {
@@ -140,14 +144,27 @@ export class RateLimiter {
    */
   private canMakeRequest(): boolean {
     const now = Date.now();
-    
-    // Reset window if more than 1 second has passed
+
+    // For rates less than 1 per second, check minimum interval between requests
+    if (this.config.maxRequestsPerSecond < 1) {
+      const minInterval = 1000 / this.config.maxRequestsPerSecond; // milliseconds between requests
+      const timeSinceLastRequest = now - this.lastRequestTime;
+      const canMake = timeSinceLastRequest >= minInterval;
+
+      if (!canMake) {
+        const waitTime = Math.round((minInterval - timeSinceLastRequest) / 1000);
+        console.log(`[RateLimiter] Waiting ${waitTime}s before next API request (1 request every ${minInterval/1000}s) - Queue: ${this.queue.length} pending`);
+      }
+
+      return canMake;
+    }
+
+    // For rates >= 1 per second, use the original windowing logic
     if (now - this.windowStart >= 1000) {
       this.windowStart = now;
       this.requestCount = 0;
     }
 
-    // Check if we're within rate limits
     return this.requestCount < this.config.maxRequestsPerSecond;
   }
 
@@ -156,13 +173,19 @@ export class RateLimiter {
    */
   private updateRequestCount(): void {
     const now = Date.now();
-    
-    // Reset window if more than 1 second has passed
+
+    // For rates less than 1 per second, just update the last request time
+    if (this.config.maxRequestsPerSecond < 1) {
+      this.lastRequestTime = now;
+      return;
+    }
+
+    // For rates >= 1 per second, use the original windowing logic
     if (now - this.windowStart >= 1000) {
       this.windowStart = now;
       this.requestCount = 0;
     }
-    
+
     this.requestCount++;
     this.lastRequestTime = now;
   }
@@ -177,18 +200,23 @@ export class RateLimiter {
   }
 
   /**
-   * Clean up expired requests from queue
+   * Clean up expired requests from queue (only if timeout is enabled)
    */
   private cleanupExpiredRequests(): void {
+    // Skip cleanup if infinite queue is enabled
+    if (this.config.enableInfiniteQueue || this.config.queueTimeout <= 0) {
+      return;
+    }
+
     const now = Date.now();
     const expiredIndexes: number[] = [];
-    
+
     this.queue.forEach((request, index) => {
       if (now - request.timestamp > this.config.queueTimeout) {
         expiredIndexes.push(index);
       }
     });
-    
+
     // Remove expired requests (in reverse order to maintain indexes)
     expiredIndexes.reverse().forEach(index => {
       const expiredRequest = this.queue.splice(index, 1)[0];
@@ -201,6 +229,26 @@ export class RateLimiter {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Get current queue status for monitoring
+   */
+  getQueueStatus(): {
+    queueLength: number;
+    activeRequests: number;
+    lastRequestTime: number;
+    timeSinceLastRequest: number;
+    canMakeRequest: boolean;
+  } {
+    const now = Date.now();
+    return {
+      queueLength: this.queue.length,
+      activeRequests: this.activeRequests,
+      lastRequestTime: this.lastRequestTime,
+      timeSinceLastRequest: now - this.lastRequestTime,
+      canMakeRequest: this.canMakeRequest()
+    };
   }
 
   /**
@@ -240,11 +288,12 @@ export class RateLimiter {
 
 // Singleton instance for Broadstreet API
 export const broadstreetRateLimiter = new RateLimiter({
-  maxRequestsPerSecond: 10, // Conservative limit for Broadstreet API
-  maxConcurrentRequests: 5,
-  queueTimeout: 60000, // 1 minute timeout for sync operations
-  retryDelay: 2000, // 2 second initial delay for rate limit retries
-  maxRetries: 3
+  maxRequestsPerSecond: 0.2, // 1 request every 5 seconds (very conservative)
+  maxConcurrentRequests: 1, // Only 1 concurrent request to prevent overload
+  queueTimeout: 0, // No timeout - infinite queue for sync operations
+  retryDelay: 5000, // 5 second initial delay for rate limit retries
+  maxRetries: 3,
+  enableInfiniteQueue: true // Enable infinite queue for long-running sync operations
 });
 
 // Helper function to wrap API calls with rate limiting

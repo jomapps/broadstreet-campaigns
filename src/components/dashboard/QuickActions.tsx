@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import SyncProgress from '@/components/dashboard/SyncProgress';
+import StreamingSyncProgress from '@/components/dashboard/StreamingSyncProgress';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
@@ -71,7 +71,7 @@ export default function QuickActions() {
 
       {showSyncProgress && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <SyncProgress 
+          <StreamingSyncProgress
             onComplete={handleSyncComplete}
             onClose={handleCloseSyncProgress}
           />
