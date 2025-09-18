@@ -10,9 +10,13 @@ import Advertiser from '../models/advertiser';
 import Zone from '../models/zone';
 import Campaign from '../models/campaign';
 import Advertisement from '../models/advertisement';
+import Placement from '../models/placement';
 import SyncLog from '../models/sync-log';
 import LocalAdvertiser from '../models/local-advertiser';
 import LocalZone from '../models/local-zone';
+import LocalNetwork from '../models/local-network';
+import LocalCampaign from '../models/local-campaign';
+import LocalAdvertisement from '../models/local-advertisement';
 
 export async function syncNetworks(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
@@ -548,8 +552,80 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
   }
 }
 
+/**
+ * Clean up all Broadstreet-sourced collections AND local-only collections before fresh sync
+ * Preserves only themes (which don't have direct entity references)
+ */
+export async function cleanupBroadstreetCollections(): Promise<{ success: boolean; count: number; error?: string }> {
+  try {
+    await connectDB();
+
+    console.log('[cleanupBroadstreetCollections] Deleting all Broadstreet-sourced and local-only data...');
+
+    // Delete all Broadstreet-sourced collections (type #1 data) AND local-only collections (type #2 data)
+    // Local collections might have references to old Broadstreet entities, so clean slate is needed
+    const [
+      networkDel, advertiserDel, zoneDel, campaignDel, advertisementDel, placementDel,
+      localNetworkDel, localAdvertiserDel, localZoneDel, localCampaignDel, localAdvertisementDel
+    ] = await Promise.all([
+      // Broadstreet-sourced collections
+      Network.deleteMany({}), // All networks come from Broadstreet
+      Advertiser.deleteMany({}), // All advertisers come from Broadstreet
+      Zone.deleteMany({}), // All zones come from Broadstreet
+      Campaign.deleteMany({}), // All campaigns come from Broadstreet
+      Advertisement.deleteMany({}), // All advertisements come from Broadstreet
+      Placement.deleteMany({}), // All placements (both local and synced) - will be recreated during sync
+
+      // Local-only collections (might have stale references to old Broadstreet entities)
+      LocalNetwork.deleteMany({}), // Delete all local networks
+      LocalAdvertiser.deleteMany({}), // Delete all local advertisers
+      LocalZone.deleteMany({}), // Delete all local zones
+      LocalCampaign.deleteMany({}), // Delete all local campaigns
+      LocalAdvertisement.deleteMany({}), // Delete all local advertisements
+    ]);
+
+    // Note: We preserve only Themes (type #3) as they don't have direct entity references
+
+    const totalDeleted = (networkDel.deletedCount || 0) +
+                        (advertiserDel.deletedCount || 0) +
+                        (zoneDel.deletedCount || 0) +
+                        (campaignDel.deletedCount || 0) +
+                        (advertisementDel.deletedCount || 0) +
+                        (placementDel.deletedCount || 0) +
+                        (localNetworkDel.deletedCount || 0) +
+                        (localAdvertiserDel.deletedCount || 0) +
+                        (localZoneDel.deletedCount || 0) +
+                        (localCampaignDel.deletedCount || 0) +
+                        (localAdvertisementDel.deletedCount || 0);
+
+    console.log('[cleanupBroadstreetCollections] Deleted counts (Broadstreet + Local):', {
+      // Broadstreet collections
+      networks: networkDel.deletedCount || 0,
+      advertisers: advertiserDel.deletedCount || 0,
+      zones: zoneDel.deletedCount || 0,
+      campaigns: campaignDel.deletedCount || 0,
+      advertisements: advertisementDel.deletedCount || 0,
+      placements: placementDel.deletedCount || 0,
+      // Local collections
+      localNetworks: localNetworkDel.deletedCount || 0,
+      localAdvertisers: localAdvertiserDel.deletedCount || 0,
+      localZones: localZoneDel.deletedCount || 0,
+      localCampaigns: localCampaignDel.deletedCount || 0,
+      localAdvertisements: localAdvertisementDel.deletedCount || 0,
+      total: totalDeleted
+    });
+
+    return { success: true, count: totalDeleted };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown cleanup error';
+    console.error('[cleanupBroadstreetCollections] Error:', message);
+    return { success: false, count: 0, error: message };
+  }
+}
+
 export async function syncAll(): Promise<{ success: boolean; results: Record<string, SyncResult>; error?: string }> {
   const results: Record<string, SyncResult> = {
+    cleanup: { success: false, count: 0 },
     networks: { success: false, count: 0 },
     advertisers: { success: false, count: 0 },
     zones: { success: false, count: 0 },
@@ -559,7 +635,17 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
   };
 
   try {
-    // Sync in order of dependencies
+    // Step 1: Clean up all Broadstreet-sourced and local-only collections for fresh data
+    console.log('[syncAll] Cleaning up all collections (Broadstreet + local-only)...');
+    results.cleanup = await cleanupBroadstreetCollections();
+
+    if (!results.cleanup.success) {
+      console.error('[syncAll] Cleanup failed:', results.cleanup.error);
+      return { success: false, results, error: results.cleanup.error };
+    }
+
+    // Step 2: Sync in order of dependencies with fresh data
+    console.log('[syncAll] Starting fresh sync from Broadstreet API...');
     results.networks = await syncNetworks();
     results.advertisers = await syncAdvertisers();
     results.zones = await syncZones();

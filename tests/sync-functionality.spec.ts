@@ -23,6 +23,10 @@ test.describe('Sync Functionality Validation', () => {
     expect(typeof body.results).toBe('object');
 
     const counts = getCounts(body);
+    // Cleanup should be successful (count may be 0 on first run, >0 on subsequent runs)
+    expect(body.results.cleanup.success).toBe(true);
+    expect(counts.cleanup).toBeGreaterThanOrEqual(0);
+
     expect(counts.networks).toBe(2);
     expect(counts.advertisers).toBeGreaterThanOrEqual(10);
     expect(counts.zones).toBeGreaterThanOrEqual(10);
@@ -95,6 +99,7 @@ test.describe('Sync Functionality Validation', () => {
   test('API response shape includes results.{entity}.count fields', async ({ request, baseURL }) => {
     const res = await request.post(buildUrl('/api/sync/all', baseURL));
     const body = JSON.parse(await res.text());
+    expect(body).toHaveProperty('results.cleanup.count');
     expect(body).toHaveProperty('results.networks.count');
     expect(body).toHaveProperty('results.advertisers.count');
     expect(body).toHaveProperty('results.zones.count');

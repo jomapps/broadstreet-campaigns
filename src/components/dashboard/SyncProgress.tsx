@@ -1,9 +1,12 @@
 'use client';
 
+'use client';
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { useSyncStatus } from '@/hooks/use-sync-status';
 import { Button } from '@/components/ui/button';
 
 interface SyncStep {
@@ -39,6 +42,7 @@ const STEP_KEY_BY_NAME: Record<string, string> = {
 };
 
 export default function SyncProgress({ onComplete, onClose }: SyncProgressProps) {
+  const { triggerSyncMonitoring } = useSyncStatus();
   const [steps, setSteps] = useState<SyncStep[]>(
     SYNC_STEPS.map(step => ({
       ...step,
@@ -150,6 +154,13 @@ export default function SyncProgress({ onComplete, onClose }: SyncProgressProps)
         }));
 
         setOverallProgress(result?.overallSuccess === false ? 0 : 100);
+
+        // Trigger theme validation monitoring if sync was successful
+        if (result?.overallSuccess !== false && result?.themeValidationStarted) {
+          console.log('[SyncProgress] Sync completed successfully, starting theme validation monitoring');
+          triggerSyncMonitoring();
+        }
+
         onComplete(result?.overallSuccess !== false);
       } else {
         // Handle error shape for full sync: report per-entity failures when available

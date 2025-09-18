@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useSyncStatus } from '@/hooks/use-sync-status';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
@@ -15,6 +18,39 @@ const navigation = [
 ];
 
 export default function Header() {
+  const { status, error } = useSyncStatus();
+
+  // Determine badge color and animation based on status
+  const getBadgeProps = () => {
+    switch (status.status) {
+      case 'syncing':
+      case 'validating':
+        return {
+          variant: 'secondary' as const,
+          className: 'flex items-center space-x-1 bg-yellow-100 text-yellow-800 border-yellow-200',
+          dotColor: 'bg-yellow-500',
+          animate: true
+        };
+      case 'error':
+        return {
+          variant: 'destructive' as const,
+          className: 'flex items-center space-x-1',
+          dotColor: 'bg-red-500',
+          animate: true
+        };
+      case 'connected':
+      default:
+        return {
+          variant: 'secondary' as const,
+          className: 'flex items-center space-x-1',
+          dotColor: 'bg-green-500',
+          animate: false
+        };
+    }
+  };
+
+  const badgeProps = getBadgeProps();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
@@ -41,9 +77,13 @@ export default function Header() {
           </nav>
           
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary" className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>API Connected</span>
+            <Badge
+              variant={badgeProps.variant}
+              className={badgeProps.className}
+              title={error ? `Error: ${error}` : status.details?.validationStatus?.currentTheme ? `Validating: ${status.details.validationStatus.currentTheme}` : undefined}
+            >
+              <div className={`w-2 h-2 ${badgeProps.dotColor} rounded-full ${badgeProps.animate ? 'animate-pulse' : ''}`}></div>
+              <span>{status.message}</span>
             </Badge>
           </div>
         </div>

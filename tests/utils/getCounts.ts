@@ -1,5 +1,6 @@
 export function getCounts(result: any) {
   return {
+    cleanup: Number(result?.results?.cleanup?.count) || 0,
     networks: Number(result?.results?.networks?.count) || 0,
     advertisers: Number(result?.results?.advertisers?.count) || 0,
     zones: Number(result?.results?.zones?.count) || 0,

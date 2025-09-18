@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { syncAll } from '@/lib/utils/sync-helpers';
 import { clearAllZoneSelections } from '@/lib/utils/zone-selection-helpers';
+import { themeValidationService } from '@/lib/theme-validation-service';
 
 export async function POST() {
   try {
@@ -8,13 +9,22 @@ export async function POST() {
     await Promise.resolve().then(() => clearAllZoneSelections());
     
     const result = await syncAll();
-    
+
     if (result.success) {
+      // Trigger theme validation workflow in background (non-blocking)
+      console.log('[sync/all] Sync completed successfully, starting theme validation...');
+
+      // Start theme validation asynchronously - don't await it
+      themeValidationService.startValidation().catch(error => {
+        console.error('[sync/all] Theme validation failed:', error);
+      });
+
       return NextResponse.json({
         success: true,
         message: 'All data synced successfully',
         results: result.results,
         overallSuccess: result.success,
+        themeValidationStarted: true
       });
     } else {
       return NextResponse.json({
