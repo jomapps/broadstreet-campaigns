@@ -293,19 +293,20 @@ if (!REQUEST_RATE_LIMIT) {
 }
 
 const waitSeconds = parseInt(REQUEST_RATE_LIMIT);
-if (isNaN(waitSeconds) || waitSeconds <= 0) {
-  throw new Error('REQUEST_RATE_LIMIT must be a positive number (seconds to wait between requests)');
+if (isNaN(waitSeconds) || waitSeconds < 0) {
+  throw new Error('REQUEST_RATE_LIMIT must be a non-negative number (seconds to wait between requests, 0 = no rate limiting)');
 }
 
-// Convert wait time to requests per second (e.g., 1 second wait = 1 request per second, 5 seconds wait = 0.2 requests per second)
-const maxRequestsPerSecond = 1 / waitSeconds;
+// Convert wait time to requests per second
+// Special case: 0 means no rate limiting (unlimited requests per second)
+const maxRequestsPerSecond = waitSeconds === 0 ? Number.MAX_SAFE_INTEGER : 1 / waitSeconds;
 
 // Singleton instance for Broadstreet API
 export const broadstreetRateLimiter = new RateLimiter({
   maxRequestsPerSecond, // Calculated from REQUEST_RATE_LIMIT
   maxConcurrentRequests: 1, // Only 1 concurrent request to prevent overload
   queueTimeout: 0, // No timeout - infinite queue for sync operations
-  retryDelay: waitSeconds * 1000, // Use the same wait time for retries (convert to milliseconds)
+  retryDelay: waitSeconds === 0 ? 1000 : waitSeconds * 1000, // Use 1 second for retries when no rate limiting, otherwise use wait time
   maxRetries: 3,
   enableInfiniteQueue: true // Enable infinite queue for long-running sync operations
 });
