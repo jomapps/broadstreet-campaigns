@@ -509,10 +509,320 @@ This document establishes the **single source of truth** for ID management in th
 
 Following these patterns ensures consistent, maintainable ID management across the entire application.
 
-## Single source of truth
-Ensure theat we have common utilities so that there is a single source of truth for working with IDs.
+## Zustand Store Integration Patterns
 
-## Getting ids from sidebar filter
-Sidebar filters can provide either a broadstreet_id or a mongo_id. 
-have a clear way, used by everyone to use it.
-The app cannot work without network id and it is always in the sidebar filter.
+### Store State Management with ID System
+
+The Zustand stores must integrate seamlessly with the three-tier ID system:
+
+```typescript
+// Store state follows database model interfaces exactly
+interface EntityState {
+  networks: NetworkEntity[];           // Always have broadstreet_id
+  advertisers: AdvertiserEntity[];     // May have broadstreet_id (synced) or only mongo_id (local)
+  campaigns: CampaignEntity[];         // May have broadstreet_id (synced) or only mongo_id (local)
+  zones: ZoneEntity[];                 // May have broadstreet_id (synced) or only mongo_id (local)
+  advertisements: AdvertisementEntity[]; // Always have broadstreet_id
+
+  // Local entities (created locally before sync)
+  localZones: LocalZoneEntity[];
+  localAdvertisers: LocalAdvertiserEntity[];
+  localCampaigns: LocalCampaignEntity[];
+  localNetworks: LocalNetworkEntity[];
+  localAdvertisements: LocalAdvertisementEntity[];
+  localPlacements: PlacementEntity[];
+}
+
+// Filter state uses entity selection keys consistently
+interface FilterState {
+  selectedNetwork: NetworkEntity | null;
+  selectedAdvertiser: AdvertiserEntity | null;
+  selectedCampaign: CampaignEntity | null;
+  selectedZones: string[];              // Array of entity selection keys
+  selectedAdvertisements: string[];     // Array of entity selection keys
+  selectedTheme: ThemeEntity | null;
+}
+```
+
+### Store Actions with ID Resolution
+
+```typescript
+interface EntityActions {
+  // Standard setters that preserve ID integrity
+  setNetworks: (networks: NetworkEntity[]) => void;
+  setAdvertisers: (advertisers: AdvertiserEntity[]) => void;
+
+  // Selection actions using utility functions
+  setSelectedNetwork: (network: NetworkEntity | null) => void;
+  toggleZoneSelection: (zoneId: string) => void;  // Uses getEntityId() internally
+
+  // Bulk selection with ID resolution
+  selectAllZones: (zones: ZoneEntity[]) => void;  // Converts to selection keys
+  selectZonesByTheme: (theme: ThemeEntity) => void; // Maps theme.zone_ids to selection keys
+}
+```
+
+### Server-Side Data Fetching Integration
+
+```typescript
+// Server-side data fetchers return properly typed entities
+export async function fetchNetworks(): Promise<NetworkEntity[]> {
+  await connectDB();
+  const networks = await Network.find({}).sort({ name: 1 }).lean();
+  return networks.map(network => ({
+    ...network,
+    _id: network._id.toString(),
+    mongo_id: network._id.toString(), // Virtual field
+    createdAt: network.createdAt.toISOString(),
+    updatedAt: network.updatedAt.toISOString(),
+  }));
+}
+
+// Client-side store initialization
+useEffect(() => {
+  setNetworks(initialNetworks);  // Preserves all ID fields
+  setAdvertisers(initialAdvertisers);
+}, [initialNetworks, initialAdvertisers]);
+```
+
+## Sidebar Filter ID Resolution - Single Source of Truth
+
+### The Challenge
+Sidebar filters can provide either a `broadstreet_id` or a `mongo_id`, and the application must handle both consistently. The network ID is always required and always present in sidebar filters.
+
+### Standardized Resolution Pattern
+
+```typescript
+// SINGLE SOURCE OF TRUTH: resolveSidebarFilterId utility
+import { resolveSidebarFilterId } from '@/lib/utils/entity-helpers';
+
+// Usage in components and stores
+function handleNetworkFilter(filterValue: any) {
+  const { broadstreet_id, mongo_id } = resolveSidebarFilterId(filterValue);
+
+  // Network ID is always a Broadstreet ID (networks cannot be local)
+  if (broadstreet_id) {
+    setSelectedNetwork(networks.find(n => n.broadstreet_id === broadstreet_id) || null);
+  }
+}
+
+function handleAdvertiserFilter(filterValue: any) {
+  const { broadstreet_id, mongo_id } = resolveSidebarFilterId(filterValue);
+
+  // Advertisers can be either synced or local
+  let selectedAdvertiser = null;
+  if (broadstreet_id) {
+    selectedAdvertiser = advertisers.find(a => a.broadstreet_id === broadstreet_id);
+  } else if (mongo_id) {
+    selectedAdvertiser = advertisers.find(a => a.mongo_id === mongo_id);
+  }
+  setSelectedAdvertiser(selectedAdvertiser || null);
+}
+```
+
+### Filter Store Integration
+
+```typescript
+// Filter store actions with proper ID resolution
+const useFilterStore = create<FilterState & FilterActions>()(
+  immer((set, get) => ({
+    // Network selection (always Broadstreet ID)
+    setSelectedNetwork: (network) => set((state) => {
+      state.selectedNetwork = network;
+      // Clear dependent selections when network changes
+      state.selectedAdvertiser = null;
+      state.selectedCampaign = null;
+      state.selectedZones = [];
+      state.selectedAdvertisements = [];
+      state.selectedTheme = null;
+    }),
+
+    // Zone selection with mixed ID support
+    setSelectedZones: (zones) => set((state) => {
+      state.selectedZones = zones;
+      // Update theme selection based on zone match
+      if (state.selectedTheme) {
+        const themeZoneIds = state.selectedTheme.zone_ids.map(String);
+        const zonesMatch = zones.length === themeZoneIds.length &&
+          zones.every(id => themeZoneIds.includes(id));
+        if (!zonesMatch) {
+          state.selectedTheme = null;
+        }
+      }
+    }),
+
+    // Theme selection with automatic zone mapping
+    setSelectedTheme: (theme) => set((state) => {
+      state.selectedTheme = theme;
+      if (theme) {
+        // Convert Broadstreet zone IDs to selection keys
+        state.selectedZones = theme.zone_ids.map(String);
+      }
+    }),
+  }))
+);
+```
+
+### URL Parameter Integration
+
+```typescript
+// Server-side parameter parsing with ID resolution
+export default async function Page({ searchParams }: PageProps) {
+  const params = await searchParams;
+
+  // Resolve network ID (always required, always Broadstreet ID)
+  const networkId = params.network ? parseInt(params.network) : undefined;
+  if (!networkId) {
+    throw new Error('Network ID is required');
+  }
+
+  // Resolve advertiser ID (can be Broadstreet or MongoDB ID)
+  const advertiserFilter = resolveSidebarFilterId(params.advertiser);
+
+  // Fetch data based on resolved IDs
+  const [networks, advertisers, zones] = await Promise.all([
+    fetchNetworks(),
+    fetchAdvertisers(networkId),
+    fetchZones(networkId),
+  ]);
+
+  return (
+    <PageClient
+      initialNetworks={networks}
+      initialAdvertisers={advertisers}
+      initialZones={zones}
+      initialFilters={{
+        networkId,
+        advertiserFilter,
+      }}
+    />
+  );
+}
+```
+
+### Component Integration Patterns
+
+```typescript
+// Component that handles mixed entity types
+function EntitySelector({ entities, selectedIds, onSelectionChange }) {
+  const handleToggle = (entity: any) => {
+    const entityId = getEntityId(entity); // Uses utility function
+    if (!entityId) return;
+
+    const newSelection = selectedIds.includes(String(entityId))
+      ? selectedIds.filter(id => id !== String(entityId))
+      : [...selectedIds, String(entityId)];
+
+    onSelectionChange(newSelection);
+  };
+
+  return (
+    <div>
+      {entities.map(entity => (
+        <EntityCard
+          key={getEntityId(entity)}
+          entity={entity}
+          isSelected={selectedIds.includes(String(getEntityId(entity)))}
+          onToggle={() => handleToggle(entity)}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+## Single Source of Truth Implementation
+
+### Core Utility Functions (Required Usage)
+
+```typescript
+// ALWAYS use these functions - never implement ID logic inline
+import {
+  getEntityId,           // Extract primary ID from any entity
+  isEntitySynced,        // Check if entity is synced with Broadstreet
+  getEntityType,         // Classify entity sync status
+  resolveSidebarFilterId // Resolve sidebar filter values to ID types
+} from '@/lib/utils/entity-helpers';
+
+// Example usage in components
+const entityId = getEntityId(entity);                    // Returns number | string | undefined
+const isSynced = isEntitySynced(entity);                 // Returns boolean
+const entityType = getEntityType(entity);               // Returns 'synced' | 'local' | 'both' | 'none'
+const { broadstreet_id, mongo_id } = resolveSidebarFilterId(filterValue);
+```
+
+### Database Query Patterns
+
+```typescript
+// Standard query patterns using resolved IDs
+async function findEntityByFilter(filterValue: any, Model: any) {
+  const { broadstreet_id, mongo_id } = resolveSidebarFilterId(filterValue);
+
+  const query: any = {};
+  if (broadstreet_id) {
+    query.broadstreet_id = broadstreet_id;
+  } else if (mongo_id) {
+    query._id = mongo_id;
+  } else {
+    return null;
+  }
+
+  return await Model.findOne(query).lean();
+}
+
+// Placement queries with flexible ID references
+async function findPlacementsByEntity(entityType: string, filterValue: any) {
+  const { broadstreet_id, mongo_id } = resolveSidebarFilterId(filterValue);
+
+  const query: any = {};
+  if (entityType === 'campaign') {
+    if (broadstreet_id) {
+      query.campaign_id = broadstreet_id;
+    } else if (mongo_id) {
+      query.campaign_mongo_id = mongo_id;
+    }
+  } else if (entityType === 'zone') {
+    if (broadstreet_id) {
+      query.zone_id = broadstreet_id;
+    } else if (mongo_id) {
+      query.zone_mongo_id = mongo_id;
+    }
+  }
+
+  return await Placement.find(query).lean();
+}
+```
+
+## Network ID Requirements
+
+### Critical Business Rule
+The application **cannot function without a network ID**, and it is **always present in sidebar filters**. Network IDs are **always Broadstreet IDs** because networks cannot be created locally.
+
+```typescript
+// Network ID validation (required in all contexts)
+function validateNetworkId(networkId: any): number {
+  const parsed = parseInt(networkId);
+  if (isNaN(parsed) || parsed <= 0) {
+    throw new Error('Valid network ID is required');
+  }
+  return parsed;
+}
+
+// Store initialization with network requirement
+const useEntityStore = create<EntityState & EntityActions>()(
+  immer((set, get) => ({
+    // Network is always required and always set first
+    setSelectedNetwork: (network) => set((state) => {
+      if (!network || !network.broadstreet_id) {
+        throw new Error('Network with valid broadstreet_id is required');
+      }
+      state.selectedNetwork = network;
+      // Clear dependent selections
+      state.selectedAdvertiser = null;
+      state.selectedCampaign = null;
+      state.selectedZones = [];
+      state.selectedAdvertisements = [];
+    }),
+  }))
+);
+```

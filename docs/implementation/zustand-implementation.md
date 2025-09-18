@@ -2,11 +2,13 @@
 
 ## Overview
 
-This document outlines the complete migration from the current FilterContext + server-side data fetching approach to a clean architecture using:
+This document outlines the complete migration from the current FilterContext + server-side data fetching approach to a **type-safe, ID-compliant architecture** using:
 
 1. **Server-side pages** with PayloadCMS Local API pattern for data fetching
-2. **Zustand** for client-side state management
-3. **Clean separation** between server data fetching and client state
+2. **Zustand** for client-side state management with full TypeScript integration
+3. **Three-tier ID system** compliance throughout all stores and components
+4. **Standardized variable naming** aligned with database schema
+5. **Clean separation** between server data fetching and client state
 
 ## Architecture Goals
 
@@ -15,24 +17,154 @@ This document outlines the complete migration from the current FilterContext + s
 - ❌ Server-client hydration issues
 - ❌ Props drilling and serialization problems
 - ❌ Mixed server/client data fetching patterns
+- ❌ Inconsistent ID handling and variable naming
+- ❌ Missing comprehensive type interfaces
+- ❌ No standardized entity selection patterns
 
 ### Target Architecture
 - ✅ Server pages handle `searchParams` and data fetching
 - ✅ Zustand stores for clean client state management
 - ✅ No hydration issues (server data → client state)
-- ✅ Type-safe state management
+- ✅ **Type-safe state management with comprehensive database model interfaces**
+- ✅ **Three-tier ID system integration (broadstreet_id, mongo_id, _id)**
+- ✅ **Standardized variable naming matching database schema exactly**
+- ✅ **Consistent entity selection using utility functions**
+- ✅ **Proper sidebar filter ID resolution**
 - ✅ Predictable data flow
+
+## Foundation Requirements
+
+### 1. Type Safety Foundation
+All stores must use the comprehensive database model interfaces from `src/lib/types/database-models.ts`:
+
+```typescript
+import {
+  NetworkEntity,
+  AdvertiserEntity,
+  CampaignEntity,
+  ZoneEntity,
+  AdvertisementEntity,
+  LocalAdvertiserEntity,
+  LocalZoneEntity,
+  LocalCampaignEntity,
+  LocalNetworkEntity,
+  LocalAdvertisementEntity,
+  PlacementEntity,
+  ThemeEntity,
+  EntitySelectionKey,
+  EntitySyncStatus
+} from '@/lib/types/database-models';
+```
+
+### 2. ID Management Integration
+All stores must use the standardized ID utilities from `src/lib/utils/entity-helpers.ts`:
+
+```typescript
+import {
+  getEntityId,
+  isEntitySynced,
+  getEntityType,
+  resolveSidebarFilterId,
+  EntitySelectionKey
+} from '@/lib/utils/entity-helpers';
+```
+
+### 3. Variable Naming Standards & Consistency Registry
+All variable names must follow the style guide in `docs/style-guides/variable-naming.md`:
+- **Singular entities**: `network`, `advertiser`, `campaign`, `zone`, `advertisement`
+- **Plural collections**: `networks`, `advertisers`, `campaigns`, `zones`, `advertisements`
+- **Database field alignment**: `created_locally`, `synced_with_api`, `web_home_url`, etc.
+- **Three-tier ID compliance**: `broadstreet_id`, `mongo_id`, `_id` (never `id`)
+
+#### **CRITICAL IMPLEMENTATION REQUIREMENT: Variable Origins Registry**
+
+**MANDATORY PROCESS FOR ALL VARIABLE NAMING:**
+
+1. **Create Registry Document**: `docs/variable-origins.md` - Central registry for all shared variable names
+2. **Pre-Implementation Check**: Before creating ANY variable name that will be used by more than one function:
+   - ✅ **Check `docs/variable-origins.md` FIRST**
+   - ✅ **If variable name exists**: Use the EXACT name from the document
+   - ✅ **If variable name does NOT exist**: Add new entry with variable name + one-sentence description
+3. **Multi-Function Criteria**: Variables used across:
+   - Multiple store actions
+   - Store state + component usage
+   - Multiple components
+   - Server-side functions + client-side usage
+   - Any cross-boundary variable references
+
+#### **Variable Origins Registry Format**
+```markdown
+# Variable Origins Registry
+
+## Entity Variables
+- `selectedNetwork` - Currently selected network entity in filter state
+- `selectedAdvertiser` - Currently selected advertiser entity in filter state
+- `selectedZones` - Array of selected zone IDs for filtering operations
+
+## Collection Variables
+- `networks` - Collection of all network entities from API/database
+- `localAdvertisers` - Collection of locally created advertiser entities
+
+## State Variables
+- `isLoadingNetworks` - Loading state for network data fetching operations
+- `networkError` - Error state for network-related operations
+```
+
+#### **Implementation Workflow**
+```typescript
+// ❌ WRONG - Creating variable without checking registry
+const selectedNet = useFilterStore(state => state.selectedNetwork);
+
+// ✅ CORRECT - Check docs/variable-origins.md first
+// Found: selectedNetwork - Currently selected network entity in filter state
+const selectedNetwork = useFilterStore(state => state.selectedNetwork);
+
+// ✅ CORRECT - New variable, add to registry first
+// Add to docs/variable-origins.md:
+// `networkValidationError` - Error message for network validation failures
+const networkValidationError = validateNetwork(network);
+```
+
+**This process ensures 100% consistent variable naming across the entire implementation.**
 
 ## Phase 1: Zustand Store Setup
 
-### Task 1.1: Install Dependencies
+### Task 1.1: Create Variable Origins Registry (MANDATORY FIRST STEP)
+
+**File: `docs/variable-origins.md`**
+```markdown
+# Variable Origins Registry - Single Source of Truth for Variable Names
+
+This document maintains a registry of all variable names used across multiple functions
+to ensure 100% consistency throughout the Zustand implementation.
+
+**USAGE RULE**: Before creating any variable name used by more than one function,
+check this document first. If it exists, use the exact name. If not, add it here.
+
+## Entity Variables
+[To be populated during implementation]
+
+## Collection Variables
+[To be populated during implementation]
+
+## State Variables
+[To be populated during implementation]
+
+## Action Variables
+[To be populated during implementation]
+
+## Function Parameters
+[To be populated during implementation]
+```
+
+### Task 1.2: Install Dependencies
 
 ```bash
 pnpm add zustand immer
 pnpm add -D @types/node
 ```
 
-### Task 1.2: Create Base Store Structure
+### Task 1.3: Create Base Store Structure
 
 **File: `src/stores/index.ts`**
 ```typescript
@@ -43,29 +175,46 @@ export { useSyncStore } from './sync-store';
 export type * from './types';
 ```
 
-### Task 1.3: Define Store Types
+### Task 1.3: Define Store Types with Full Type Safety
+
+**⚠️ REMINDER: Check `docs/variable-origins.md` for all interface property names before implementation**
 
 **File: `src/stores/types.ts`**
 ```typescript
-import { Network, Advertiser, Campaign, Zone, Advertisement } from '@/lib/types/broadstreet';
+import {
+  NetworkEntity,
+  AdvertiserEntity,
+  CampaignEntity,
+  ZoneEntity,
+  AdvertisementEntity,
+  LocalAdvertiserEntity,
+  LocalZoneEntity,
+  LocalCampaignEntity,
+  LocalNetworkEntity,
+  LocalAdvertisementEntity,
+  PlacementEntity,
+  ThemeEntity,
+  EntitySelectionKey
+} from '@/lib/types/database-models';
 
-// Entity state types
+// Entity state types - MUST use proper database model interfaces
 export interface EntityState {
-  networks: Network[];
-  advertisers: Advertiser[];
-  campaigns: Campaign[];
-  zones: Zone[];
-  advertisements: Advertisement[];
-  
-  // Local entities
-  localZones: any[];
-  localAdvertisers: any[];
-  localCampaigns: any[];
-  localNetworks: any[];
-  localAdvertisements: any[];
-  localPlacements: any[];
-  
-  // Loading states
+  // Synced entities (from Broadstreet API)
+  networks: NetworkEntity[];                    // Always have broadstreet_id
+  advertisers: AdvertiserEntity[];              // May have broadstreet_id (synced) or only mongo_id (local)
+  campaigns: CampaignEntity[];                  // May have broadstreet_id (synced) or only mongo_id (local)
+  zones: ZoneEntity[];                          // May have broadstreet_id (synced) or only mongo_id (local)
+  advertisements: AdvertisementEntity[];        // Always have broadstreet_id
+
+  // Local entities (created locally before sync) - MUST use Local*Entity interfaces
+  localZones: LocalZoneEntity[];
+  localAdvertisers: LocalAdvertiserEntity[];
+  localCampaigns: LocalCampaignEntity[];
+  localNetworks: LocalNetworkEntity[];
+  localAdvertisements: LocalAdvertisementEntity[];
+  localPlacements: PlacementEntity[];           // Placements are hybrid entities
+
+  // Loading states - granular control for better UX
   isLoading: {
     networks: boolean;
     advertisers: boolean;
@@ -73,9 +222,11 @@ export interface EntityState {
     zones: boolean;
     advertisements: boolean;
     localEntities: boolean;
+    placements: boolean;
+    themes: boolean;
   };
-  
-  // Error states
+
+  // Error states - specific error tracking
   errors: {
     networks: string | null;
     advertisers: string | null;
@@ -83,19 +234,32 @@ export interface EntityState {
     zones: string | null;
     advertisements: string | null;
     localEntities: string | null;
+    placements: string | null;
+    themes: string | null;
   };
 }
 
-// Filter state types
+// Filter state types - MUST use proper entity interfaces and selection keys
 export interface FilterState {
-  selectedNetwork: Network | null;
-  selectedAdvertiser: Advertiser | null;
-  selectedCampaign: Campaign | null;
-  selectedZones: string[];
-  selectedAdvertisements: string[];
-  selectedTheme: { _id: string; name: string; zone_ids: number[] } | null;
+  // Selected entities - use full entity objects for rich data access
+  selectedNetwork: NetworkEntity | null;       // Always required, always has broadstreet_id
+  selectedAdvertiser: AdvertiserEntity | null; // Can be synced or local
+  selectedCampaign: CampaignEntity | null;     // Can be synced or local
+
+  // Selection arrays - use EntitySelectionKey for consistent ID handling
+  selectedZones: EntitySelectionKey[];         // Array of broadstreet_id or mongo_id strings
+  selectedAdvertisements: EntitySelectionKey[]; // Array of broadstreet_id or mongo_id strings
+
+  // Theme selection - use proper ThemeEntity interface
+  selectedTheme: ThemeEntity | null;           // Local-only entity with zone_ids array
+
+  // Display options
   showOnlySelected: boolean;
   showOnlySelectedAds: boolean;
+
+  // Filter metadata for debugging and analytics
+  lastFilterUpdate: Date;
+  filterSource: 'user' | 'url' | 'theme' | 'bulk';
 }
 
 // Sync state types
@@ -125,53 +289,101 @@ export interface Notification {
 }
 ```
 
-### Task 1.4: Create Entity Store
+### Task 1.4: Create Entity Store with Type Safety and ID Management
+
+**⚠️ REMINDER: Check `docs/variable-origins.md` for all variable names before implementation**
 
 **File: `src/stores/entity-store.ts`**
 ```typescript
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { EntityState } from './types';
+import {
+  NetworkEntity,
+  AdvertiserEntity,
+  CampaignEntity,
+  ZoneEntity,
+  AdvertisementEntity,
+  LocalAdvertiserEntity,
+  LocalZoneEntity,
+  LocalCampaignEntity,
+  LocalNetworkEntity,
+  LocalAdvertisementEntity,
+  PlacementEntity
+} from '@/lib/types/database-models';
+import { getEntityId, isEntitySynced } from '@/lib/utils/entity-helpers';
 
 interface EntityActions {
-  // Setters
-  setNetworks: (networks: any[]) => void;
-  setAdvertisers: (advertisers: any[]) => void;
-  setCampaigns: (campaigns: any[]) => void;
-  setZones: (zones: any[]) => void;
-  setAdvertisements: (advertisements: any[]) => void;
+  // Setters - MUST use proper entity types
+  setNetworks: (networks: NetworkEntity[]) => void;
+  setAdvertisers: (advertisers: AdvertiserEntity[]) => void;
+  setCampaigns: (campaigns: CampaignEntity[]) => void;
+  setZones: (zones: ZoneEntity[]) => void;
+  setAdvertisements: (advertisements: AdvertisementEntity[]) => void;
+
+  // Local entity setters - MUST use proper Local*Entity types
   setLocalEntities: (entities: {
-    zones: any[];
-    advertisers: any[];
-    campaigns: any[];
-    networks: any[];
-    advertisements: any[];
-    placements: any[];
+    zones: LocalZoneEntity[];
+    advertisers: LocalAdvertiserEntity[];
+    campaigns: LocalCampaignEntity[];
+    networks: LocalNetworkEntity[];
+    advertisements: LocalAdvertisementEntity[];
+    placements: PlacementEntity[];
   }) => void;
-  
-  // Loading states
+
+  // Individual local entity setters for granular updates
+  setLocalZones: (zones: LocalZoneEntity[]) => void;
+  setLocalAdvertisers: (advertisers: LocalAdvertiserEntity[]) => void;
+  setLocalCampaigns: (campaigns: LocalCampaignEntity[]) => void;
+  setLocalPlacements: (placements: PlacementEntity[]) => void;
+
+  // Entity operations with ID resolution
+  addEntity: (entityType: keyof EntityState, entity: any) => void;
+  updateEntity: (entityType: keyof EntityState, entityId: string | number, updates: any) => void;
+  removeEntity: (entityType: keyof EntityState, entityId: string | number) => void;
+
+  // Bulk operations
+  mergeEntities: (entityType: keyof EntityState, entities: any[]) => void;
+  replaceEntities: (entityType: keyof EntityState, entities: any[]) => void;
+
+  // Loading states - granular control
   setLoading: (entity: keyof EntityState['isLoading'], loading: boolean) => void;
-  
-  // Error states
+  setAllLoading: (loading: boolean) => void;
+
+  // Error states - specific error tracking
   setError: (entity: keyof EntityState['errors'], error: string | null) => void;
-  
-  // Clear actions
+  clearErrors: () => void;
+
+  // Clear actions with proper typing
   clearAll: () => void;
-  clearEntity: (entity: string) => void;
+  clearEntity: (entityType: keyof EntityState) => void;
+  clearSyncedEntities: () => void;
+  clearLocalEntities: () => void;
+
+  // Utility functions for entity management
+  getEntityById: (entityType: keyof EntityState, entityId: string | number) => any | null;
+  getEntitiesByIds: (entityType: keyof EntityState, entityIds: (string | number)[]) => any[];
+  filterEntitiesBySync: (entityType: keyof EntityState, synced: boolean) => any[];
 }
 
+// Initial state with proper typing and comprehensive coverage
 const initialState: EntityState = {
-  networks: [],
-  advertisers: [],
-  campaigns: [],
-  zones: [],
-  advertisements: [],
-  localZones: [],
-  localAdvertisers: [],
-  localCampaigns: [],
-  localNetworks: [],
-  localAdvertisements: [],
-  localPlacements: [],
+  // Synced entities - empty arrays with proper typing
+  networks: [] as NetworkEntity[],
+  advertisers: [] as AdvertiserEntity[],
+  campaigns: [] as CampaignEntity[],
+  zones: [] as ZoneEntity[],
+  advertisements: [] as AdvertisementEntity[],
+
+  // Local entities - empty arrays with proper typing
+  localZones: [] as LocalZoneEntity[],
+  localAdvertisers: [] as LocalAdvertiserEntity[],
+  localCampaigns: [] as LocalCampaignEntity[],
+  localNetworks: [] as LocalNetworkEntity[],
+  localAdvertisements: [] as LocalAdvertisementEntity[],
+  localPlacements: [] as PlacementEntity[],
+
+  // Loading states - comprehensive coverage
   isLoading: {
     networks: false,
     advertisers: false,
@@ -179,7 +391,11 @@ const initialState: EntityState = {
     zones: false,
     advertisements: false,
     localEntities: false,
+    placements: false,
+    themes: false,
   },
+
+  // Error states - specific error tracking
   errors: {
     networks: null,
     advertisers: null,
@@ -187,52 +403,92 @@ const initialState: EntityState = {
     zones: null,
     advertisements: null,
     localEntities: null,
+    placements: null,
+    themes: null,
   },
 };
 
 export const useEntityStore = create<EntityState & EntityActions>()(
-  immer((set) => ({
+  immer((set, get) => ({
     ...initialState,
-    
+
+    // Synced entity setters with validation and type safety
     setNetworks: (networks) => set((state) => {
-      state.networks = networks;
+      // Validate that all networks have broadstreet_id (networks are always synced)
+      const validNetworks = networks.filter(n => n.broadstreet_id && n.name);
+      state.networks = validNetworks;
       state.isLoading.networks = false;
       state.errors.networks = null;
     }),
-    
+
     setAdvertisers: (advertisers) => set((state) => {
-      state.advertisers = advertisers;
+      // Advertisers can be synced or local - validate accordingly
+      const validAdvertisers = advertisers.filter(a => a.name && (a.broadstreet_id || a.mongo_id));
+      state.advertisers = validAdvertisers;
       state.isLoading.advertisers = false;
       state.errors.advertisers = null;
     }),
-    
+
     setCampaigns: (campaigns) => set((state) => {
-      state.campaigns = campaigns;
+      // Campaigns can be synced or local - validate accordingly
+      const validCampaigns = campaigns.filter(c => c.name && (c.broadstreet_id || c.mongo_id));
+      state.campaigns = validCampaigns;
       state.isLoading.campaigns = false;
       state.errors.campaigns = null;
     }),
-    
+
     setZones: (zones) => set((state) => {
-      state.zones = zones;
+      // Zones can be synced or local - validate accordingly
+      const validZones = zones.filter(z => z.name && z.network_id && (z.broadstreet_id || z.mongo_id));
+      state.zones = validZones;
       state.isLoading.zones = false;
       state.errors.zones = null;
     }),
-    
+
     setAdvertisements: (advertisements) => set((state) => {
-      state.advertisements = advertisements;
+      // Advertisements are always synced - validate broadstreet_id
+      const validAdvertisements = advertisements.filter(a => a.broadstreet_id && a.name);
+      state.advertisements = validAdvertisements;
       state.isLoading.advertisements = false;
       state.errors.advertisements = null;
     }),
-    
+
+    // Local entity setters with proper validation
     setLocalEntities: (entities) => set((state) => {
-      state.localZones = entities.zones;
-      state.localAdvertisers = entities.advertisers;
-      state.localCampaigns = entities.campaigns;
-      state.localNetworks = entities.networks;
-      state.localAdvertisements = entities.advertisements;
-      state.localPlacements = entities.placements;
+      // Validate local entities have required fields
+      state.localZones = entities.zones.filter(z => z.name && z.network_id && z.mongo_id);
+      state.localAdvertisers = entities.advertisers.filter(a => a.name && a.network_id && a.mongo_id);
+      state.localCampaigns = entities.campaigns.filter(c => c.name && c.network_id && c.mongo_id);
+      state.localNetworks = entities.networks.filter(n => n.name && n.mongo_id);
+      state.localAdvertisements = entities.advertisements.filter(a => a.name && a.network_id && a.mongo_id);
+      state.localPlacements = entities.placements.filter(p =>
+        p.network_id && p.advertiser_id && p.advertisement_id &&
+        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+      );
       state.isLoading.localEntities = false;
       state.errors.localEntities = null;
+    }),
+
+    // Individual local entity setters for granular updates
+    setLocalZones: (zones) => set((state) => {
+      state.localZones = zones.filter(z => z.name && z.network_id && z.mongo_id);
+    }),
+
+    setLocalAdvertisers: (advertisers) => set((state) => {
+      state.localAdvertisers = advertisers.filter(a => a.name && a.network_id && a.mongo_id);
+    }),
+
+    setLocalCampaigns: (campaigns) => set((state) => {
+      state.localCampaigns = campaigns.filter(c => c.name && c.network_id && c.mongo_id);
+    }),
+
+    setLocalPlacements: (placements) => set((state) => {
+      state.localPlacements = placements.filter(p =>
+        p.network_id && p.advertiser_id && p.advertisement_id &&
+        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+      );
     }),
     
     setLoading: (entity, loading) => set((state) => {
