@@ -11,7 +11,10 @@ import Placement from '@/lib/models/placement';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Target, Users, Calendar, Globe, Image } from 'lucide-react';
-import LocalOnlyDashboard from './LocalOnlyDashboard';
+import ClientDashboardWrapper from './ClientDashboardWrapper';
+// Force dynamic rendering to prevent caching issues
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // Type for local entity data
 type LocalEntity = {
@@ -189,11 +192,15 @@ async function LocalOnlyDataWrapper() {
       })),
     };
 
+    // Convert Maps to plain objects for serialization
+    const networkMapObject = Object.fromEntries(networkMap);
+    const advertiserMapObject = Object.fromEntries(advertiserMap);
+
     return (
-      <LocalOnlyDashboard 
+      <ClientDashboardWrapper
         data={serializedData}
-        networkMap={networkMap}
-        advertiserMap={advertiserMap}
+        networkMap={networkMapObject}
+        advertiserMap={advertiserMapObject}
       />
     );
   } catch (error) {

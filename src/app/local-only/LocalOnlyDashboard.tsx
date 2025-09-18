@@ -49,8 +49,8 @@ type LocalOnlyData = {
 
 interface LocalOnlyDashboardProps {
   data: LocalOnlyData;
-  networkMap: Map<number, string>;
-  advertiserMap: Map<number, string>;
+  networkMap: Record<number, string>;
+  advertiserMap: Record<number, string>;
 }
 
 function mapLocalEntityToCardProps(
@@ -110,8 +110,8 @@ function mapLocalEntityToCardProps(
 interface EntitySectionProps {
   title: string;
   entities: LocalEntity[];
-  networkMap: Map<number, string>;
-  advertiserMap: Map<number, string>;
+  networkMap: Record<number, string>;
+  advertiserMap: Record<number, string>;
   onDelete: (entityId: string, type: string) => void;
   selectedIds: Set<string>;
   onToggleSelection: (entityId: string) => void;
@@ -135,15 +135,15 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
           <UniversalEntityCard
             key={entity._id}
             {...mapLocalEntityToCardProps(entity, {
-              networkName: networkMap.get(
+              networkName: networkMap[
               typeof entity.network_id === 'string' ? Number(entity.network_id) : entity.network_id
-              ),
+              ],
               advertiserName: entity.type === 'campaign'
-              ? advertiserMap.get(
+              ? advertiserMap[
                   typeof (entity as any).advertiser_id === 'string'
                     ? Number((entity as any).advertiser_id)
                     : (entity as any).advertiser_id
-                )
+                ]
                 : undefined,
               onDelete,
               isSelected: selectedIds.has(entity._id),
@@ -165,13 +165,13 @@ function LocalPlacementCard({
   isDeleting
 }: {
   placement: LocalOnlyData['placements'][0];
-  networkMap: Map<number, string>;
-  advertiserMap: Map<number, string>;
+  networkMap: Record<number, string>;
+  advertiserMap: Record<number, string>;
   onDelete: (entityId: string) => void;
   isDeleting: boolean;
 }) {
-  const networkName = networkMap.get(placement.network_id) || `Network ${placement.network_id}`;
-  const advertiserName = advertiserMap.get(placement.advertiser_id) || `Advertiser ${placement.advertiser_id}`;
+  const networkName = networkMap[placement.network_id] || `Network ${placement.network_id}`;
+  const advertiserName = advertiserMap[placement.advertiser_id] || `Advertiser ${placement.advertiser_id}`;
 
   return (
     <UniversalEntityCard
