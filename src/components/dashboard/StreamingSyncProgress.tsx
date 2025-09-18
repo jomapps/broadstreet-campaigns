@@ -55,93 +55,125 @@ export default function StreamingSyncProgress({ onComplete, onClose }: Streaming
     };
 
     eventSource.addEventListener('status', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('[StreamingSync] Status update:', data);
-      
-      setCurrentPhase(data.phase);
-      setCurrentMessage(data.message);
-      setOverallProgress(data.progress);
-      
-      if (data.phase === 'initializing') {
-        setIsConnecting(false);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Status update:', data);
+
+        setCurrentPhase(data.phase);
+        setCurrentMessage(data.message);
+        setOverallProgress(data.progress);
+
+        if (data.phase === 'initializing') {
+          setIsConnecting(false);
+        }
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse status event data:', error, event.data);
+        return; // Skip processing this event
       }
     });
 
     eventSource.addEventListener('step-start', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('[StreamingSync] Step start:', data);
-      
-      setCurrentPhase(data.phase);
-      setCurrentMessage(data.message);
-      setOverallProgress(data.progress);
-      
-      // Update step status
-      setSteps(prev => prev.map(step => 
-        step.key === data.phase 
-          ? { ...step, status: 'in_progress', message: data.message }
-          : step
-      ));
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Step start:', data);
 
-      // Calculate estimated time remaining
-      if (data.currentStep && data.totalSteps) {
-        const elapsed = Date.now() - startTime;
-        const avgTimePerStep = elapsed / data.currentStep;
-        const remainingSteps = data.totalSteps - data.currentStep;
-        const estimated = Math.round((avgTimePerStep * remainingSteps) / 1000);
-        setEstimatedTimeRemaining(estimated);
+        setCurrentPhase(data.phase);
+        setCurrentMessage(data.message);
+        setOverallProgress(data.progress);
+
+        // Update step status
+        setSteps(prev => prev.map(step =>
+          step.key === data.phase
+            ? { ...step, status: 'in_progress', message: data.message }
+            : step
+        ));
+
+        // Calculate estimated time remaining
+        if (data.currentStep && data.totalSteps) {
+          const elapsed = Date.now() - startTime;
+          const avgTimePerStep = elapsed / data.currentStep;
+          const remainingSteps = data.totalSteps - data.currentStep;
+          const estimated = Math.round((avgTimePerStep * remainingSteps) / 1000);
+          setEstimatedTimeRemaining(estimated);
+        }
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse step-start event data:', error, event.data);
+        return; // Skip processing this event
       }
     });
 
     eventSource.addEventListener('step-complete', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('[StreamingSync] Step complete:', data);
-      
-      setOverallProgress(data.progress);
-      
-      // Update step status
-      setSteps(prev => prev.map(step => 
-        step.key === data.phase 
-          ? { 
-              ...step, 
-              status: 'completed', 
-              message: data.message,
-              count: data.stepResult?.count 
-            }
-          : step
-      ));
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Step complete:', data);
+
+        setOverallProgress(data.progress);
+
+        // Update step status
+        setSteps(prev => prev.map(step =>
+          step.key === data.phase
+            ? {
+                ...step,
+                status: 'completed',
+                message: data.message,
+                count: data.stepResult?.count
+              }
+            : step
+        ));
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse step-complete event data:', error, event.data);
+        return; // Skip processing this event
+      }
     });
 
     eventSource.addEventListener('step-error', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('[StreamingSync] Step error:', data);
-      
-      setHasErrors(true);
-      setOverallProgress(data.progress);
-      
-      // Update step status
-      setSteps(prev => prev.map(step => 
-        step.key === data.phase 
-          ? { 
-              ...step, 
-              status: 'failed', 
-              message: data.message,
-              error: data.stepResult?.error 
-            }
-          : step
-      ));
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Step error:', data);
+
+        setHasErrors(true);
+        setOverallProgress(data.progress);
+
+        // Update step status
+        setSteps(prev => prev.map(step =>
+          step.key === data.phase
+            ? {
+                ...step,
+                status: 'failed',
+                message: data.message,
+                error: data.stepResult?.error
+              }
+            : step
+        ));
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse step-error event data:', error, event.data);
+        return; // Skip processing this event
+      }
     });
 
     eventSource.addEventListener('complete', (event) => {
-      const data = JSON.parse(event.data);
-      console.log('[StreamingSync] Sync complete:', data);
-      
-      setIsComplete(true);
-      setCurrentPhase('completed');
-      setCurrentMessage(data.message);
-      setOverallProgress(100);
-      setEstimatedTimeRemaining(0);
-      
-      onComplete(data.overallSuccess);
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Sync complete:', data);
+
+        setIsComplete(true);
+        setCurrentPhase('completed');
+        setCurrentMessage(data.message);
+        setOverallProgress(100);
+        setEstimatedTimeRemaining(0);
+
+        onComplete(data.overallSuccess);
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse complete event data:', error, event.data);
+        // Still mark as complete but with error state
+        setIsComplete(true);
+        setHasErrors(true);
+        setCurrentPhase('error');
+        setCurrentMessage('Sync completed but failed to parse completion data');
+        setOverallProgress(100);
+        setEstimatedTimeRemaining(0);
+        onComplete(false);
+      }
     });
 
     eventSource.addEventListener('error', (event) => {

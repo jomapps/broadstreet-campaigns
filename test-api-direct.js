@@ -1,8 +1,40 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
-// Use environment variables directly (they should be available in the shell)
+// Load environment variables from .env.local file manually
+function loadEnvLocal() {
+  const envPath = path.join(__dirname, '.env.local');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const lines = envContent.split('\n');
+
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine && !trimmedLine.startsWith('#')) {
+        const [key, ...valueParts] = trimmedLine.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').trim();
+          process.env[key.trim()] = value;
+        }
+      }
+    });
+  }
+}
+
+// Load environment variables
+loadEnvLocal();
+
+// Use environment variables
 const API_BASE_URL = process.env.BROADSTREET_API_BASE_URL || 'https://api.broadstreetads.com/api/1';
-const API_TOKEN = process.env.BROADSTREET_API_TOKEN || 'a75908ff9ebcb98f0ecfc243b6af837923fb59f1c853af1f3b9a5f9823b124b5';
+const API_TOKEN = process.env.BROADSTREET_API_TOKEN;
+
+// Validate required environment variables
+if (!API_TOKEN) {
+  console.error('❌ Error: BROADSTREET_API_TOKEN environment variable is required');
+  console.error('Please ensure BROADSTREET_API_TOKEN is set in .env.local file');
+  process.exit(1);
+}
 
 async function testAPIDirectly() {
   console.log('🔍 Testing Broadstreet API directly');
