@@ -250,6 +250,13 @@ export interface SyncActions {
   addError: (error: string) => void;
   completeSync: (success: boolean) => void;
   resetSync: () => void;
+
+  // Additional utility methods
+  clearSyncErrors: () => void;
+  updatePhase: (phase: string, message: string) => void;
+  setProgress: (progress: number) => void;
+  incrementProgress: (increment: number) => void;
+  getTimeSinceLastSync: () => string | null;
 }
 
 // =============================================================================
@@ -284,11 +291,30 @@ export interface AppState {
  */
 export interface AppActions {
   setSidebarCollapsed: (collapsed: boolean) => void;
+  toggleSidebar: () => void;
   setCurrentPage: (page: string) => void;
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
   markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
   removeNotification: (id: string) => void;
   clearAllNotifications: () => void;
+  clearReadNotifications: () => void;
+
+  // Utility methods
+  getUnreadCount: () => number;
+  hasErrorNotifications: () => boolean;
+  getNotificationsByType: (type: 'success' | 'error' | 'warning' | 'info') => Notification[];
+  getRecentNotifications: () => Notification[];
+
+  // Convenience methods
+  addSuccessNotification: (title: string, message: string) => void;
+  addErrorNotification: (title: string, message: string) => void;
+  addWarningNotification: (title: string, message: string) => void;
+  addInfoNotification: (title: string, message: string) => void;
+
+  // App state management
+  resetAppState: () => void;
+  cleanupOldNotifications: () => void;
 }
 
 // =============================================================================

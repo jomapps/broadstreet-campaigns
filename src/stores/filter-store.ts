@@ -48,7 +48,7 @@ const initialState = {
 
   // Filter metadata for debugging and analytics
   lastFilterUpdate: new Date(),
-  filterSource: 'user',
+  filterSource: 'user' as const,
 };
 
 /**
@@ -287,12 +287,12 @@ export const useFilterStore = create<FilterState & FilterActions>()(
           if (defaultNetwork) {
             state.selectedNetwork = defaultNetwork;
             state.lastFilterUpdate = new Date();
-            state.filterSource = 'default';
+            state.filterSource = 'user';
           } else {
             // Fallback to first network if default not found
             state.selectedNetwork = networks[0];
             state.lastFilterUpdate = new Date();
-            state.filterSource = 'default';
+            state.filterSource = 'user';
           }
         }
       }),
@@ -354,21 +354,21 @@ export const useFilterStore = create<FilterState & FilterActions>()(
        */
       getFiltersAsParams: () => {
         const state = get();
-        const params = {};
+        const params: Record<string, string> = {};
 
         // Add network parameter
         if (state.selectedNetwork) {
-          params.network = state.selectedNetwork.broadstreet_id?.toString() || state.selectedNetwork.mongo_id;
+          params.network = state.selectedNetwork.broadstreet_id?.toString() || state.selectedNetwork.mongo_id || '';
         }
 
         // Add advertiser parameter
         if (state.selectedAdvertiser) {
-          params.advertiser = state.selectedAdvertiser.broadstreet_id?.toString() || state.selectedAdvertiser.mongo_id;
+          params.advertiser = state.selectedAdvertiser.broadstreet_id?.toString() || state.selectedAdvertiser.mongo_id || '';
         }
 
         // Add campaign parameter
         if (state.selectedCampaign) {
-          params.campaign = state.selectedCampaign.broadstreet_id?.toString() || state.selectedCampaign.mongo_id;
+          params.campaign = state.selectedCampaign.broadstreet_id?.toString() || state.selectedCampaign.mongo_id || '';
         }
 
         // Add zones parameter

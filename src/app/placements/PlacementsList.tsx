@@ -224,15 +224,15 @@ export default function PlacementsList({ placements: initialPlacements, entities
     const filterDetails = [];
 
     if (entities?.network) {
-      filterDetails.push(`Network: ${entities.network.name} (ID: ${entities.network.broadstreet_id || entities.network.mongo_id})`);
+      filterDetails.push(`Network: ${entities.network.name} (ID: ${entities.network.ids.broadstreet_id || entities.network.ids.mongo_id})`);
     }
 
     if (entities?.advertiser) {
-      filterDetails.push(`Advertiser: ${entities.advertiser.name} (ID: ${entities.advertiser.broadstreet_id || entities.advertiser.mongo_id})`);
+      filterDetails.push(`Advertiser: ${entities.advertiser.name} (ID: ${entities.advertiser.ids.broadstreet_id || entities.advertiser.ids.mongo_id})`);
     }
 
     if (entities?.campaign) {
-      filterDetails.push(`Campaign: ${entities.campaign.name} (ID: ${entities.campaign.broadstreet_id || entities.campaign.mongo_id})`);
+      filterDetails.push(`Campaign: ${entities.campaign.name} (ID: ${entities.campaign.ids.broadstreet_id || entities.campaign.ids.mongo_id})`);
     }
 
     if (entities?.zones && entities.zones.length > 0) {

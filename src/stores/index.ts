@@ -33,22 +33,18 @@ export type {
   // Entity Store Types
   EntityState,
   EntityActions,
-  EntityStore,
-  
+
   // Filter Store Types
   FilterState,
   FilterActions,
-  FilterStore,
-  
+
   // Sync Store Types
   SyncState,
   SyncActions,
-  SyncStore,
-  
+
   // App Store Types
   AppState,
   AppActions,
-  AppStore,
   Notification,
   
   // Utility Types

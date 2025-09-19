@@ -24,9 +24,13 @@ import { getEntityId, EntitySelectionKey } from '@/lib/utils/entity-helpers';
  * and either campaign_id OR campaign_mongo_id, and either zone_id OR zone_mongo_id
  */
 const isPlacementValid = (p: PlacementEntity): boolean => {
-  return p.network_id && p.advertiser_id && p.advertisement_id &&
+  return !!(
+    p.network_id &&
+    p.advertiser_id &&
+    p.advertisement_id &&
     ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
-    ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id));
+    ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+  );
 };
 
 // Initial state with proper typing and comprehensive coverage
@@ -260,8 +264,8 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      * Remove entity from collection
      */
     removeEntity: (entityType, entityId) => set((state) => {
-      if (entityType in state && Array.isArray(state[entityType])) {
-        state[entityType] = state[entityType].filter(entity => getEntityId(entity) !== entityId);
+      if (entityType in state && Array.isArray((state as any)[entityType])) {
+        (state as any)[entityType] = (state as any)[entityType].filter((entity: any) => getEntityId(entity) !== entityId);
       }
     }),
 
@@ -272,16 +276,16 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      * Merge entities into collection (add new, update existing)
      */
     mergeEntities: (entityType, entities) => set((state) => {
-      if (entityType in state && Array.isArray(state[entityType])) {
-        entities.forEach(entity => {
+      if (entityType in state && Array.isArray((state as any)[entityType])) {
+        entities.forEach((entity: any) => {
           const entityId = getEntityId(entity);
-          const existingIndex = state[entityType].findIndex(existing => getEntityId(existing) === entityId);
+          const existingIndex = (state as any)[entityType].findIndex((existing: any) => getEntityId(existing) === entityId);
           if (existingIndex !== -1) {
             // Update existing
-            Object.assign(state[entityType][existingIndex], entity);
+            Object.assign((state as any)[entityType][existingIndex], entity);
           } else {
             // Add new
-            state[entityType].push(entity);
+            (state as any)[entityType].push(entity);
           }
         });
       }
@@ -292,7 +296,7 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     replaceEntities: (entityType, entities) => set((state) => {
       if (entityType in state) {
-        state[entityType] = entities;
+        (state as any)[entityType] = entities;
       }
     }),
 
@@ -311,7 +315,7 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     setAllLoading: (loading) => set((state) => {
       Object.keys(state.isLoading).forEach(key => {
-        state.isLoading[key] = loading;
+        (state.isLoading as any)[key] = loading;
       });
     }),
 
@@ -331,7 +335,7 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     clearErrors: () => set((state) => {
       Object.keys(state.errors).forEach(key => {
-        state.errors[key] = null;
+        (state.errors as any)[key] = null;
       });
     }),
 
@@ -348,7 +352,7 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     clearEntity: (entityType) => set((state) => {
       if (entityType in state) {
-        state[entityType] = [];
+        (state as any)[entityType] = [];
       }
     }),
 
@@ -383,8 +387,8 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     getEntityById: (entityType, entityId) => {
       const state = get();
-      if (entityType in state && Array.isArray(state[entityType])) {
-        return state[entityType].find(entity => getEntityId(entity) === entityId) || null;
+      if (entityType in state && Array.isArray((state as any)[entityType])) {
+        return (state as any)[entityType].find((entity: any) => getEntityId(entity) === entityId) || null;
       }
       return null;
     },
@@ -394,8 +398,11 @@ export const useEntityStore = create<EntityState & EntityActions>()(
      */
     getEntitiesByIds: (entityType, entityIds) => {
       const state = get();
-      if (entityType in state && Array.isArray(state[entityType])) {
-        return state[entityType].filter(entity => entityIds.includes(getEntityId(entity)));
+      if (entityType in state && Array.isArray((state as any)[entityType])) {
+        return (state as any)[entityType].filter((entity: any) => {
+          const entityId = getEntityId(entity);
+          return entityId && entityIds.includes(entityId);
+        });
       }
       return [];
     },

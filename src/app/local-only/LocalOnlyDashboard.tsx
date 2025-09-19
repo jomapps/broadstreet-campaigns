@@ -21,45 +21,37 @@ import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { useAllEntities } from '@/stores';
+import {
+  LocalZoneEntity,
+  LocalAdvertiserEntity,
+  LocalCampaignEntity,
+  LocalNetworkEntity,
+  LocalAdvertisementEntity,
+  PlacementEntity
+} from '@/lib/types/database-models';
 
-// Type for local entity data
-type LocalEntity = {
-  _id: string;
-  name: string;
-  network_id: number | string;
-  created_at: string;
-  synced_with_api: boolean;
-  type: 'zone' | 'advertiser' | 'campaign' | 'network' | 'advertisement';
-  broadstreet_id?: number;
-  mongo_id?: string;
-  [key: string]: any;
-};
-
+// Type for local entity data using proper database model interfaces
 type LocalOnlyData = {
-  zones: LocalEntity[];
-  advertisers: LocalEntity[];
-  campaigns: LocalEntity[];
-  networks: LocalEntity[];
-  advertisements: LocalEntity[];
-  placements: Array<{
-    _id: string;
-    network_id: number;
-    advertiser_id: number;
-    advertisement_id: number;
-    campaign_id?: number;
-    campaign_mongo_id?: string;
-    zone_id?: number;
-    zone_mongo_id?: string;
-    restrictions?: string[];
-    created_at?: string;
-    type: 'placement';
-  }>;
+  zones: (LocalZoneEntity & { type: 'zone' })[];
+  advertisers: (LocalAdvertiserEntity & { type: 'advertiser' })[];
+  campaigns: (LocalCampaignEntity & { type: 'campaign' })[];
+  networks: (LocalNetworkEntity & { type: 'network' })[];
+  advertisements: (LocalAdvertisementEntity & { type: 'advertisement' })[];
+  placements: PlacementEntity[];
 };
+
+// Union type for all local entities with type discrimination
+type LocalEntityWithType =
+  | (LocalZoneEntity & { type: 'zone' })
+  | (LocalAdvertiserEntity & { type: 'advertiser' })
+  | (LocalCampaignEntity & { type: 'campaign' })
+  | (LocalNetworkEntity & { type: 'network' })
+  | (LocalAdvertisementEntity & { type: 'advertisement' });
 
 // No props needed - component reads from Zustand stores
 
 function mapLocalEntityToCardProps(
-  entity: LocalEntity,
+  entity: LocalEntityWithType,
   params: {
   networkName?: string;
   advertiserName?: string;
@@ -114,7 +106,7 @@ function mapLocalEntityToCardProps(
 
 interface EntitySectionProps {
   title: string;
-  entities: LocalEntity[];
+  entities: LocalEntityWithType[];
   networkMap: Record<number, string>;
   advertiserMap: Record<number, string>;
   onDelete: (entityId: string, type: string) => void;
@@ -140,15 +132,19 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
           <UniversalEntityCard
             key={entity._id}
             {...mapLocalEntityToCardProps(entity, {
-              networkName: networkMap[
-              typeof entity.network_id === 'string' ? Number(entity.network_id) : entity.network_id
-              ],
+              networkName: entity.type === 'network'
+                ? entity.name // Networks don't have network_id, they ARE the network
+                : networkMap[
+                    typeof (entity as any).network_id === 'string'
+                      ? Number((entity as any).network_id)
+                      : (entity as any).network_id
+                  ],
               advertiserName: entity.type === 'campaign'
-              ? advertiserMap[
-                  typeof (entity as any).advertiser_id === 'string'
-                    ? Number((entity as any).advertiser_id)
-                    : (entity as any).advertiser_id
-                ]
+                ? advertiserMap[
+                    typeof (entity as any).advertiser_id === 'string'
+                      ? Number((entity as any).advertiser_id)
+                      : (entity as any).advertiser_id
+                  ]
                 : undefined,
               onDelete,
               isSelected: selectedIds.has(entity._id),
@@ -296,13 +292,13 @@ export default function LocalOnlyDashboard() {
     }, {} as Record<number, string>);
   }, [advertisers]);
 
-  // Reconstruct data object to match expected structure
+  // Reconstruct data object to match expected structure with type discrimination
   const data = {
-    zones: localZones,
-    advertisers: localAdvertisers,
-    campaigns: localCampaigns,
-    networks: localNetworks,
-    advertisements: localAdvertisements,
+    zones: localZones.map(zone => ({ ...zone, type: 'zone' as const })),
+    advertisers: localAdvertisers.map(advertiser => ({ ...advertiser, type: 'advertiser' as const })),
+    campaigns: localCampaigns.map(campaign => ({ ...campaign, type: 'campaign' as const })),
+    networks: localNetworks.map(network => ({ ...network, type: 'network' as const })),
+    advertisements: localAdvertisements.map(advertisement => ({ ...advertisement, type: 'advertisement' as const })),
     placements: localPlacements
   };
   const [isDeleting, setIsDeleting] = useState<string | null>(null);

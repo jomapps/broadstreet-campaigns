@@ -133,7 +133,7 @@ export const useAppStore = create<AppState & AppActions>()(
       /**
        * Get notifications by type
        */
-      getNotificationsByType: (type) => {
+      getNotificationsByType: (type: 'success' | 'error' | 'warning' | 'info') => {
         const state = get();
         return state.notifications.filter(n => n.type === type);
       },
@@ -161,7 +161,7 @@ export const useAppStore = create<AppState & AppActions>()(
       /**
        * Add success notification
        */
-      addSuccessNotification: (title, message) => {
+      addSuccessNotification: (title: string, message: string) => {
         get().addNotification({
           type: 'success',
           title,
@@ -172,7 +172,7 @@ export const useAppStore = create<AppState & AppActions>()(
       /**
        * Add error notification
        */
-      addErrorNotification: (title, message) => {
+      addErrorNotification: (title: string, message: string) => {
         get().addNotification({
           type: 'error',
           title,
@@ -183,7 +183,7 @@ export const useAppStore = create<AppState & AppActions>()(
       /**
        * Add warning notification
        */
-      addWarningNotification: (title, message) => {
+      addWarningNotification: (title: string, message: string) => {
         get().addNotification({
           type: 'warning',
           title,
@@ -194,7 +194,7 @@ export const useAppStore = create<AppState & AppActions>()(
       /**
        * Add info notification
        */
-      addInfoNotification: (title, message) => {
+      addInfoNotification: (title: string, message: string) => {
         get().addNotification({
           type: 'info',
           title,
