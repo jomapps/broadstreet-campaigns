@@ -661,3 +661,29 @@ Following `docs/variable-origins.md` standards:
 - `isLoadingPlacements` - Loading state for placement data fetching operations
 - `placementError` - Error state for placement-related operations
 - `selectedPlacements` - Array of selected placement IDs for bulk operations
+
+## Business Logic Confirmation
+Placements are created from the sidebar > Utilities > Creaete Placements.
+the filter has to have network, advertiser, and campaign.
+Futher there has to be atleast 1 zone and 1 advertisement selected.
+Multiple zones and advertisements can be selected. All combinations of the selected zones and advertisements are created.
+
+When the create placemetns button is clicked, modal shows the info of what is going to happen.
+
+### **NEW FEATURE**
+**TWO MODES** there will be to choice of two modes.
+The sidebar > Utilties section will get a toggle button. it will toggle between safe mode and advanced mode. Advanced mode denoted by a red background and safe mode by a green background. Ensure font is bold and black.
+
+we know the all all zones and advertisements have a SQ, LS or PT as standalone words IN CAPITAL
+SQ - stands for square (ad sizes 350x200)
+LS - stands for leaderboard (ad sizes 728x90)
+PT - stands for portrait (ad sizes 300x600)
+
+when the create placement button is pressed and the modal opens, following will happen:
+the modal opens. The modal will be depending on the mode selected.
+
+#### Safe Mode - Mode 1 - the default mode
+Safe mode will do this - it will only allow combos of advertisements and zones that have the same size type. Everything else will be ignore.
+
+#### Advanced Mode - Mode 2 - the second mode
+Advanced mode will do this - it will allow all combinations of advertisements and zones, which is the current default.

@@ -252,13 +252,18 @@ export const useFilterStore = create<FilterState & FilterActions>()(
       // Clear actions - using exact names from variable registry
 
       /**
-       * Clear all filters and selections
+       * Clear all filters and selections except network
        */
-      clearAllFilters: () => set(() => ({
-        ...initialState,
-        lastFilterUpdate: new Date(),
-        filterSource: 'user',
-      })),
+      clearAllFilters: () => set((state) => {
+        const currentNetwork = state.selectedNetwork;
+        // Reset to initial state but preserve network
+        Object.assign(state, {
+          ...initialState,
+          selectedNetwork: currentNetwork, // Preserve network selection
+          lastFilterUpdate: new Date(),
+          filterSource: 'user',
+        });
+      }),
 
       /**
        * Clear only zone and advertisement selections

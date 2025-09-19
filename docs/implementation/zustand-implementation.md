@@ -1025,7 +1025,14 @@ export const useFilterStore = create<FilterState & FilterActions>()(
         state.showOnlySelectedAds = show;
       }),
 
-      clearAllFilters: () => set(() => initialState),
+      clearAllFilters: () => set((state) => {
+        const currentNetwork = state.selectedNetwork;
+        // Reset to initial state but preserve network
+        Object.assign(state, {
+          ...initialState,
+          selectedNetwork: currentNetwork, // Preserve network selection
+        });
+      }),
 
       clearSelections: () => set((state) => {
         state.selectedZones = [];

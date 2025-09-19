@@ -42,7 +42,7 @@ export default function FiltersCard() {
   // Get loading states from entity store
   const { isLoading } = useEntityStore();
 
-  const hasAnyFilter = selectedNetwork || selectedAdvertiser || selectedCampaign;
+  const hasAnyFilter = selectedAdvertiser || selectedCampaign;
   const hasZoneSelection = selectedZones.length > 0;
   const hasAdvertisementSelection = selectedAdvertisements.length > 0;
 
