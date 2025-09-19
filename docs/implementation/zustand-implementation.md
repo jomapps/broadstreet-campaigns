@@ -2548,3 +2548,12 @@ Before considering any store "TypeScript compliant":
 - [ ] **Performance optimized** - Minimal import footprint
 
 ---
+
+## Parent-Child Relationships
+Network is parent of all
+Advertiser and Zone are children of Network
+Campaign is child of Advertiser
+Advertisement is child of Advertiser
+Placement is child of Network > Advertiser > Campaign > Advertisement + Zone
+
+Please use this strategy for bread crumbs

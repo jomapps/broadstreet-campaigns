@@ -8,7 +8,7 @@
  */
 
 import { Suspense } from 'react';
-import { fetchPlacements, fetchNetworks, fetchAdvertisers, fetchCampaigns } from '@/lib/server/data-fetchers';
+import { fetchNetworks, fetchAdvertisers, fetchCampaigns } from '@/lib/server/data-fetchers';
 import { Button } from '@/components/ui/button';
 import PlacementsClient from './PlacementsClient';
 import LoadingSkeleton from './LoadingSkeleton';
@@ -26,9 +26,12 @@ export default async function PlacementsPage({ searchParams }: { searchParams: a
   const advertiserId = params?.advertiser ? parseInt(params.advertiser) : null;
   const campaignId = params?.campaign ? parseInt(params.campaign) : null;
 
-  // Fetch placements and related data in parallel using existing data fetchers
-  const [placements, networks, advertisers, campaigns] = await Promise.all([
-    fetchPlacements(networkId, advertiserId, campaignId, params),
+  // For now, use empty placements array - will be loaded client-side
+  // TODO: Create server-side enriched placement fetcher
+  const placements: any[] = [];
+
+  // Fetch related data in parallel using existing data fetchers
+  const [networks, advertisers, campaigns] = await Promise.all([
     fetchNetworks(),
     fetchAdvertisers(networkId),
     fetchCampaigns(advertiserId, params)

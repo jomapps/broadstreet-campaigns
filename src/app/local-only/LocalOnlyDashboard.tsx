@@ -166,31 +166,100 @@ function LocalPlacementCard({
   placement,
   networkMap,
   advertiserMap,
+  allLocalEntities,
   onDelete,
   isDeleting
 }: {
   placement: LocalOnlyData['placements'][0];
   networkMap: Record<number, string>;
   advertiserMap: Record<number, string>;
+  allLocalEntities: LocalOnlyData;
   onDelete: (entityId: string) => void;
   isDeleting: boolean;
 }) {
-  const networkName = networkMap[placement.network_id] || `Network ${placement.network_id}`;
-  const advertiserName = advertiserMap[placement.advertiser_id] || `Advertiser ${placement.advertiser_id}`;
+  // Find related entities from local data
+  const network = Object.values(networkMap).find((_, index) =>
+    Object.keys(networkMap)[index] === String(placement.network_id)
+  );
+  const advertiser = advertiserMap[placement.advertiser_id];
+
+  // Find campaign entity
+  const campaign = placement.campaign_id
+    ? allLocalEntities.campaigns.find(c => c.broadstreet_id === placement.campaign_id)
+    : placement.campaign_mongo_id
+      ? allLocalEntities.campaigns.find(c => c._id === placement.campaign_mongo_id)
+      : null;
+
+  // Find advertisement entity
+  const advertisement = allLocalEntities.advertisements.find(ad =>
+    ad.broadstreet_id === placement.advertisement_id
+  );
+
+  // Find zone entity
+  const zone = placement.zone_id
+    ? allLocalEntities.zones.find(z => z.broadstreet_id === placement.zone_id)
+    : placement.zone_mongo_id
+      ? allLocalEntities.zones.find(z => z._id === placement.zone_mongo_id)
+      : null;
+
+  // Build breadcrumb hierarchy: Network > Advertiser > Campaign > Advertisement + Zone
+  const parentsBreadcrumb = [
+    // Network
+    {
+      name: networkMap[placement.network_id] || `Network ${placement.network_id}`,
+      broadstreet_id: placement.network_id,
+      mongo_id: undefined,
+      entityType: 'network' as const,
+    },
+    // Advertiser
+    {
+      name: advertiser || `Advertiser ${placement.advertiser_id}`,
+      broadstreet_id: placement.advertiser_id,
+      mongo_id: undefined,
+      entityType: 'advertiser' as const,
+    },
+    // Campaign (if found)
+    campaign && {
+      name: campaign.name,
+      broadstreet_id: campaign.broadstreet_id,
+      mongo_id: campaign._id,
+      entityType: 'campaign' as const,
+    },
+    // Advertisement
+    advertisement && {
+      name: advertisement.name,
+      broadstreet_id: advertisement.broadstreet_id,
+      mongo_id: advertisement._id,
+      entityType: 'advertisement' as const,
+    },
+    // Zone
+    zone && {
+      name: zone.name,
+      broadstreet_id: zone.broadstreet_id,
+      mongo_id: zone._id,
+      entityType: 'zone' as const,
+    },
+  ].filter(Boolean) as any[];
+
+  // Display data for the card content
+  const displayData = [
+    { label: 'Campaign', value: campaign?.name ?? (placement.campaign_id ? `Campaign ${placement.campaign_id}` : 'N/A'), type: 'string' as const },
+    { label: 'Advertisement', value: advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
+    { label: 'Zone', value: zone?.name ?? (placement.zone_id ? `Zone ${placement.zone_id}` : 'N/A'), type: 'string' as const },
+  ] as any[];
+
+  if (placement.restrictions && placement.restrictions.length > 0) {
+    displayData.push({ label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const });
+  }
 
   return (
     <UniversalEntityCard
-      title={`Local Placement`}
+      title={advertisement?.name || `Advertisement ${placement.advertisement_id}`}
       entityType="placement"
       isLocal={true}
-      displayData={[
-        { label: 'Network', value: networkName, type: 'string' as const },
-        { label: 'Advertiser', value: advertiserName, type: 'string' as const },
-        { label: 'Ad ID', value: String(placement.advertisement_id), type: 'string' as const },
-        { label: 'Campaign', value: placement.campaign_id ? `Campaign ${placement.campaign_id}` : (placement.campaign_mongo_id || 'N/A'), type: 'string' as const },
-        { label: 'Zone', value: placement.zone_id ? `Zone ${placement.zone_id}` : (placement.zone_mongo_id || 'N/A'), type: 'string' as const },
-        placement.restrictions && placement.restrictions.length > 0 ? { label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const } : undefined,
-      ].filter(Boolean) as any}
+      mongo_id={placement._id}
+      parentsBreadcrumb={parentsBreadcrumb}
+      displayData={displayData}
       onDelete={() => onDelete(placement._id)}
     />
   );
@@ -679,6 +748,7 @@ export default function LocalOnlyDashboard() {
                 placement={placement as any}
                 networkMap={networkMap}
                 advertiserMap={advertiserMap}
+                allLocalEntities={data}
                 onDelete={handleDelete}
                 isDeleting={isDeleting === placement._id}
               />

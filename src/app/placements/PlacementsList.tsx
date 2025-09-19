@@ -82,11 +82,25 @@ function mapPlacementToUniversalProps(
   const placementId = `${placement.advertisement_id}-${placement.zone_id || placement.zone_mongo_id || ''}`;
   const isDeleting = params.deletingIds.has(placementId);
 
+  // Placement hierarchy: Network > Advertiser > Campaign > Advertisement + Zone
   const parentsBreadcrumb = [
+    placement.network && {
+      name: placement.network.name,
+      broadstreet_id: placement.network.broadstreet_id,
+      mongo_id: placement.network.mongo_id,
+      entityType: 'network' as const,
+    },
+    placement.advertiser && {
+      name: placement.advertiser.name,
+      broadstreet_id: placement.advertiser.broadstreet_id,
+      mongo_id: placement.advertiser.mongo_id,
+      entityType: 'advertiser' as const,
+    },
     placement.campaign && {
       name: placement.campaign.name,
       broadstreet_id: placement.campaign.broadstreet_id,
       mongo_id: placement.campaign.mongo_id,
+      entityType: 'campaign' as const,
     },
     placement.advertisement && {
       name: placement.advertisement.name,
@@ -210,15 +224,15 @@ export default function PlacementsList({ placements: initialPlacements, entities
     const filterDetails = [];
 
     if (entities?.network) {
-      filterDetails.push(`Network: ${entities.network.name} (ID: ${entities.network.ids.broadstreet_id || entities.network.ids.mongo_id})`);
+      filterDetails.push(`Network: ${entities.network.name} (ID: ${entities.network.broadstreet_id || entities.network.mongo_id})`);
     }
 
     if (entities?.advertiser) {
-      filterDetails.push(`Advertiser: ${entities.advertiser.name} (ID: ${entities.advertiser.ids.broadstreet_id || entities.advertiser.ids.mongo_id})`);
+      filterDetails.push(`Advertiser: ${entities.advertiser.name} (ID: ${entities.advertiser.broadstreet_id || entities.advertiser.mongo_id})`);
     }
 
     if (entities?.campaign) {
-      filterDetails.push(`Campaign: ${entities.campaign.name} (ID: ${entities.campaign.ids.broadstreet_id || entities.campaign.ids.mongo_id})`);
+      filterDetails.push(`Campaign: ${entities.campaign.name} (ID: ${entities.campaign.broadstreet_id || entities.campaign.mongo_id})`);
     }
 
     if (entities?.zones && entities.zones.length > 0) {

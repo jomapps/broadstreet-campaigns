@@ -51,8 +51,30 @@ export default function ThemeSelector() {
     );
   }
 
-  if (errors.themes || themes.length === 0) {
-    return null; // Don't show if there are no themes or error
+  if (errors.themes) {
+    return null; // Don't show if there's an error
+  }
+
+  // Show empty state if no themes, but still render the component
+  if (themes.length === 0) {
+    return (
+      <Card className="bg-sidebar-accent/50 border-sidebar-border">
+        <CardHeader className="pb-1">
+          <CardTitle className="text-sidebar-foreground text-lg flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Theme Filter
+          </CardTitle>
+          <CardDescription className="text-sidebar-foreground/70 text-xs mt-1">
+            No themes available
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="text-xs text-sidebar-foreground/70 text-center py-4">
+            Create themes to enable filtering
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
