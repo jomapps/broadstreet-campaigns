@@ -30,6 +30,19 @@ import {
 } from '@/lib/types/database-models';
 import { getEntityId, EntitySelectionKey } from '@/lib/utils/entity-helpers';
 
+/**
+ * Helper function to validate placement entities
+ * Placements must have network_id, advertiser_id, advertisement_id
+ * and either campaign_id OR campaign_mongo_id, and either zone_id OR zone_mongo_id
+ * @param {PlacementEntity} p - Placement entity to validate
+ * @returns {boolean} True if placement is valid
+ */
+const isPlacementValid = (p: PlacementEntity): boolean => {
+  return p.network_id && p.advertiser_id && p.advertisement_id &&
+    ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+    ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id));
+};
+
 // Initial state with proper typing and comprehensive coverage
 // Variable names follow docs/variable-origins.md registry
 const initialState = {
@@ -157,11 +170,7 @@ export const useEntityStore = create(
      */
     setPlacements: (placements) => set((state) => {
       // Placements can be local or synced - validate required fields
-      const validPlacements = placements.filter(p =>
-        p.network_id && p.advertiser_id && p.advertisement_id &&
-        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
-        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
-      );
+      const validPlacements = placements.filter(isPlacementValid);
       state.placements = validPlacements;
       state.isLoading.placements = false;
       state.errors.placements = null;
@@ -181,11 +190,7 @@ export const useEntityStore = create(
       state.localCampaigns = entities.campaigns.filter(c => c.name && c.network_id && c.mongo_id);
       state.localNetworks = entities.networks.filter(n => n.name && n.mongo_id);
       state.localAdvertisements = entities.advertisements.filter(a => a.name && a.network_id && a.mongo_id);
-      state.localPlacements = entities.placements.filter(p =>
-        p.network_id && p.advertiser_id && p.advertisement_id &&
-        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
-        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
-      );
+      state.localPlacements = entities.placements.filter(isPlacementValid);
       state.isLoading.localEntities = false;
       state.errors.localEntities = null;
     }),
@@ -215,15 +220,27 @@ export const useEntityStore = create(
     }),
 
     /**
+     * Set local networks collection
+     * @param {LocalNetworkEntity[]} networks - Array of local network entities
+     */
+    setLocalNetworks: (networks) => set((state) => {
+      state.localNetworks = networks.filter(n => n.name && n.mongo_id);
+    }),
+
+    /**
+     * Set local advertisements collection
+     * @param {LocalAdvertisementEntity[]} advertisements - Array of local advertisement entities
+     */
+    setLocalAdvertisements: (advertisements) => set((state) => {
+      state.localAdvertisements = advertisements.filter(a => a.name && a.network_id && a.mongo_id);
+    }),
+
+    /**
      * Set local placements collection
      * @param {PlacementEntity[]} placements - Array of local placement entities
      */
     setLocalPlacements: (placements) => set((state) => {
-      state.localPlacements = placements.filter(p =>
-        p.network_id && p.advertiser_id && p.advertisement_id &&
-        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
-        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
-      );
+      state.localPlacements = placements.filter(isPlacementValid);
     }),
 
     /**

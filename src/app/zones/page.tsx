@@ -15,10 +15,18 @@ import LoadingSkeleton from './LoadingSkeleton';
 
 
 /**
+ * Props interface for ZonesPage
+ * Variable names follow docs/variable-origins.md registry
+ */
+interface ZonesPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+/**
  * ZonesPage - Server component that fetches data and renders client
  * Variable names follow docs/variable-origins.md registry
  */
-export default async function ZonesPage({ searchParams }) {
+export default async function ZonesPage({ searchParams }: ZonesPageProps) {
   // Await searchParams for Next.js 15 compatibility
   const params = await searchParams;
 

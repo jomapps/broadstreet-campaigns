@@ -14,6 +14,7 @@ import { useEntityStore } from '@/stores';
 import { SearchInput } from '@/components/ui/search-input';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import ThemeCreateModal from '@/components/themes/ThemeCreateModal';
+import { useCreateTheme } from './useCreateTheme';
 
 /**
  * ThemesList - Main themes display component
@@ -25,45 +26,20 @@ function ThemesList() {
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
+  // Use custom hook for theme creation
+  const { createTheme: handleCreateTheme } = useCreateTheme({ postCreateBehavior: 'refresh' });
+
   // Filter themes based on search term
   const filteredThemes = useMemo(() => {
     if (!searchTerm.trim()) return themes;
-    
+
     const search = searchTerm.toLowerCase();
-    return themes.filter(theme => 
+    return themes.filter(theme =>
       theme.name.toLowerCase().includes(search) ||
       theme.description?.toLowerCase().includes(search)
     );
   }, [themes, searchTerm]);
 
-  // Handle theme creation
-  const handleCreateTheme = async (name: string, description?: string, zoneIds?: number[]) => {
-    try {
-      const response = await fetch('/api/themes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description?.trim() || undefined,
-          zone_ids: zoneIds || [],
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create theme');
-      }
-
-      // Refresh the page to show the new theme
-      router.refresh();
-    } catch (error) {
-      console.error('Error creating theme:', error);
-      alert(`Failed to create theme: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error;
-    }
-  };
 
   // Handle theme editing
   const handleEditTheme = async (theme: any) => {
@@ -248,33 +224,9 @@ function ThemesList() {
  */
 export default function ThemesContent() {
   const { themes } = useEntityStore();
-  const handleCreateTheme = async (name: string, description?: string, zoneIds?: number[]) => {
-    try {
-      const response = await fetch('/api/themes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description?.trim() || undefined,
-          zone_ids: zoneIds || [],
-        }),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create theme');
-      }
-
-      // Refresh the page to show the new theme
-      window.location.reload();
-    } catch (error) {
-      console.error('Error creating theme:', error);
-      alert(`Failed to create theme: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      throw error;
-    }
-  };
+  // Use custom hook for theme creation
+  const { createTheme: handleCreateTheme } = useCreateTheme({ postCreateBehavior: 'reload' });
 
   return (
     <div className="space-y-6">

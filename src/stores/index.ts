@@ -22,6 +22,8 @@ export { useFilterStore } from './filter-store';
 // Import stores for internal use in helper hooks
 import { useEntityStore } from './entity-store';
 import { useFilterStore } from './filter-store';
+import { useSyncStore } from './sync-store';
+import { useAppStore } from './app-store';
 export { useSyncStore } from './sync-store';
 export { useAppStore } from './app-store';
 

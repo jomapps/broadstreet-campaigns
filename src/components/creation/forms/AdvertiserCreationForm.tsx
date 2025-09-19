@@ -25,7 +25,8 @@ interface AdminContact {
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
   const entities = useSelectedEntities();
-  const { setAdvertisers } = useFilters();
+  const filters = useAllFilters();
+  const { setAdvertisers } = useFilterActions();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields

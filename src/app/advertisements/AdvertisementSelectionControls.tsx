@@ -17,16 +17,17 @@ interface AdvertisementSelectionControlsProps {
   showOnlySelectedAds: boolean;
 }
 
-export default function AdvertisementSelectionControls({ 
-  advertisements, 
-  selectedAdvertisements, 
-  showOnlySelectedAds 
+export default function AdvertisementSelectionControls({
+  advertisements,
+  selectedAdvertisements,
+  showOnlySelectedAds
 }: AdvertisementSelectionControlsProps) {
-  const { 
-    selectAdvertisements, 
-    deselectAdvertisements, 
-    setShowOnlySelectedAds 
-  } = useFilters();
+  const filters = useAllFilters();
+  const {
+    selectAdvertisements,
+    deselectAdvertisements,
+    setShowOnlySelectedAds
+  } = useFilterActions();
   const entities = useSelectedEntities();
 
   // The advertisements prop now contains the filtered advertisements from AdvertisementFiltersWrapper

@@ -57,6 +57,10 @@ export interface EntityState {
   localAdvertisements: LocalAdvertisementEntity[];
   localPlacements: PlacementEntity[];           // Placements are hybrid entities
 
+  // Themes - local-only entities
+  themes: ThemeEntity[];
+  currentTheme: ThemeEntity | null;
+
   // Loading states - granular control for better UX
   isLoading: {
     networks: boolean;
@@ -109,7 +113,13 @@ export interface EntityActions {
   setLocalZones: (zones: LocalZoneEntity[]) => void;
   setLocalAdvertisers: (advertisers: LocalAdvertiserEntity[]) => void;
   setLocalCampaigns: (campaigns: LocalCampaignEntity[]) => void;
+  setLocalNetworks: (networks: LocalNetworkEntity[]) => void;
+  setLocalAdvertisements: (advertisements: LocalAdvertisementEntity[]) => void;
   setLocalPlacements: (placements: PlacementEntity[]) => void;
+
+  // Theme setters
+  setThemes: (themes: ThemeEntity[]) => void;
+  setCurrentTheme: (theme: ThemeEntity | null) => void;
 
   // Entity operations with ID resolution using EntitySelectionKey
   addEntity: (entityType: keyof EntityState, entity: any) => void;

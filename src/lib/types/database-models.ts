@@ -280,6 +280,29 @@ export interface LocalCampaignEntity extends BaseEntity, LocalEntityFields {
 }
 
 /**
+ * Local Advertisement entity - Created locally before sync to Broadstreet
+ * Collection: localadvertisements
+ */
+export interface LocalAdvertisementEntity extends BaseEntity, LocalEntityFields {
+  broadstreet_id?: number;        // Set after successful sync
+  name: string;
+  network_id: number;
+  type: string;
+  advertiser?: string;
+  advertiser_id?: number;
+  active?: {
+    url?: string | null;
+  };
+  active_placement?: boolean;
+  preview_url?: string;
+  notes?: string;
+  // Local creation tracking
+  created_locally: boolean;       // Always true
+  synced_with_api: boolean;       // Default: false
+  created_at: Date;               // Default: Date.now
+}
+
+/**
  * Local Network entity - Created locally before sync to Broadstreet
  * Collection: localnetworks
  */
@@ -546,26 +569,4 @@ export type EntitySelectionKey = string | number;
  */
 export type EntitySyncStatus = 'synced' | 'local' | 'both' | 'none';
 
-/**
- * Local Advertisement entity - Created locally before sync to Broadstreet
- * Collection: localadvertisements
- */
-export interface LocalAdvertisementEntity extends BaseEntity, LocalEntityFields {
-  broadstreet_id?: number;        // Set after successful sync
-  name: string;
-  network_id: number;
-  advertiser_id?: number | string; // Flexible for local/synced advertisers
-  type: string;
-  advertiser: string;
-  active: {
-    url?: string | null;
-  };
-  active_placement?: boolean;
-  preview_url?: string;
-  notes?: string;
-  updated_at?: string;
-  // Local creation tracking
-  created_locally: boolean;       // Always true
-  synced_with_api: boolean;       // Default: false
-  created_at: Date;               // Default: Date.now
-}
+

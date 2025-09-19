@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -206,7 +206,8 @@ export default function LocalOnlyDashboard() {
     localNetworks,
     localAdvertisements,
     localPlacements,
-    networks
+    networks,
+    advertisers
   } = useAllEntities();
 
   // Create network and advertiser maps from store data
@@ -215,9 +216,15 @@ export default function LocalOnlyDashboard() {
     return map;
   }, {} as Record<number, string>);
 
-  // For advertiser map, we would need advertisers from the store
-  // For now, using empty object as placeholder
-  const advertiserMap = {} as Record<number, string>;
+  // Create advertiser map from store data
+  const advertiserMap = useMemo(() => {
+    return advertisers.reduce((map: Record<number, string>, advertiser: any) => {
+      if (advertiser.broadstreet_id) {
+        map[advertiser.broadstreet_id] = advertiser.name || 'Unknown Advertiser';
+      }
+      return map;
+    }, {} as Record<number, string>);
+  }, [advertisers]);
 
   // Reconstruct data object to match expected structure
   const data = {

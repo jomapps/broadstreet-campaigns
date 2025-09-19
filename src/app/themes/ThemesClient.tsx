@@ -10,7 +10,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useEntityStore, useFilterStore } from '@/stores';
+import { useEntityStore, useFilterStore, ThemeEntity } from '@/stores';
 import ThemesContent from './ThemesContent';
 
 /**
@@ -18,8 +18,8 @@ import ThemesContent from './ThemesContent';
  * Variable names follow docs/variable-origins.md registry
  */
 interface ThemesClientProps {
-  initialThemes: any[];
-  searchParams: any;
+  initialThemes: ThemeEntity[];
+  searchParams: Record<string, string | string[] | undefined>;
 }
 
 /**

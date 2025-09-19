@@ -10,7 +10,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useEntityStore, useFilterStore } from '@/stores';
+import { useEntityStore, useFilterStore, ZoneEntity, NetworkEntity } from '@/stores';
 import ZonesContent from './ZonesContent';
 
 /**
@@ -18,9 +18,9 @@ import ZonesContent from './ZonesContent';
  * Variable names follow docs/variable-origins.md registry
  */
 interface ZonesClientProps {
-  initialZones: any[];
-  initialNetworks: any[];
-  searchParams: any;
+  initialZones: ZoneEntity[];
+  initialNetworks: NetworkEntity[];
+  searchParams: Record<string, string | string[] | undefined>;
 }
 
 /**

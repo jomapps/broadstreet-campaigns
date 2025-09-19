@@ -34,13 +34,6 @@ export function useNetworksQuery() {
       if (!response.ok) throw new Error('Failed to fetch networks');
       return response.json();
     },
-    onSuccess: (data) => {
-      setNetworks(data);
-      setLoading('networks', false);
-    },
-    onError: () => {
-      setLoading('networks', false);
-    },
   });
 }
 
@@ -57,17 +50,10 @@ export function useAdvertisersQuery() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedNetworkId) params.append('networkId', selectedNetworkId);
-      
+
       const response = await fetch(`/api/advertisers?${params}`);
       if (!response.ok) throw new Error('Failed to fetch advertisers');
       return response.json();
-    },
-    onSuccess: (data) => {
-      setAdvertisers(data);
-      setLoading('advertisers', false);
-    },
-    onError: () => {
-      setLoading('advertisers', false);
     },
   });
 }
@@ -85,17 +71,10 @@ export function useZonesQuery() {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (selectedNetworkId) params.append('networkId', selectedNetworkId);
-      
+
       const response = await fetch(`/api/zones?${params}`);
       if (!response.ok) throw new Error('Failed to fetch zones');
       return response.json();
-    },
-    onSuccess: (data) => {
-      setZones(data);
-      setLoading('zones', false);
-    },
-    onError: () => {
-      setLoading('zones', false);
     },
   });
 }

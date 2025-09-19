@@ -78,8 +78,6 @@ export default async function AdvertisementsPage({ searchParams }) {
           searchParams={params}
         />
       </Suspense>
-
-      <CreationButton />
     </div>
   );
 }
