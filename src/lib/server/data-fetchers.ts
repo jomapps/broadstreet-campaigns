@@ -626,16 +626,24 @@ export async function fetchAuditData(params = {}) {
 export async function getEntityCounts(networkId) {
   try {
     await connectDB();
-    
+
     const query = networkId ? { network_id: networkId } : {};
-    
+
+    // Count embedded placements from campaigns (this is where sync stores them)
+    const placementCountResult = await Campaign.aggregate([
+      { $match: query },
+      { $project: { placementCount: { $size: { $ifNull: ['$placements', []] } } } },
+      { $group: { _id: null, totalPlacements: { $sum: '$placementCount' } } }
+    ]);
+    const embeddedPlacementCount = placementCountResult.length > 0 ? placementCountResult[0].totalPlacements : 0;
+
     const [
       networkCount,
       advertiserCount,
       campaignCount,
       zoneCount,
       advertisementCount,
-      placementCount,
+      localPlacementCount,
       localEntityCounts
     ] = await Promise.all([
       networkId ? 1 : Network.countDocuments({}),
@@ -643,32 +651,32 @@ export async function getEntityCounts(networkId) {
       Campaign.countDocuments(query),
       Zone.countDocuments(query),
       Advertisement.countDocuments(query),
-      Placement.countDocuments(query),
+      // Count local placements from the Placement collection (local-only placements)
+      Placement.countDocuments({ ...query, created_locally: true, synced_with_api: false }),
       Promise.all([
         LocalZone.countDocuments({ ...query, synced_with_api: false }),
         LocalAdvertiser.countDocuments({ ...query, synced_with_api: false }),
         LocalCampaign.countDocuments({ ...query, synced_with_api: false }),
         LocalNetwork.countDocuments({ synced_with_api: false }),
         LocalAdvertisement.countDocuments({ ...query, synced_with_api: false }),
-        Placement.countDocuments({ ...query, created_locally: true, synced_with_api: false }),
       ]),
     ]);
-    
-    const [localZoneCount, localAdvertiserCount, localCampaignCount, localNetworkCount, localAdvertisementCount, localPlacementCount] = localEntityCounts;
-    
+
+    const [localZoneCount, localAdvertiserCount, localCampaignCount, localNetworkCount, localAdvertisementCount] = localEntityCounts;
+
     return {
       networks: networkCount,
       advertisers: advertiserCount,
       campaigns: campaignCount,
       zones: zoneCount,
       advertisements: advertisementCount,
-      placements: placementCount,
+      placements: embeddedPlacementCount, // Use embedded placement count from campaigns
       localZones: localZoneCount,
       localAdvertisers: localAdvertiserCount,
       localCampaigns: localCampaignCount,
       localNetworks: localNetworkCount,
       localAdvertisements: localAdvertisementCount,
-      localPlacements: localPlacementCount,
+      localPlacements: localPlacementCount, // Local-only placements from Placement collection
       totalLocal: localZoneCount + localAdvertiserCount + localCampaignCount + localNetworkCount + localAdvertisementCount + localPlacementCount,
     };
   } catch (error) {
