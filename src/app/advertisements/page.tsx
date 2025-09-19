@@ -1,74 +1,38 @@
+/**
+ * ADVERTISEMENTS PAGE - SERVER-SIDE PATTERN WITH ZUSTAND INTEGRATION
+ *
+ * Server page that fetches advertisements data and passes to client component
+ * for Zustand store initialization. Follows the server-client pattern
+ * established in Phase 2 (Dashboard, Networks, Advertisers, Zones, Campaigns).
+ * All variable names follow docs/variable-origins.md registry.
+ */
+
 import { Suspense } from 'react';
-import connectDB from '@/lib/mongodb';
-import Advertisement from '@/lib/models/advertisement';
+import { fetchAdvertisements, fetchNetworks, fetchAdvertisers } from '@/lib/server/data-fetchers';
 import CreationButton from '@/components/creation/CreationButton';
-import AdvertisementFiltersWrapper from './AdvertisementFiltersWrapper';
-import { AdvertisementLean } from '@/lib/types/lean-entities';
+import AdvertisementsClient from './AdvertisementsClient';
+import LoadingSkeleton from './LoadingSkeleton';
 
 
-function LoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="animate-pulse">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-              </div>
-              <div className="w-16 h-6 bg-gray-200 rounded"></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-              </div>
-              <div>
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-1"></div>
-                <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-              </div>
-            </div>
-            <div className="h-32 bg-gray-200 rounded mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+/**
+ * AdvertisementsPage - Server component that fetches data and renders client
+ * Variable names follow docs/variable-origins.md registry
+ */
+export default async function AdvertisementsPage({ searchParams }) {
+  // Await searchParams for Next.js 15 compatibility
+  const params = await searchParams;
 
+  // Extract filters from parameters
+  const networkId = params?.network ? parseInt(params.network) : null;
+  const advertiserId = params?.advertiser ? parseInt(params.advertiser) : null;
 
-async function AdvertisementsData() {
-  await connectDB();
-  const advertisements = await Advertisement.find({}).sort({ name: 1 }).lean() as AdvertisementLean[];
-  
-  // Serialize the data to plain objects
-  const serializedAdvertisements = advertisements.map(advertisement => ({
-    _id: advertisement._id.toString(),
-    __v: advertisement.__v,
-    // Use standardized ID mapping - preserve broadstreet_id for proper EntityIdBadge display
-    broadstreet_id: advertisement.broadstreet_id,
-    mongo_id: advertisement._id.toString(),
-    name: advertisement.name,
-    updated_at: advertisement.updated_at,
-    type: advertisement.type,
-    advertiser: advertisement.advertiser,
-    active: advertisement.active,
-    active_placement: advertisement.active_placement,
-    preview_url: advertisement.preview_url,
-    createdAt: typeof advertisement.createdAt === 'object' && advertisement.createdAt && 'toISOString' in advertisement.createdAt
-      ? (advertisement.createdAt as Date).toISOString()
-      : advertisement.createdAt as string,
-    updatedAt: typeof advertisement.updatedAt === 'object' && advertisement.updatedAt && 'toISOString' in advertisement.updatedAt
-      ? (advertisement.updatedAt as Date).toISOString()
-      : advertisement.updatedAt as string,
-  }));
-  
-  return <AdvertisementFiltersWrapper advertisements={serializedAdvertisements} />;
-}
+  // Fetch advertisements, networks, and advertisers data in parallel using existing data fetchers
+  const [advertisements, networks, advertisers] = await Promise.all([
+    fetchAdvertisements(advertiserId, params),
+    fetchNetworks(),
+    fetchAdvertisers(networkId)
+  ]);
 
-export default function AdvertisementsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -78,7 +42,7 @@ export default function AdvertisementsPage() {
             Actual ads shown on your websites
           </p>
         </div>
-        
+
         <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
           <CreationButton />
         </Suspense>
@@ -107,10 +71,17 @@ export default function AdvertisementsPage() {
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
-        <AdvertisementsData />
+        <AdvertisementsClient
+          initialAdvertisements={advertisements}
+          initialNetworks={networks}
+          initialAdvertisers={advertisers}
+          searchParams={params}
+        />
       </Suspense>
 
       <CreationButton />
     </div>
   );
 }
+
+

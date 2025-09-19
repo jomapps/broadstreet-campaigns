@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { useFilters } from '@/contexts/FilterContext';
-import { useThemes } from '@/hooks/useThemes';
+import { useAllFilters, useFilterActions } from '@/stores';
+import { useEntityStore } from '@/stores';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X, Palette } from 'lucide-react';
 
 export default function ThemeSelector() {
-  const { selectedTheme, selectThemeZones } = useFilters();
-  const { themes, isLoading, error } = useThemes();
+  const { selectedTheme } = useAllFilters();
+  const { selectThemeZones } = useFilterActions();
+  const { themes, isLoading } = useEntityStore();
 
   const handleThemeSelection = (themeId: string) => {
     if (themeId === 'none') {

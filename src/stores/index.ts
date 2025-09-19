@@ -18,6 +18,10 @@
 // Variable names follow docs/variable-origins.md registry
 export { useEntityStore } from './entity-store';
 export { useFilterStore } from './filter-store';
+
+// Import stores for internal use in helper hooks
+import { useEntityStore } from './entity-store';
+import { useFilterStore } from './filter-store';
 export { useSyncStore } from './sync-store';
 export { useAppStore } from './app-store';
 

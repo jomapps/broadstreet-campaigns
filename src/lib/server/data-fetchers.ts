@@ -25,26 +25,43 @@ import LocalCampaign from '@/lib/models/local-campaign';
 import LocalNetwork from '@/lib/models/local-network';
 import LocalAdvertisement from '@/lib/models/local-advertisement';
 import Placement from '@/lib/models/placement';
+import Theme from '@/lib/models/theme';
 
 /**
- * Serialize entity for client transfer
- * Converts MongoDB ObjectIds to strings and dates to ISO strings
+ * Deep serialize entity for client transfer
+ * Recursively converts MongoDB ObjectIds to strings and dates to ISO strings
+ * Handles nested objects and arrays to prevent Next.js serialization warnings
  * @param {any} entity - Entity to serialize
- * @returns {any} Serialized entity
+ * @returns {any} Serialized entity safe for client transfer
  */
 function serializeEntity(entity) {
   if (!entity) return null;
-  
-  return {
-    ...entity,
-    _id: entity._id?.toString(),
-    mongo_id: entity.mongo_id?.toString(),
-    created_at: entity.created_at?.toISOString(),
-    updated_at: entity.updated_at?.toISOString(),
-    synced_at: entity.synced_at?.toISOString(),
-    createdAt: entity.createdAt?.toISOString(),
-    updatedAt: entity.updatedAt?.toISOString(),
-  };
+
+  // Handle primitive types
+  if (typeof entity !== 'object') return entity;
+
+  // Handle Date objects
+  if (entity instanceof Date) {
+    return entity.toISOString();
+  }
+
+  // Handle MongoDB ObjectId (has toString method and _bsontype)
+  if (entity._bsontype === 'ObjectId' || (entity.toString && typeof entity.toString === 'function' && entity.constructor?.name === 'ObjectId')) {
+    return entity.toString();
+  }
+
+  // Handle arrays
+  if (Array.isArray(entity)) {
+    return entity.map(serializeEntity);
+  }
+
+  // Handle plain objects
+  const serialized = {};
+  for (const [key, value] of Object.entries(entity)) {
+    serialized[key] = serializeEntity(value);
+  }
+
+  return serialized;
 }
 
 /**
@@ -150,24 +167,24 @@ export async function fetchAdvertisers(networkId, params = {}) {
 }
 
 /**
- * Fetch zones from database
+ * Fetch zones from database (both API and local zones)
  * Variable names follow docs/variable-origins.md registry
  * @param {number} networkId - Optional network ID filter
  * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of zone entities
+ * @returns {Promise<any[]>} Array of zone entities with source information
  */
 export async function fetchZones(networkId, params = {}) {
   try {
     await connectDB();
-    
+
     // Build query based on parameters
     const query = {};
-    
+
     // Add network filter if provided
     if (networkId) {
       query.network_id = networkId;
     }
-    
+
     // Add search filter if provided
     if (params.search) {
       query.$or = [
@@ -175,12 +192,21 @@ export async function fetchZones(networkId, params = {}) {
         { alias: { $regex: params.search, $options: 'i' } },
       ];
     }
-    
-    const zones = await Zone.find(query)
-      .sort({ name: 1 })
-      .lean();
-    
-    return serializeEntities(zones);
+
+    // Fetch zones from both models in parallel
+    const [apiZones, localZones] = await Promise.all([
+      Zone.find(query).sort({ name: 1 }).lean(),
+      // Show only truly local, not-yet-synced zones
+      LocalZone.find({ ...query, synced_with_api: false }).sort({ name: 1 }).lean()
+    ]);
+
+    // Combine zones from both sources with source information
+    const allZones = [
+      ...apiZones.map(zone => ({ ...zone, source: 'api' })),
+      ...localZones.map(zone => ({ ...zone, source: 'local', broadstreet_id: undefined }))
+    ];
+
+    return serializeEntities(allZones);
   } catch (error) {
     console.error('Error fetching zones:', error);
     throw new Error('Failed to fetch zones');
@@ -190,24 +216,25 @@ export async function fetchZones(networkId, params = {}) {
 /**
  * Fetch campaigns from database
  * Variable names follow docs/variable-origins.md registry
- * @param {Object} params - Query parameters
+ * @param {number} advertiserId - Optional advertiser ID filter
+ * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of campaign entities
  */
-export async function fetchCampaigns(params = {}) {
+export async function fetchCampaigns(advertiserId, params = {}) {
   try {
     await connectDB();
-    
+
     // Build query based on parameters
     const query = {};
-    
+
+    // Add advertiser filter if provided
+    if (advertiserId) {
+      query.advertiser_id = advertiserId;
+    }
+
     // Add network filter if provided
     if (params.networkId) {
       query.network_id = params.networkId;
-    }
-    
-    // Add advertiser filter if provided
-    if (params.advertiserId) {
-      query.advertiser_id = params.advertiserId;
     }
     
     // Add search filter if provided
@@ -246,20 +273,25 @@ export async function fetchCampaigns(params = {}) {
 /**
  * Fetch advertisements from database
  * Variable names follow docs/variable-origins.md registry
- * @param {number} networkId - Optional network ID filter
+ * @param {number} advertiserId - Optional advertiser ID filter
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of advertisement entities
  */
-export async function fetchAdvertisements(networkId, params = {}) {
+export async function fetchAdvertisements(advertiserId, params = {}) {
   try {
     await connectDB();
-    
+
     // Build query based on parameters
     const query = {};
-    
+
+    // Add advertiser filter if provided
+    if (advertiserId) {
+      query.advertiser_id = advertiserId;
+    }
+
     // Add network filter if provided
-    if (networkId) {
-      query.network_id = networkId;
+    if (params.networkId) {
+      query.network_id = params.networkId;
     }
     
     // Add search filter if provided
@@ -334,31 +366,34 @@ export async function fetchLocalEntities() {
 /**
  * Fetch placements from database with optional filtering
  * Variable names follow docs/variable-origins.md registry
- * @param {Object} params - Query parameters
+ * @param {number} networkId - Optional network ID filter
+ * @param {number} advertiserId - Optional advertiser ID filter
+ * @param {number} campaignId - Optional campaign ID filter
+ * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of placement entities
  */
-export async function fetchPlacements(params = {}) {
+export async function fetchPlacements(networkId, advertiserId, campaignId, params = {}) {
   try {
     await connectDB();
-    
+
     // Build query based on parameters
     const query = {};
-    
+
     // Add network filter if provided
-    if (params.networkId) {
-      query.network_id = params.networkId;
+    if (networkId) {
+      query.network_id = networkId;
     }
-    
+
     // Add advertiser filter if provided
-    if (params.advertiserId) {
-      query.advertiser_id = params.advertiserId;
+    if (advertiserId) {
+      query.advertiser_id = advertiserId;
     }
-    
+
     // Add campaign filter if provided
-    if (params.campaignId) {
+    if (campaignId) {
       query.$or = [
-        { campaign_id: params.campaignId },
-        { campaign_mongo_id: params.campaignId },
+        { campaign_id: campaignId },
+        { campaign_mongo_id: campaignId },
       ];
     }
     
@@ -399,6 +434,182 @@ export async function fetchPlacements(params = {}) {
   } catch (error) {
     console.error('Error fetching placements:', error);
     throw new Error('Failed to fetch placements');
+  }
+}
+
+/**
+ * Fetch themes from database
+ * Variable names follow docs/variable-origins.md registry
+ * @param {Object} params - Optional query parameters
+ * @returns {Promise<any[]>} Array of theme entities
+ */
+export async function fetchThemes(params = {}) {
+  try {
+    await connectDB();
+
+    // Build query based on parameters
+    const query = {};
+
+    // Add search filter if provided
+    if (params.search) {
+      query.$or = [
+        { name: { $regex: params.search, $options: 'i' } },
+        { description: { $regex: params.search, $options: 'i' } },
+      ];
+    }
+
+    const themes = await Theme.find(query)
+      .sort({ name: 1 })
+      .lean();
+
+    return serializeEntities(themes);
+  } catch (error) {
+    console.error('Error fetching themes:', error);
+    throw new Error('Failed to fetch themes');
+  }
+}
+
+/**
+ * Fetch single theme by ID with zones
+ * Variable names follow docs/variable-origins.md registry
+ * @param {string} themeId - Theme ID to fetch
+ * @returns {Promise<any|null>} Theme entity with zones or null if not found
+ */
+export async function fetchThemeById(themeId) {
+  try {
+    await connectDB();
+
+    const theme = await Theme.findById(themeId).lean();
+
+    if (!theme) {
+      return null;
+    }
+
+    // Fetch zones that belong to this theme
+    const zones = await Zone.find({
+      broadstreet_id: { $in: theme.zone_ids || [] }
+    }).sort({ name: 1 }).lean();
+
+    return {
+      ...serializeEntity(theme),
+      zones: serializeEntities(zones)
+    };
+  } catch (error) {
+    console.error('Error fetching theme by ID:', error);
+    throw new Error('Failed to fetch theme');
+  }
+}
+
+/**
+ * Fetch audit data with search, filtering, and pagination
+ * Variable names follow docs/variable-origins.md registry
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Audit data with entities, summary, and pagination
+ */
+export async function fetchAuditData(params = {}) {
+  try {
+    await connectDB();
+
+    const {
+      search = '',
+      type = '',
+      limit = '50',
+      offset = '0'
+    } = params;
+
+    const limitNum = parseInt(limit, 10) || 50;
+    const offsetNum = parseInt(offset, 10) || 0;
+
+    // Build query for audit entities (synced entities from all collections)
+    const searchQuery = search ? {
+      $or: [
+        { name: { $regex: search, $options: 'i' } }
+      ]
+    } : {};
+
+    // Fetch entities from different collections based on type filter
+    let entities = [];
+    let summary = {
+      total_synced: 0,
+      by_type: {
+        advertisers: 0,
+        campaigns: 0,
+        zones: 0,
+      },
+      recent_syncs: []
+    };
+
+    if (!type || type === 'advertiser') {
+      const advertisers = await Advertiser.find({
+        ...searchQuery,
+        broadstreet_id: { $exists: true }
+      }).sort({ synced_at: -1 }).lean();
+
+      entities.push(...advertisers.map(a => ({
+        ...a,
+        type: 'advertiser',
+        entity_id: a._id.toString()
+      })));
+      summary.by_type.advertisers = advertisers.length;
+    }
+
+    if (!type || type === 'campaign') {
+      const campaigns = await Campaign.find({
+        ...searchQuery,
+        broadstreet_id: { $exists: true }
+      }).sort({ synced_at: -1 }).lean();
+
+      entities.push(...campaigns.map(c => ({
+        ...c,
+        type: 'campaign',
+        entity_id: c._id.toString()
+      })));
+      summary.by_type.campaigns = campaigns.length;
+    }
+
+    if (!type || type === 'zone') {
+      const zones = await Zone.find({
+        ...searchQuery,
+        broadstreet_id: { $exists: true }
+      }).sort({ synced_at: -1 }).lean();
+
+      entities.push(...zones.map(z => ({
+        ...z,
+        type: 'zone',
+        entity_id: z._id.toString()
+      })));
+      summary.by_type.zones = zones.length;
+    }
+
+    // Sort all entities by synced_at descending
+    entities.sort((a, b) => new Date(b.synced_at) - new Date(a.synced_at));
+
+    // Calculate totals
+    summary.total_synced = entities.length;
+    summary.recent_syncs = entities.slice(0, 5).map(e => ({
+      name: e.name,
+      type: e.type,
+      synced_at: e.synced_at,
+      broadstreet_id: e.broadstreet_id
+    }));
+
+    // Apply pagination
+    const paginatedEntities = entities.slice(offsetNum, offsetNum + limitNum);
+
+    return {
+      success: true,
+      entities: serializeEntities(paginatedEntities),
+      summary,
+      pagination: {
+        total: entities.length,
+        limit: limitNum,
+        offset: offsetNum,
+        has_more: offsetNum + limitNum < entities.length
+      }
+    };
+  } catch (error) {
+    console.error('Error fetching audit data:', error);
+    throw new Error('Failed to fetch audit data');
   }
 }
 

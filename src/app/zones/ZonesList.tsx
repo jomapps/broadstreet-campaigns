@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters, useFilterActions } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
@@ -83,7 +83,7 @@ export default function ZonesList({
   filteredZones
 }: ZonesListProps) {
   const entities = useSelectedEntities();
-  const { toggleZoneSelection } = useFilters();
+  const { toggleZoneSelection } = useFilterActions();
 
   // Use filtered zones if provided, otherwise fall back to local filtering
   const displayZones = filteredZones || zones;

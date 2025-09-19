@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters } from '@/stores';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 
 type EntityType = 'network' | 'advertiser' | 'campaign' | 'zone' | 'advertisement';
@@ -38,8 +38,9 @@ export function useSelectedEntities(): SelectedEntitiesResult {
     selectedCampaign,
     selectedZones,
     selectedAdvertisements,
-    networks,
-  } = useFilters();
+  } = useAllFilters();
+
+
 
 
   const network = useMemo(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { AdvertisementLean } from '@/lib/types/lean-entities';
@@ -17,7 +17,7 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [showActiveOnly, setShowActiveOnly] = useState(false);
   const entities = useSelectedEntities();
-  const { selectedAdvertisements, showOnlySelectedAds } = useFilters();
+  const { selectedAdvertisements, showOnlySelectedAds } = useAllFilters();
 
   // Get unique advertisement types for filtering (only from the selected advertiser's ads)
   const advertisementTypes = useMemo(() => {

@@ -1,5 +1,8 @@
 # Variable Origins Registry - Single Source of Truth for Variable Names
 
+**Last Updated**: January 2025 - Phase 2 Complete
+**Status**: Updated with Phase 2 Migration Patterns
+
 ## Purpose
 
 This document maintains a registry of all variable names used across multiple functions to ensure 100% consistency throughout the Zustand implementation and beyond.
@@ -209,9 +212,45 @@ This document maintains a registry of all variable names used across multiple fu
 
 ---
 
+## Phase 2 Migration Patterns (NEW)
+
+### Server-Client Component Pattern
+- `initialData` - Server data passed to client components for store initialization
+- `initialNetworks` - Server-fetched networks passed to client components
+- `initialAdvertisers` - Server-fetched advertisers passed to client components
+- `initialCampaigns` - Server-fetched campaigns passed to client components
+- `initialZones` - Server-fetched zones passed to client components
+- `searchParams` - URL search parameters passed from server to client components
+
+### Client Component Props
+- `PageClient` - Standard naming pattern for client components that initialize stores
+- `PageContent` - Standard naming pattern for content components that read from stores
+- `LoadingSkeleton` - Standard naming pattern for loading skeleton components
+
+### Store Hook Patterns
+- `useAllFilters` - Hook to get all filter state from Zustand filter store
+- `useFilterActions` - Hook to get all filter actions from Zustand filter store
+- `useAllEntities` - Hook to get all entity collections from Zustand entity store
+- `useEntityActions` - Hook to get all entity actions from Zustand entity store
+
+### Component State Management
+- `setFiltersFromParams` - Action to initialize filter state from URL parameters
+- `isLoading` - Loading state object with entity-specific loading flags (isLoading.networks, isLoading.advertisers, etc.)
+- `clearSelections` - Action to clear zone and advertisement selections (replaces clearZones)
+
+### Server Data Fetching
+- `fetchNetworks` - Server-side function to fetch networks with parameter handling
+- `fetchAdvertisers` - Server-side function to fetch advertisers with network filtering
+- `fetchCampaigns` - Server-side function to fetch campaigns with advertiser filtering
+- `fetchZones` - Server-side function to fetch zones with network filtering
+- `getEntityCounts` - Server-side function to get entity count statistics
+
+---
+
 ## Notes
 
-- This registry will be continuously updated during implementation
+- This registry was extensively validated during Phase 2 migration (Dashboard, Networks, Advertisers pages)
+- All Phase 2 patterns are proven and should be followed exactly for remaining page migrations
 - All entries must follow the established naming conventions in `docs/style-guides/variable-naming.md`
 - When in doubt, add the variable to this registry rather than risk inconsistency
 - Review this document regularly to ensure no duplicate or conflicting names exist

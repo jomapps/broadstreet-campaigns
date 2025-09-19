@@ -1,6 +1,6 @@
 'use client';
 
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters, useFilterActions, useAllEntities, useEntityStore } from '@/stores';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { getEntityId } from '@/lib/utils/entity-helpers';
 import ThemeSelector from '@/components/themes/ThemeSelector';
 
 export default function FiltersCard() {
+  // Get filter state from Zustand stores
   const {
     selectedNetwork,
     selectedAdvertiser,
@@ -18,6 +19,10 @@ export default function FiltersCard() {
     showOnlySelected,
     selectedAdvertisements,
     showOnlySelectedAds,
+  } = useAllFilters();
+
+  // Get filter actions from Zustand stores
+  const {
     setSelectedNetwork,
     setSelectedAdvertiser,
     setSelectedCampaign,
@@ -25,15 +30,15 @@ export default function FiltersCard() {
     setShowOnlySelected,
     setSelectedAdvertisements,
     setShowOnlySelectedAds,
-    networks,
-    advertisers,
-    campaigns,
-    isLoadingNetworks,
-    isLoadingAdvertisers,
-    isLoadingCampaigns,
     clearAllFilters,
-    clearZones,
-  } = useFilters();
+    clearSelections,
+  } = useFilterActions();
+
+  // Get entity data from Zustand stores
+  const { networks, advertisers, campaigns } = useAllEntities();
+
+  // Get loading states from entity store
+  const { isLoading } = useEntityStore();
 
   const hasAnyFilter = selectedNetwork || selectedAdvertiser || selectedCampaign;
   const hasZoneSelection = selectedZones.length > 0;
@@ -72,7 +77,7 @@ export default function FiltersCard() {
         {/* Network Filter */}
         <div className="space-y-2">
           <div className="text-xs text-sidebar-foreground/70">Network</div>
-          {isLoadingNetworks ? (
+          {isLoading.networks ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : (
             <Select
@@ -148,7 +153,7 @@ export default function FiltersCard() {
             <div className="h-8 bg-sidebar-accent/20 rounded-md flex items-center justify-center">
               <span className="text-xs text-sidebar-foreground/50">Select network first</span>
             </div>
-          ) : isLoadingAdvertisers ? (
+          ) : isLoading.advertisers ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : selectedAdvertiser ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
@@ -184,7 +189,7 @@ export default function FiltersCard() {
             <div className="h-8 bg-sidebar-accent/20 rounded-md flex items-center justify-center">
               <span className="text-xs text-sidebar-foreground/50">Select advertiser first</span>
             </div>
-          ) : isLoadingCampaigns ? (
+          ) : isLoading.campaigns ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
           ) : selectedCampaign ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
@@ -209,7 +214,7 @@ export default function FiltersCard() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={clearZones}
+                onClick={clearSelections}
                 className="h-4 w-4 p-0 text-sidebar-foreground/50 hover:text-sidebar-foreground"
               >
                 <X className="h-2 w-2" />

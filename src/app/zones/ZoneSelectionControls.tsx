@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters, useFilterActions } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,11 +19,11 @@ interface ZoneSelectionControlsProps {
 }
 
 export default function ZoneSelectionControls({ zones, selectedZones, showOnlySelected }: ZoneSelectionControlsProps) {
-  const { 
-    selectZones, 
-    deselectZones, 
-    setShowOnlySelected 
-  } = useFilters();
+  const {
+    selectAllZones,
+    deselectAllZones,
+    setShowOnlySelected
+  } = useFilterActions();
   const entities = useSelectedEntities();
 
   // The zones prop now contains the filtered zones from ZoneFiltersWrapper
@@ -48,12 +48,12 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
 
   // Handle select all visible zones
   const handleSelectAll = () => {
-    selectZones(visibleZoneIds);
+    selectAllZones(visibleZoneIds);
   };
 
   // Handle deselect all visible zones
   const handleDeselectAll = () => {
-    deselectZones(visibleZoneIds);
+    deselectAllZones();
   };
 
   // Handle toggle only selected filter

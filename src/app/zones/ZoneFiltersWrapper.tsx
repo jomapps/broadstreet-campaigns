@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useFilters } from '@/contexts/FilterContext';
+import { useAllFilters } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import ZoneSizeFilters from './ZoneSizeFilters';
 import ZonesList from './ZonesList';
@@ -19,7 +19,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
   const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS' | 'CS')[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const entities = useSelectedEntities();
-  const { selectedZones, showOnlySelected } = useFilters();
+  const { selectedZones, showOnlySelected } = useAllFilters();
 
   // Helper: derive selection key using standardized utility (same as ZoneSelectionControls)
   const zoneSelectionKey = (zone: ZoneLean) => {

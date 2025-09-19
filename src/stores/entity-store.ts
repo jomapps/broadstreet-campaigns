@@ -48,6 +48,10 @@ const initialState = {
   localAdvertisements: [],
   localPlacements: [],
 
+  // Themes - local-only entities
+  themes: [],
+  currentTheme: null,
+
   // Loading states - comprehensive coverage
   isLoading: {
     networks: false,
@@ -201,6 +205,24 @@ export const useEntityStore = create(
         ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
         ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
       );
+    }),
+
+    /**
+     * Set themes collection - themes are local-only entities
+     * @param {any[]} themes - Array of theme entities
+     */
+    setThemes: (themes) => set((state) => {
+      state.themes = themes.filter(t => t.name && t._id);
+      state.isLoading.themes = false;
+      state.errors.themes = null;
+    }),
+
+    /**
+     * Set current theme for detail view
+     * @param {any} theme - Theme entity with zones
+     */
+    setCurrentTheme: (theme) => set((state) => {
+      state.currentTheme = theme;
     }),
 
     // Entity operations with ID resolution using EntitySelectionKey
