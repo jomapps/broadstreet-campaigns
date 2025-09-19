@@ -166,9 +166,10 @@ function ZonesFilters() {
 
     // Apply size filter
     if (selectedSizes && selectedSizes.length > 0) {
-      filtered = filtered.filter(zone =>
-        selectedSizes.includes(zone.size_type || 'Unknown')
-      );
+      filtered = filtered.filter(zone => {
+        // Only include zones that have a valid size_type that matches the selected sizes
+        return zone.size_type && selectedSizes.includes(zone.size_type);
+      });
     }
 
     // Apply "show only selected" filter
