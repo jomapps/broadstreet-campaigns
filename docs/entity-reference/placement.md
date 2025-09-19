@@ -670,20 +670,46 @@ Multiple zones and advertisements can be selected. All combinations of the selec
 
 When the create placemetns button is clicked, modal shows the info of what is going to happen.
 
-### **NEW FEATURE**
-**TWO MODES** there will be to choice of two modes.
-The sidebar > Utilties section will get a toggle button. it will toggle between safe mode and advanced mode. Advanced mode denoted by a red background and safe mode by a green background. Ensure font is bold and black.
+**IMPORTANT** The creation workflow is the same for both modes, and it is what is currently present. Just that the wrokflow is on a page instead of a modal and it will process all or selected data, based on the button pressed.
 
+### **NEW FEATURE** Two modes for create placements
+**TWO MODES** there will be a choice of two modes.
+The sidebar > Utilties section will remain as is
+when pressed, it will route to a page instead of opening a modal.
+/placements/create-placements
+The creation workflow logic and processing will on the page.
+The logic of enabling the create placements button remains same as now.
+
+**IMPORTANT**
 we know the all all zones and advertisements have a SQ, LS or PT as standalone words IN CAPITAL
 SQ - stands for square (ad sizes 350x200)
 LS - stands for leaderboard (ad sizes 728x90)
 PT - stands for portrait (ad sizes 300x600)
 
-when the create placement button is pressed and the modal opens, following will happen:
-the modal opens. The modal will be depending on the mode selected.
+**IMPORTANT** the pages do not save any data to db or universal. Each visit to the page will be a generations, which will be displayed on the page. the state will be lost on refresh.
 
-#### Safe Mode - Mode 1 - the default mode
-Safe mode will do this - it will only allow combos of advertisements and zones that have the same size type. Everything else will be ignore.
+After creation, the user will be redirected to the placements page.
 
-#### Advanced Mode - Mode 2 - the second mode
-Advanced mode will do this - it will allow all combinations of advertisements and zones, which is the current default.
+#### Common to both modes
+/placements/create-placements
+on page load, it will check if there is a network, advertiser, and campaign selected. If not, it will give a message saying creation cannot be done and list the missing criteria.
+The criteria is that filters have to be selected for network, advertiser, campaign, zone, and advertisement.
+If all filters are selected, it will do this:
+- create an array of placements for each size type aka SQ, LS, PT. This array will simply have 2 items per card which is zone and advertisement.
+- it will further create an similar array for the ignored combinations.
+- then it will add all the combinations of advertisements and zones that have the same size type.
+- there will be 4 cards on the page. One for each array and one card called ignored. the will have the following title and the the number will be the array count.
+  -- SQ
+  -- LS
+  -- PT
+  -- IGNORED (this will have all the combinations that do not have a size type in the name)
+**IMPORTANT** By logic, there will be no 2 cards that are alike and therefore no duplicates.
+
+There will be a two new button called "Create Placements with IGNORED" (red with white text) and "Create Placements without IGNORED" (green with white text)
+
+##### "Create Placements with IGNORED" (red with white text)
+This will create all the placements including the ignored ones. It will also display a message saying that the ignored placements will be created.
+
+##### "Create Placements without IGNORED" (green with white text)
+This will create all the placements excluding the ignored ones. It will also display a message saying that the ignored placements will not be created.
+
