@@ -65,15 +65,19 @@ export default function CreatePlacementsClient({
 
   // Get selected entity objects for processing
   const getSelectedZoneEntities = () => {
-    return initialData.zones.filter(zone => 
-      selectedZones.includes(getEntityId(zone))
-    );
+    return initialData.zones.filter(zone => {
+      const zoneId = getEntityId(zone);
+      // Convert both to strings for consistent comparison (localStorage serializes numbers to strings)
+      return selectedZones.map(String).includes(String(zoneId));
+    });
   };
 
   const getSelectedAdvertisementEntities = () => {
-    return initialData.advertisements.filter(advertisement => 
-      selectedAdvertisements.includes(getEntityId(advertisement))
-    );
+    return initialData.advertisements.filter(advertisement => {
+      const adId = getEntityId(advertisement);
+      // Convert both to strings for consistent comparison (localStorage serializes numbers to strings)
+      return selectedAdvertisements.map(String).includes(String(adId));
+    });
   };
 
   // Generate placement categories when selections change
@@ -82,18 +86,19 @@ export default function CreatePlacementsClient({
       try {
         const selectedZoneEntities = getSelectedZoneEntities();
         const selectedAdvertisementEntities = getSelectedAdvertisementEntities();
-        
+
         const categories = categorizePlacementsBySize(
           selectedZoneEntities,
           selectedAdvertisementEntities
         );
-        
+
         const validation = validatePlacementCategories(categories);
-        
+
         setPlacementCategories(categories);
         setValidationResult(validation);
         setError(null);
       } catch (err) {
+        console.error('Error categorizing placements:', err);
         setError(err instanceof Error ? err.message : 'Failed to categorize placements');
         setPlacementCategories(null);
         setValidationResult(null);

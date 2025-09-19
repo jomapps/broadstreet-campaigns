@@ -405,6 +405,8 @@ export const useFilterStore = create<FilterState & FilterActions>()(
         selectedNetwork: state.selectedNetwork,
         selectedAdvertiser: state.selectedAdvertiser,
         selectedCampaign: state.selectedCampaign,
+        selectedZones: state.selectedZones,
+        selectedAdvertisements: state.selectedAdvertisements,
         selectedTheme: state.selectedTheme,
         showOnlySelected: state.showOnlySelected,
         showOnlySelectedAds: state.showOnlySelectedAds,

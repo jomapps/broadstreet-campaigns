@@ -2556,6 +2556,81 @@ Before considering any store "TypeScript compliant":
 
 ---
 
+## **CRITICAL BUG PATTERNS & SOLUTIONS**
+
+### **EntitySelectionKey Type Mismatch in localStorage Persistence**
+
+**Issue Pattern**: Components show "no entities selected" despite sidebar showing selections.
+
+**Root Cause**: `getEntityId()` returns `EntitySelectionKey` (string | number) - **numbers** for Broadstreet entities, but Zustand localStorage persistence serializes them as **strings**.
+
+**Failure Example**:
+```typescript
+// localStorage: selectedZones = ["171670", "175008", "174982"] (strings)
+// getEntityId(): returns 171670 (number)
+// Comparison: selectedZones.includes(171670) → false ❌
+```
+
+**Detection Symptoms**:
+- Console shows correct IDs in arrays: `selectedZones: [171670, 175008, 174982]`
+- But `selectedZones[0]` type is `string`, `getEntityId()` type is `number`
+- `includes()` and `===` comparisons return `false` despite matching values
+
+**Solution Pattern**:
+```typescript
+// ❌ BROKEN - Direct comparison fails
+const getSelectedEntities = () => {
+  return entities.filter(entity => {
+    const entityId = getEntityId(entity);
+    return selectedIds.includes(entityId); // Type mismatch!
+  });
+};
+
+// ✅ FIXED - String conversion for consistency
+const getSelectedEntities = () => {
+  return entities.filter(entity => {
+    const entityId = getEntityId(entity);
+    // Convert both to strings for consistent comparison
+    return selectedIds.map(String).includes(String(entityId));
+  });
+};
+```
+
+**Files Commonly Affected**:
+- Any component filtering entities using `EntitySelectionKey[]` from Zustand stores
+- Components using `getEntityId()` with localStorage-persisted selection arrays
+- Placement creation, zone selection, advertisement filtering components
+
+**Prevention Strategy**:
+1. **Always use string conversion** when comparing `EntitySelectionKey` values from localStorage
+2. **Add debugging** to check types: `console.log(typeof selectedIds[0], typeof entityId)`
+3. **Test localStorage persistence** by refreshing pages after selections
+4. **Document type handling** in component comments
+
+**Example Implementation**:
+```typescript
+// CreatePlacementsClient.tsx - Fixed implementation
+const getSelectedZoneEntities = () => {
+  return initialData.zones.filter(zone => {
+    const zoneId = getEntityId(zone);
+    // CRITICAL: Convert both to strings (localStorage serializes numbers to strings)
+    return selectedZones.map(String).includes(String(zoneId));
+  });
+};
+
+const getSelectedAdvertisementEntities = () => {
+  return initialData.advertisements.filter(advertisement => {
+    const adId = getEntityId(advertisement);
+    // CRITICAL: Convert both to strings (localStorage serializes numbers to strings)
+    return selectedAdvertisements.map(String).includes(String(adId));
+  });
+};
+```
+
+**Key Learning**: The `EntitySelectionKey` type correctly supports both `string | number`, and `getEntityId()` correctly returns numbers for Broadstreet entities. The issue is specifically with **localStorage serialization** converting numbers to strings, requiring consistent type handling in comparisons.
+
+---
+
 ## Parent-Child Relationships
 Network is parent of all
 Advertiser and Zone are children of Network

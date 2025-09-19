@@ -270,6 +270,35 @@ await broadstreetAPI.deletePlacement({
 - Check that local campaigns have `network_id` set correctly
 - Verify zone lookup maps are populated during API processing
 
+### **CRITICAL: EntitySelectionKey Type Mismatch Issues**
+
+**Problem**: Components showing "no zones/ads selected" despite sidebar showing selections.
+
+**Root Cause**: `getEntityId()` returns **numbers** for Broadstreet entities, but Zustand localStorage persistence serializes them as **strings**, causing comparison failures:
+- `selectedZones.includes(171670)` returns `false` when `selectedZones = ["171670"]`
+- `"171670" !== 171670` (strict equality fails)
+
+**Solution**: Convert both values to strings for consistent comparison:
+```typescript
+// ❌ BROKEN - Type mismatch
+return selectedZones.includes(zoneId);
+
+// ✅ FIXED - Consistent string comparison
+return selectedZones.map(String).includes(String(zoneId));
+```
+
+**Files Commonly Affected**:
+- `src/app/placements/create-placements/CreatePlacementsClient.tsx`
+- Any component filtering entities using `EntitySelectionKey` arrays from Zustand stores
+- Components using `getEntityId()` with localStorage-persisted selection arrays
+
+**Detection Pattern**: Look for:
+- `selectedZones.includes(getEntityId(zone))`
+- `selectedAdvertisements.includes(getEntityId(ad))`
+- Any `EntitySelectionKey[]` array comparisons with `getEntityId()` results
+
+**Prevention**: Always use string conversion when comparing `EntitySelectionKey` values from localStorage-persisted arrays.
+
 ## Notes
 - Access token must be passed as a query parameter to Broadstreet endpoints.
 - We never create networks or advertisements as part of placement creation. They must already exist and be synced or selected from synced data.
