@@ -6,12 +6,46 @@ import { themeValidationService } from '@/lib/theme-validation-service';
 export async function GET(request: NextRequest) {
   // Set up Server-Sent Events response
   const encoder = new TextEncoder();
-  
+
   const stream = new ReadableStream({
     start(controller) {
+      let isControllerClosed = false;
+
       const sendEvent = (data: any, event: string = 'progress') => {
-        const eventData = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-        controller.enqueue(encoder.encode(eventData));
+        if (isControllerClosed) {
+          console.log('[sync/stream] Attempted to send event after controller closed:', event, data.phase);
+          return;
+        }
+
+        try {
+          const eventData = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+          controller.enqueue(encoder.encode(eventData));
+        } catch (error) {
+          if (error instanceof Error && error.message.includes('Controller is already closed')) {
+            console.log('[sync/stream] Controller closed during sendEvent:', event, data.phase);
+            isControllerClosed = true;
+          } else {
+            console.error('[sync/stream] Error sending event:', error);
+            throw error;
+          }
+        }
+      };
+
+      const closeController = () => {
+        if (!isControllerClosed) {
+          try {
+            controller.close();
+            isControllerClosed = true;
+            console.log('[sync/stream] Controller closed successfully');
+          } catch (error) {
+            if (error instanceof Error && error.message.includes('Controller is already closed')) {
+              console.log('[sync/stream] Controller was already closed');
+              isControllerClosed = true;
+            } else {
+              console.error('[sync/stream] Error closing controller:', error);
+            }
+          }
+        }
       };
 
       const performSync = async () => {
@@ -25,7 +59,7 @@ export async function GET(request: NextRequest) {
 
           // Clear zone selections before syncing
           await Promise.resolve().then(() => clearAllZoneSelections());
-          
+
           sendEvent({
             phase: 'initializing',
             message: 'Initializing sync process...',
@@ -77,7 +111,7 @@ export async function GET(request: NextRequest) {
             error: error instanceof Error ? error.message : 'Unknown error'
           }, 'error');
         } finally {
-          controller.close();
+          closeController();
         }
       };
 
@@ -127,62 +161,81 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
       const startProgress = cumulativeProgress;
       const endProgress = cumulativeProgress + step.weight;
 
-      sendEvent({
-        phase: step.key,
-        message: `Syncing ${step.name}...`,
-        progress: startProgress,
-        currentStep: i + 1,
-        totalSteps: steps.length
-      }, 'step-start');
+      // Safely send step start event
+      try {
+        sendEvent({
+          phase: step.key,
+          message: `Syncing ${step.name}...`,
+          progress: startProgress,
+          currentStep: i + 1,
+          totalSteps: steps.length
+        }, 'step-start');
+      } catch (error) {
+        console.log('[syncAllWithStreaming] Failed to send step-start event, continuing sync...');
+      }
 
       // Execute the sync step
       let stepResult;
-      switch (step.key) {
-        case 'cleanup':
-          const { cleanupBroadstreetCollections } = await import('@/lib/utils/sync-helpers');
-          stepResult = await cleanupBroadstreetCollections();
-          break;
-        case 'networks':
-          const { syncNetworks } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncNetworks();
-          break;
-        case 'advertisers':
-          const { syncAdvertisers } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncAdvertisers();
-          break;
-        case 'zones':
-          const { syncZones } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncZones();
-          break;
-        case 'campaigns':
-          const { syncCampaigns } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncCampaigns();
-          break;
-        case 'advertisements':
-          const { syncAdvertisements } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncAdvertisements();
-          break;
-        case 'placements':
-          const { syncPlacements } = await import('@/lib/utils/sync-helpers');
-          stepResult = await syncPlacements();
-          break;
-        default:
-          stepResult = { success: false, count: 0, error: 'Unknown step' };
+      try {
+        switch (step.key) {
+          case 'cleanup':
+            const { cleanupBroadstreetCollections } = await import('@/lib/utils/sync-helpers');
+            stepResult = await cleanupBroadstreetCollections();
+            break;
+          case 'networks':
+            const { syncNetworks } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncNetworks();
+            break;
+          case 'advertisers':
+            const { syncAdvertisers } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncAdvertisers();
+            break;
+          case 'zones':
+            const { syncZones } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncZones();
+            break;
+          case 'campaigns':
+            const { syncCampaigns } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncCampaigns();
+            break;
+          case 'advertisements':
+            const { syncAdvertisements } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncAdvertisements();
+            break;
+          case 'placements':
+            const { syncPlacements } = await import('@/lib/utils/sync-helpers');
+            stepResult = await syncPlacements();
+            break;
+          default:
+            stepResult = { success: false, count: 0, error: 'Unknown step' };
+        }
+      } catch (stepError) {
+        console.error(`[syncAllWithStreaming] Error in ${step.key} step:`, stepError);
+        stepResult = {
+          success: false,
+          count: 0,
+          error: stepError instanceof Error ? stepError.message : 'Unknown step error'
+        };
       }
 
       results[step.key] = stepResult;
       cumulativeProgress = endProgress;
 
-      sendEvent({
-        phase: step.key,
-        message: stepResult.success 
-          ? `${step.name} synced successfully (${stepResult.count} records)`
-          : `${step.name} sync failed: ${stepResult.error}`,
-        progress: endProgress,
-        currentStep: i + 1,
-        totalSteps: steps.length,
-        stepResult: stepResult
-      }, stepResult.success ? 'step-complete' : 'step-error');
+      // Safely send step completion event
+      try {
+        sendEvent({
+          phase: step.key,
+          message: stepResult.success
+            ? `${step.name} synced successfully (${stepResult.count} records)`
+            : `${step.name} sync failed: ${stepResult.error}`,
+          progress: endProgress,
+          currentStep: i + 1,
+          totalSteps: steps.length,
+          stepResult: stepResult
+        }, stepResult.success ? 'step-complete' : 'step-error');
+      } catch (error) {
+        console.log('[syncAllWithStreaming] Failed to send step completion event, continuing sync...');
+      }
 
       // If a critical step fails, we might want to continue or stop
       if (!stepResult.success && step.key === 'cleanup') {
@@ -194,6 +247,7 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
     const allSuccessful = Object.values(results).every((result: any) => result.success);
     return { success: allSuccessful, results };
   } catch (error) {
+    console.error('[syncAllWithStreaming] Unexpected error during sync:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, results, error: message };
   }
