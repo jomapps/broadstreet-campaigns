@@ -10,7 +10,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useEntityStore, useFilterStore } from '@/stores';
+import { useEntityStore, useFilterStore, useFilterActions } from '@/stores';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { performanceMonitor } from '@/lib/utils/performance-monitor';
 import DashboardContent from './DashboardContent';
@@ -24,6 +24,7 @@ interface DashboardClientProps {
   initialAdvertisers: any[];
   initialZones: any[];
   initialCampaigns: any[];
+  initialThemes: any[];
   initialEntityCounts: any;
   searchParams: any;
 }
@@ -32,23 +33,25 @@ interface DashboardClientProps {
  * DashboardClient - Initializes Zustand stores and renders dashboard
  * Variable names follow docs/variable-origins.md registry
  */
-export default function DashboardClient({ 
+export default function DashboardClient({
   initialNetworks,
   initialAdvertisers,
   initialZones,
   initialCampaigns,
+  initialThemes,
   initialEntityCounts,
-  searchParams 
+  searchParams
 }: DashboardClientProps) {
   // Get store actions using exact names from docs/variable-origins.md registry
-  const { 
-    setNetworks, 
-    setAdvertisers, 
-    setZones, 
-    setCampaigns 
+  const {
+    setNetworks,
+    setAdvertisers,
+    setZones,
+    setCampaigns,
+    setThemes
   } = useEntityStore();
-  
-  const { setFiltersFromParams } = useFilterStore();
+
+  const { setFiltersFromParams, setDefaultNetworkIfNone } = useFilterActions();
   
   // Initialize store with server data on mount
   useEffect(() => {
@@ -60,6 +63,10 @@ export default function DashboardClient({
     setAdvertisers(initialAdvertisers);
     setZones(initialZones);
     setCampaigns(initialCampaigns);
+    setThemes(initialThemes);
+
+    // Set default network if none is selected (for smooth UX)
+    setDefaultNetworkIfNone(initialNetworks);
 
     // Set filters from URL parameters if provided
     if (searchParams && Object.keys(searchParams).length > 0) {
@@ -72,11 +79,14 @@ export default function DashboardClient({
     initialAdvertisers,
     initialZones,
     initialCampaigns,
+    initialThemes,
     searchParams,
     setNetworks,
     setAdvertisers,
     setZones,
     setCampaigns,
+    setThemes,
+    setDefaultNetworkIfNone,
     setFiltersFromParams
   ]);
 

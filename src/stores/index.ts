@@ -266,7 +266,10 @@ export const useFilterActions = () => {
     // Clear actions
     clearAllFilters: filterStore.clearAllFilters,
     clearSelections: filterStore.clearSelections,
-    
+
+    // Default network initialization
+    setDefaultNetworkIfNone: filterStore.setDefaultNetworkIfNone,
+
     // URL integration
     setFiltersFromParams: filterStore.setFiltersFromParams,
     getFiltersAsParams: filterStore.getFiltersAsParams,

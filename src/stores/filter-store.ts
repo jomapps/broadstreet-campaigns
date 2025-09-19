@@ -25,6 +25,11 @@ import {
 } from '@/lib/types/database-models';
 import { EntitySelectionKey } from '@/lib/utils/entity-helpers';
 
+// Default network configuration - FASH Medien Verlag GmbH - SCHWULISSIMO
+// This is the primary network that should be selected by default for smooth UX
+const DEFAULT_NETWORK_ID = 9396;
+const DEFAULT_NETWORK_NAME = 'FASH Medien Verlag GmbH - SCHWULISSIMO';
+
 // Initial state with proper typing and comprehensive coverage
 // Variable names follow docs/variable-origins.md registry
 const initialState = {
@@ -279,6 +284,31 @@ export const useFilterStore = create(
         state.showOnlySelectedAds = false;
         state.lastFilterUpdate = new Date();
         state.filterSource = 'user';
+      }),
+
+      // Default network initialization
+
+      /**
+       * Set default network if none is selected
+       * @param {NetworkEntity[]} networks - Available networks to choose from
+       */
+      setDefaultNetworkIfNone: (networks) => set((state) => {
+        // Only set default if no network is currently selected
+        if (!state.selectedNetwork && networks.length > 0) {
+          // Try to find the default network (FASH Medien Verlag GmbH - SCHWULISSIMO)
+          const defaultNetwork = networks.find(n => n.broadstreet_id === DEFAULT_NETWORK_ID);
+
+          if (defaultNetwork) {
+            state.selectedNetwork = defaultNetwork;
+            state.lastFilterUpdate = new Date();
+            state.filterSource = 'default';
+          } else {
+            // Fallback to first network if default not found
+            state.selectedNetwork = networks[0];
+            state.lastFilterUpdate = new Date();
+            state.filterSource = 'default';
+          }
+        }
       }),
 
       // URL parameter integration

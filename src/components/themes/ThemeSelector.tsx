@@ -11,16 +11,18 @@ import { X, Palette } from 'lucide-react';
 
 export default function ThemeSelector() {
   const { selectedTheme } = useAllFilters();
-  const { selectThemeZones } = useFilterActions();
-  const { themes, isLoading } = useEntityStore();
+  const { setSelectedTheme } = useFilterActions();
+  const { themes, isLoading, errors } = useEntityStore();
+
+
 
   const handleThemeSelection = (themeId: string) => {
     if (themeId === 'none') {
-      selectThemeZones(null);
+      setSelectedTheme(null);
     } else {
       const theme = themes.find(t => t._id === themeId);
       if (theme) {
-        selectThemeZones({
+        setSelectedTheme({
           _id: theme._id,
           name: theme.name,
           zone_ids: theme.zone_ids
@@ -30,10 +32,10 @@ export default function ThemeSelector() {
   };
 
   const clearThemeSelection = () => {
-    selectThemeZones(null);
+    setSelectedTheme(null);
   };
 
-  if (isLoading) {
+  if (isLoading.themes) {
     return (
       <Card className="bg-sidebar-accent/50 border-sidebar-border">
         <CardHeader className="pb-1">
@@ -49,7 +51,7 @@ export default function ThemeSelector() {
     );
   }
 
-  if (error || themes.length === 0) {
+  if (errors.themes || themes.length === 0) {
     return null; // Don't show if there are no themes or error
   }
 

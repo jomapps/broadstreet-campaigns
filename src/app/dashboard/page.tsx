@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { fetchNetworks, fetchAdvertisers, fetchZones, fetchCampaigns, getEntityCounts } from '@/lib/server/data-fetchers';
+import { fetchNetworks, fetchAdvertisers, fetchZones, fetchCampaigns, fetchThemes, getEntityCounts } from '@/lib/server/data-fetchers';
 import DashboardClient from './DashboardClient';
 import LoadingSkeleton from './LoadingSkeleton';
 
@@ -20,18 +20,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // 1. Await searchParams (Next.js 15 requirement)
   const params = await searchParams;
 
-  // 2. Parse parameters
-  const networkId = params.network ? parseInt(params.network) : undefined;
+  // 2. Parse parameters with default network fallback
+  // Default to network 9396 (FASH Medien Verlag GmbH - SCHWULISSIMO) for smooth UX
+  const networkId = params.network ? parseInt(params.network) : 9396;
   const advertiserId = params.advertiser ? parseInt(params.advertiser) : undefined;
   const page = parseInt(params.page || '1');
   const limit = parseInt(params.limit || '20');
 
   // 3. Fetch data based on parameters
-  const [networks, advertisers, zones, campaigns, entityCounts] = await Promise.all([
+  const [networks, advertisers, zones, campaigns, themes, entityCounts] = await Promise.all([
     fetchNetworks(),
     fetchAdvertisers(networkId),
     fetchZones(networkId),
     fetchCampaigns(advertiserId, { networkId }),
+    fetchThemes(),
     getEntityCounts(networkId),
   ]);
 
@@ -53,6 +55,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           initialAdvertisers={advertisers}
           initialZones={zones}
           initialCampaigns={campaigns}
+          initialThemes={themes}
           initialEntityCounts={entityCounts}
           searchParams={params}
         />
