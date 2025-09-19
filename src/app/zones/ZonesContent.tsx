@@ -11,8 +11,10 @@
 import { useState, useMemo } from 'react';
 import { useEntityStore, useAllFilters, useFilterActions } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
+
 import ZoneSizeFilters from './ZoneSizeFilters';
 import ZoneSelectionControls from './ZoneSelectionControls';
 import ZonesList from './ZonesList';
@@ -101,6 +103,7 @@ function ZonesFilters() {
   // Local filter state
   const [selectedSizes, setSelectedSizes] = useState<('SQ' | 'PT' | 'LS' | 'CS')[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [negativeSearchTerm, setNegativeSearchTerm] = useState('');
 
   // Helper: derive selection key using standardized utility
   const zoneSelectionKey = (zone: ZoneLean) => {
@@ -108,65 +111,7 @@ function ZonesFilters() {
     return typeof entityId === 'number' ? String(entityId) : entityId || zone._id;
   };
 
-  // Apply all filters to get the currently visible zones
-  const filteredZones = useMemo(() => {
-    if (!zones || !Array.isArray(zones)) {
-      return [];
-    }
-
-    let filtered = zones;
-
-    // 1. Apply "Only Selected" filter first (highest priority)
-    if (showOnlySelected && selectedZones.length > 0) {
-      filtered = filtered.filter(zone => selectedZones.includes(zoneSelectionKey(zone as any)));
-    }
-    
-    // 2. Apply size filters
-    if (selectedSizes.length > 0) {
-      filtered = filtered.filter(zone => {
-        // Handle CS (Conflict Size) filter
-        if (selectedSizes.includes('CS')) {
-          if (hasMultipleSizeTypes(zone.name)) {
-            return true;
-          }
-        }
-        
-        // Handle regular size type filters
-        const regularSizes = selectedSizes.filter((size): size is 'SQ' | 'PT' | 'LS' => size !== 'CS');
-        if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS')) {
-          return true;
-        }
-        
-        // If CS is selected but no regular sizes, only show conflict zones
-        if (selectedSizes.includes('CS') && regularSizes.length === 0) {
-          return hasMultipleSizeTypes(zone.name);
-        }
-        
-        return false;
-      });
-    }
-
-    // 3. Apply search filter
-    if (searchTerm.trim()) {
-      const search = searchTerm.toLowerCase();
-      filtered = filtered.filter(zone =>
-        zone.name.toLowerCase().includes(search) ||
-        (zone.alias && zone.alias.toLowerCase().includes(search))
-      );
-    }
-
-    // 4. Apply network filter from selected entities
-    if (entities.network) {
-      const networkId = entities.network.ids.broadstreet_id;
-      if (networkId) {
-        filtered = filtered.filter(zone => zone.network_id === networkId);
-      }
-    }
-
-    return filtered;
-  }, [zones, selectedZones, showOnlySelected, selectedSizes, searchTerm, entities.network]);
-
-  // Create network map for zone display
+  // Create network map for zone display and filtering
   const networkMap = useMemo(() => {
     const map = new Map<number, string>();
     networks.forEach(network => {
@@ -176,6 +121,73 @@ function ZonesFilters() {
     });
     return map;
   }, [networks]);
+
+  // Apply zone filtering - same as original but with negative search added
+  const filteredZones = useMemo(() => {
+    if (!zones || zones.length === 0) return [];
+
+    let filtered = zones;
+
+    // Apply positive search filter first
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(zone => {
+        const networkName = networkMap?.get(zone.network_id) || '';
+        return (
+          zone.name?.toLowerCase().includes(searchLower) ||
+          zone.alias?.toLowerCase().includes(searchLower) ||
+          zone.category?.toLowerCase().includes(searchLower) ||
+          zone.block?.toLowerCase().includes(searchLower) ||
+          zone.size_type?.toLowerCase().includes(searchLower) ||
+          zone.broadstreet_id?.toString().includes(searchLower) ||
+          zone._id?.toString().includes(searchLower) ||
+          networkName.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    // Apply negative search filter (excludes zones containing the term)
+    if (negativeSearchTerm) {
+      const negativeSearchLower = negativeSearchTerm.toLowerCase();
+      filtered = filtered.filter(zone => {
+        const networkName = networkMap?.get(zone.network_id) || '';
+        return !(
+          zone.name?.toLowerCase().includes(negativeSearchLower) ||
+          zone.alias?.toLowerCase().includes(negativeSearchLower) ||
+          zone.category?.toLowerCase().includes(negativeSearchLower) ||
+          zone.block?.toLowerCase().includes(negativeSearchLower) ||
+          zone.size_type?.toLowerCase().includes(negativeSearchLower) ||
+          zone.broadstreet_id?.toString().includes(negativeSearchLower) ||
+          zone._id?.toString().includes(negativeSearchLower) ||
+          networkName.toLowerCase().includes(negativeSearchLower)
+        );
+      });
+    }
+
+    // Apply size filter
+    if (selectedSizes && selectedSizes.length > 0) {
+      filtered = filtered.filter(zone =>
+        selectedSizes.includes(zone.size_type || 'Unknown')
+      );
+    }
+
+    // Apply "show only selected" filter
+    if (showOnlySelected && selectedZones && selectedZones.length > 0) {
+      filtered = filtered.filter(zone =>
+        selectedZones.includes(zone._id?.toString() || '')
+      );
+    }
+
+    return filtered;
+  }, [
+    zones,
+    searchTerm,
+    negativeSearchTerm,
+    selectedSizes,
+    showOnlySelected,
+    selectedZones,
+    networkMap
+  ]);
 
   if (isLoading.zones) {
     return (
@@ -195,18 +207,18 @@ function ZonesFilters() {
   }
 
   return (
-    <div className="space-y-6">
-      <ZoneSizeFilters 
+    <div className="space-y-6 relative">
+      <ZoneSizeFilters
         selectedSizes={selectedSizes}
         onSizeFilterChange={setSelectedSizes}
       />
-      
+
       <ZoneSelectionControls
         zones={filteredZones as any}
         selectedZones={selectedZones as any}
         showOnlySelected={showOnlySelected}
       />
-      
+
       <ZonesList
         zones={zones as any}
         networkMap={networkMap}
@@ -216,6 +228,8 @@ function ZonesFilters() {
         showOnlySelected={showOnlySelected}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        negativeSearchTerm={negativeSearchTerm}
+        onNegativeSearchChange={setNegativeSearchTerm}
         filteredZones={filteredZones as any}
       />
     </div>

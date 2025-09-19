@@ -296,3 +296,36 @@ Following `docs/variable-origins.md` standards:
 - `isLoadingZones` - Loading state for zone data fetching operations
 - `zoneError` - Error state for zone-related operations
 
+## Business Logic for display and selection
+Zones are selected in three ways. Except for themes, selection of zones is an additive process. Filtering does not deselect zones.
+- by theme
+- by filter
+- by clicking on a zone card
+
+Deselection also happens in 3 ways. 
+- when a theme is selected, all other zones are deselected. 
+- using the deselect all visible button
+- using the deselect by clicking on a zone card
+
+### Selction by Theme
+The theme selection is the only exclusive zone selection. All the currnt zones are deselected and the zones in the theme are selected. 
+**IMPORTANT**Themes never have local zones in thme.
+
+### Selection by filters
+bu default, the zones page shows ALL zones. It is not filtered by the sidebar filters. Ofcourse network is always set.
+Currently we have a filter. the filter will filter out zones beased on substring match in ANY part of the zone data (pls confirm this)
+**NEW FEATURE** We will add a negative filter. it superceedes the search filter and filters out zones whoes data contains a substring that match the negative filter. (pls implement)
+
+once the zones are displayed, we can simple click on select all visible. The existing zones in selected list will be preserved and only the visible zones will be added to the selected list.
+
+### Selection by clicking on a zone card
+When we click on a zone card, we toggle the selection of the zone. If the zone is already selected, we deselect it. If the zone is not selected, we select it. The rest of the zones are preserved.
+
+### Deselection by clicking on a zone card
+When we click on a zone card, we toggle the selection of the zone. If the zone is already selected, we deselect it. If the zone is not selected, we select it. The rest of the zones are preserved.
+
+### Deselection by using the deselect all visible button
+When we click on the deselect all visible button, we deselect all the visible zones. The rest of the zones are preserved.
+Again we will use the search and negative search to filter the zones. we can also use the show selected zones checkbox present in the ui to quickly filter to selected zones.
+
+

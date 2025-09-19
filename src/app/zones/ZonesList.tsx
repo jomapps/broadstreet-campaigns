@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAllFilters, useFilterActions } from '@/stores';
-import { SearchInput } from '@/components/ui/search-input';
+import { DualSearchInput } from '@/components/ui/dual-search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { ThemeBadges } from '@/components/themes/ThemeBadge';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
@@ -68,17 +68,21 @@ interface ZonesListProps {
   showOnlySelected?: boolean;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
+  negativeSearchTerm?: string;
+  onNegativeSearchChange?: (term: string) => void;
   filteredZones?: ZoneLean[];
 }
 
-export default function ZonesList({ 
-  zones, 
-  networkMap, 
-  selectedSizes = [], 
-  selectedZones = [], 
+export default function ZonesList({
+  zones,
+  networkMap,
+  selectedSizes = [],
+  selectedZones = [],
   showOnlySelected = false,
   searchTerm = '',
   onSearchChange,
+  negativeSearchTerm = '',
+  onNegativeSearchChange,
   filteredZones
 }: ZonesListProps) {
   const { selectedNetwork, selectedAdvertiser } = useAllFilters();
@@ -126,10 +130,13 @@ export default function ZonesList({
   return (
     <div className="space-y-6" data-testid="zones-list">
       <div className="max-w-md">
-        <SearchInput
-          placeholder="Search zones..."
-          value={searchTerm}
-          onChange={onSearchChange || (() => {})}
+        <DualSearchInput
+          searchPlaceholder="Search zones..."
+          searchValue={searchTerm}
+          onSearchChange={onSearchChange || (() => {})}
+          negativeSearchPlaceholder="Exclude zones containing..."
+          negativeSearchValue={negativeSearchTerm}
+          onNegativeSearchChange={onNegativeSearchChange || (() => {})}
         />
       </div>
       

@@ -1,20 +1,40 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAllFilters, useFilterActions } from '@/stores';
 import { useEntityStore } from '@/stores';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { X, Palette } from 'lucide-react';
+import { X, Palette, RefreshCw } from 'lucide-react';
 
 export default function ThemeSelector() {
   const { selectedTheme } = useAllFilters();
   const { setSelectedTheme } = useFilterActions();
-  const { themes, isLoading, errors } = useEntityStore();
+  const { themes, isLoading, errors, setThemes, setLoading } = useEntityStore();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
 
+
+  const refreshThemes = async () => {
+    try {
+      setIsRefreshing(true);
+      setLoading('themes', true);
+
+      const response = await fetch('/api/themes');
+      if (!response.ok) {
+        throw new Error('Failed to fetch themes');
+      }
+
+      const data = await response.json();
+      setThemes(data.themes || []);
+    } catch (error) {
+      console.error('Error refreshing themes:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleThemeSelection = (themeId: string) => {
     if (themeId === 'none') {
@@ -33,6 +53,11 @@ export default function ThemeSelector() {
 
   const clearThemeSelection = () => {
     setSelectedTheme(null);
+  };
+
+  const handleDropdownOpen = () => {
+    // Always refresh themes when dropdown is opened
+    refreshThemes();
   };
 
   if (isLoading.themes) {
@@ -55,27 +80,7 @@ export default function ThemeSelector() {
     return null; // Don't show if there's an error
   }
 
-  // Show empty state if no themes, but still render the component
-  if (themes.length === 0) {
-    return (
-      <Card className="bg-sidebar-accent/50 border-sidebar-border">
-        <CardHeader className="pb-1">
-          <CardTitle className="text-sidebar-foreground text-lg flex items-center gap-2">
-            <Palette className="h-4 w-4" />
-            Theme Filter
-          </CardTitle>
-          <CardDescription className="text-sidebar-foreground/70 text-xs mt-1">
-            No themes available
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <div className="text-xs text-sidebar-foreground/70 text-center py-4">
-            Create themes to enable filtering
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Always show the dropdown, even if no themes are available
 
   return (
     <Card className="bg-sidebar-accent/50 border-sidebar-border">
@@ -90,16 +95,29 @@ export default function ThemeSelector() {
               Select a theme to filter zones
             </CardDescription>
           </div>
-          {selectedTheme && (
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="sm"
-              onClick={clearThemeSelection}
+              onClick={refreshThemes}
+              disabled={isRefreshing}
               className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+              title="Refresh themes"
             >
-              <X className="h-3 w-3" />
+              <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
-          )}
+            {selectedTheme && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearThemeSelection}
+                className="h-6 w-6 p-0 text-sidebar-foreground/70 hover:text-sidebar-foreground"
+                title="Clear theme selection"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3 pt-2">
@@ -108,9 +126,14 @@ export default function ThemeSelector() {
           <Select
             value={selectedTheme?._id || 'none'}
             onValueChange={handleThemeSelection}
+            onOpenChange={(open) => {
+              if (open) {
+                handleDropdownOpen();
+              }
+            }}
           >
             <SelectTrigger className="h-8 text-xs bg-sidebar-accent/30 border-sidebar-border text-sidebar-foreground">
-              <SelectValue placeholder="No theme filter">
+              <SelectValue placeholder="Select">
                 {selectedTheme ? (
                   <div className="flex items-center justify-between w-full">
                     <span className="truncate" title={selectedTheme.name}>
@@ -121,29 +144,40 @@ export default function ThemeSelector() {
                     </Badge>
                   </div>
                 ) : (
-                  "No theme filter"
+                  "Select"
                 )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent className="max-h-60">
               <SelectItem value="none" className="text-xs">
                 <div className="flex items-center justify-between w-full">
-                  <span className="text-sidebar-foreground/70">No theme filter</span>
+                  <span className="text-sidebar-foreground/70">None</span>
                 </div>
               </SelectItem>
 
-              {themes.map((theme) => (
-                <SelectItem key={theme._id} value={theme._id} className="text-xs">
-                  <div className="flex items-center justify-between w-full">
-                    <span className="truncate flex-1" title={theme.name}>
-                      {theme.name}
-                    </span>
-                    <Badge variant="outline" className="text-[10px] px-1 py-0 h-3 ml-2 flex-shrink-0">
-                      {theme.zone_count || theme.zone_ids?.length || 0}
-                    </Badge>
-                  </div>
-                </SelectItem>
-              ))}
+              {isRefreshing ? (
+                <div className="flex items-center justify-center py-4">
+                  <RefreshCw className="h-4 w-4 animate-spin text-sidebar-foreground/50" />
+                  <span className="ml-2 text-xs text-sidebar-foreground/70">Loading themes...</span>
+                </div>
+              ) : themes.length === 0 ? (
+                <div className="flex items-center justify-center py-4">
+                  <span className="text-xs text-sidebar-foreground/70">No themes available</span>
+                </div>
+              ) : (
+                themes.map((theme) => (
+                  <SelectItem key={theme._id} value={theme._id} className="text-xs">
+                    <div className="flex items-center justify-between w-full">
+                      <span className="truncate flex-1" title={theme.name}>
+                        {theme.name}
+                      </span>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-3 ml-2 flex-shrink-0">
+                        {theme.zone_count || theme.zone_ids?.length || 0}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>

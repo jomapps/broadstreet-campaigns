@@ -6,10 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
+import {
   Globe, Users, Image as ImageIcon, Calendar, Target, Folder,
   CheckCircle, XCircle, Clock, AlertTriangle
 } from 'lucide-react';
+import Link from 'next/link';
+import NegativeFilterTest from './negative-filter-test';
 
 // Sample data for each entity type
 const sampleData = {
@@ -343,6 +345,16 @@ export default function TestPage() {
           </p>
         </div>
       )}
+
+      {/* Negative Filter Test Section */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-lg text-blue-900">Negative Filter TEST</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <NegativeFilterTest />
+        </CardContent>
+      </Card>
 
       {/* Debug Info */}
       <Card className="bg-gray-50">
