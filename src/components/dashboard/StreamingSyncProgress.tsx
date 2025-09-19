@@ -102,6 +102,35 @@ export default function StreamingSyncProgress({ onComplete, onClose }: Streaming
       }
     });
 
+    eventSource.addEventListener('step-progress', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[StreamingSync] Step progress:', data);
+
+        setCurrentPhase(data.phase);
+        setCurrentMessage(data.message);
+        setOverallProgress(data.progress);
+
+        // Update step with real-time count
+        setSteps(prev => prev.map(step =>
+          step.key === data.phase
+            ? {
+                ...step,
+                status: 'in_progress',
+                message: data.message,
+                count: data.currentCount,
+                progress: data.currentCount && data.totalCampaigns
+                  ? Math.round((data.currentCount / (data.totalCampaigns * 10)) * 100)
+                  : undefined
+              }
+            : step
+        ));
+      } catch (error) {
+        console.error('[StreamingSync] Failed to parse step-progress event data:', error, event.data);
+        return; // Skip processing this event
+      }
+    });
+
     eventSource.addEventListener('step-complete', (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -321,8 +350,15 @@ export default function StreamingSyncProgress({ onComplete, onClose }: Streaming
                       </span>
                       <div className="flex items-center gap-2">
                         {step.count !== undefined && (
-                          <Badge variant="secondary" className="text-xs">
-                            {step.count} records
+                          <Badge
+                            variant={step.status === 'in_progress' ? "default" : "secondary"}
+                            className={`text-xs ${
+                              step.status === 'in_progress' && step.key === 'placements'
+                                ? 'bg-blue-500 text-white animate-pulse'
+                                : ''
+                            }`}
+                          >
+                            {step.count.toLocaleString()} {step.key === 'placements' ? 'placements' : 'records'}
                           </Badge>
                         )}
                       </div>

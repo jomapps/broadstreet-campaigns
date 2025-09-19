@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
 
       const sendEvent = (data: any, event: string = 'progress') => {
         if (isControllerClosed) {
-          console.log('[sync/stream] Attempted to send event after controller closed:', event, data.phase);
           return;
         }
 
@@ -22,7 +21,6 @@ export async function GET(request: NextRequest) {
           controller.enqueue(encoder.encode(eventData));
         } catch (error) {
           if (error instanceof Error && error.message.includes('Controller is already closed')) {
-            console.log('[sync/stream] Controller closed during sendEvent:', event, data.phase);
             isControllerClosed = true;
           } else {
             console.error('[sync/stream] Error sending event:', error);
@@ -36,10 +34,8 @@ export async function GET(request: NextRequest) {
           try {
             controller.close();
             isControllerClosed = true;
-            console.log('[sync/stream] Controller closed successfully');
           } catch (error) {
             if (error instanceof Error && error.message.includes('Controller is already closed')) {
-              console.log('[sync/stream] Controller was already closed');
               isControllerClosed = true;
             } else {
               console.error('[sync/stream] Error closing controller:', error);
@@ -71,8 +67,6 @@ export async function GET(request: NextRequest) {
 
           if (result.success) {
             // Trigger theme validation workflow in background (non-blocking)
-            console.log('[sync/stream] Sync completed successfully, starting theme validation...');
-
             sendEvent({
               phase: 'validation',
               message: 'Starting theme validation...',
@@ -171,7 +165,7 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
           totalSteps: steps.length
         }, 'step-start');
       } catch (error) {
-        console.log('[syncAllWithStreaming] Failed to send step-start event, continuing sync...');
+        // Continue sync even if event sending fails
       }
 
       // Execute the sync step
@@ -204,7 +198,17 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
             break;
           case 'placements':
             const { syncPlacements } = await import('@/lib/utils/sync-helpers');
-            stepResult = await syncPlacements();
+            // Pass a callback to send real-time placement count updates
+            stepResult = await syncPlacements((currentCount: number, totalCampaigns: number, campaignName: string) => {
+              sendEvent({
+                phase: 'placements',
+                message: `Processing placements: ${currentCount} placements processed (${campaignName})`,
+                progress: cumulativeProgress + (step.weight * (currentCount / Math.max(totalCampaigns * 10, 1))), // Rough estimate
+                currentCount,
+                totalCampaigns,
+                campaignName
+              }, 'step-progress');
+            });
             break;
           default:
             stepResult = { success: false, count: 0, error: 'Unknown step' };
@@ -234,7 +238,7 @@ async function syncAllWithStreaming(sendEvent: (data: any, event?: string) => vo
           stepResult: stepResult
         }, stepResult.success ? 'step-complete' : 'step-error');
       } catch (error) {
-        console.log('[syncAllWithStreaming] Failed to send step completion event, continuing sync...');
+        // Continue sync even if event sending fails
       }
 
       // If a critical step fails, we might want to continue or stop

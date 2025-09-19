@@ -461,7 +461,9 @@ interface SyncResult {
   error?: string;
 }
 
-export async function syncPlacements(): Promise<{ success: boolean; count: number; error?: string }> {
+export async function syncPlacements(
+  onProgress?: (currentCount: number, totalCampaigns: number, campaignName: string) => void
+): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
     networkId: -1, // Special ID for global sync operations
     syncType: 'full',
@@ -480,8 +482,10 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
     // Get all campaigns and fetch their placements
     const campaigns = await Campaign.find({});
     let totalPlacements = 0;
+    const totalCampaigns = campaigns.length;
 
-    for (const campaign of campaigns) {
+    for (let i = 0; i < campaigns.length; i++) {
+      const campaign = campaigns[i];
       try {
         // Use Broadstreet campaign identifier, not Mongo _id
         if (typeof campaign.broadstreet_id !== 'number') {
@@ -513,7 +517,7 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
               placements: coerced
             }
           );
-          console.log(`Campaign ${campaign.broadstreet_id}: embedded ${apiPlacements.length} placement(s). Updated ${updateResult.modifiedCount}, matched ${updateResult.matchedCount}.`);
+
         } else {
           // Ensure placements is an empty array if none returned
           await Campaign.updateOne(
@@ -523,10 +527,15 @@ export async function syncPlacements(): Promise<{ success: boolean; count: numbe
         }
 
         totalPlacements += apiPlacements.length;
+
+        // Send progress update if callback provided
+        if (onProgress) {
+          onProgress(totalPlacements, totalCampaigns, campaign.name || `Campaign ${campaign.broadstreet_id}`);
+        }
       } catch (error: any) {
         // Handle duplicate key errors gracefully
         if (error.code === 11000) {
-          console.log(`Duplicate key errors ignored for campaign ${campaign.broadstreet_id} placements`);
+
         } else {
           console.error(`Error syncing placements for campaign ${campaign.broadstreet_id}:`, error);
         }
@@ -560,7 +569,7 @@ export async function cleanupBroadstreetCollections(): Promise<{ success: boolea
   try {
     await connectDB();
 
-    console.log('[cleanupBroadstreetCollections] Deleting all Broadstreet-sourced and local-only data...');
+
 
     // Delete all Broadstreet-sourced collections (type #1 data) AND local-only collections (type #2 data)
     // Local collections might have references to old Broadstreet entities, so clean slate is needed
@@ -598,22 +607,7 @@ export async function cleanupBroadstreetCollections(): Promise<{ success: boolea
                         (localCampaignDel.deletedCount || 0) +
                         (localAdvertisementDel.deletedCount || 0);
 
-    console.log('[cleanupBroadstreetCollections] Deleted counts (Broadstreet + Local):', {
-      // Broadstreet collections
-      networks: networkDel.deletedCount || 0,
-      advertisers: advertiserDel.deletedCount || 0,
-      zones: zoneDel.deletedCount || 0,
-      campaigns: campaignDel.deletedCount || 0,
-      advertisements: advertisementDel.deletedCount || 0,
-      placements: placementDel.deletedCount || 0,
-      // Local collections
-      localNetworks: localNetworkDel.deletedCount || 0,
-      localAdvertisers: localAdvertiserDel.deletedCount || 0,
-      localZones: localZoneDel.deletedCount || 0,
-      localCampaigns: localCampaignDel.deletedCount || 0,
-      localAdvertisements: localAdvertisementDel.deletedCount || 0,
-      total: totalDeleted
-    });
+
 
     return { success: true, count: totalDeleted };
   } catch (error) {
@@ -636,7 +630,6 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
 
   try {
     // Step 1: Clean up all Broadstreet-sourced and local-only collections for fresh data
-    console.log('[syncAll] Cleaning up all collections (Broadstreet + local-only)...');
     results.cleanup = await cleanupBroadstreetCollections();
 
     if (!results.cleanup.success) {
@@ -645,7 +638,6 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
     }
 
     // Step 2: Sync in order of dependencies with fresh data
-    console.log('[syncAll] Starting fresh sync from Broadstreet API...');
     results.networks = await syncNetworks();
     results.advertisers = await syncAdvertisers();
     results.zones = await syncZones();
