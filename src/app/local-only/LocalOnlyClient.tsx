@@ -47,20 +47,20 @@ export default function LocalOnlyClient({
   useEffect(() => {
     // Set local entities using exact variable names from registry
     setLocalEntities(initialLocalEntities);
-    
+
     // Set networks using exact variable names from registry
     setNetworks(initialNetworks);
-    
+
     // Set filters from URL parameters if provided
     if (searchParams && Object.keys(searchParams).length > 0) {
       setFiltersFromParams(searchParams);
     }
   }, [
-    initialLocalEntities, 
-    initialNetworks, 
+    initialLocalEntities,
+    initialNetworks,
     searchParams,
-    setLocalEntities, 
-    setNetworks, 
+    setLocalEntities,
+    setNetworks,
     setFiltersFromParams
   ]);
   

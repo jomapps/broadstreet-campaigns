@@ -236,14 +236,14 @@ export async function fetchCampaigns(advertiserId: any, params: any = {}) {
     if (params.networkId) {
       query.network_id = params.networkId;
     }
-    
+
     // Add search filter if provided
     if (params.search) {
       query.$or = [
         { name: { $regex: params.search, $options: 'i' } },
       ];
     }
-    
+
     // Add status filter if provided
     if (params.status) {
       if (params.status === 'active') {
@@ -258,12 +258,38 @@ export async function fetchCampaigns(advertiserId: any, params: any = {}) {
         query.start_date = { $gt: new Date() };
       }
     }
-    
-    const campaigns = await Campaign.find(query)
-      .sort({ name: 1 })
-      .lean();
-    
-    return serializeEntities(campaigns);
+
+    // Build local campaign query - handle advertiser_id flexibility for local campaigns
+    const localQuery: any = { ...query };
+    if (advertiserId) {
+      // For local campaigns, advertiser_id can be either number (broadstreet_id) or string (mongo_id)
+      localQuery.$or = [
+        { advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : undefined },
+        { advertiser_id: advertiserId }
+      ].filter((q: any) => q.advertiser_id !== undefined);
+      delete localQuery.advertiser_id; // Remove the original filter since we're using $or
+    }
+
+    // Fetch campaigns from both models in parallel
+    const [syncedCampaigns, localCampaigns] = await Promise.all([
+      Campaign.find(query).sort({ name: 1 }).lean(),
+      // Show only truly local, not-yet-synced campaigns
+      LocalCampaign.find({ ...localQuery, synced_with_api: false }).sort({ name: 1 }).lean()
+    ]);
+
+    // Combine campaigns from both sources with source information
+    // Add mongo_id for local campaigns to match Zustand store expectations
+    const allCampaigns = [
+      ...syncedCampaigns.map(campaign => ({ ...campaign, source: 'api' })),
+      ...localCampaigns.map(campaign => ({
+        ...campaign,
+        source: 'local',
+        broadstreet_id: undefined,
+        mongo_id: campaign._id.toString()
+      }))
+    ];
+
+    return serializeEntities(allCampaigns);
   } catch (error) {
     console.error('Error fetching campaigns:', error);
     throw new Error('Failed to fetch campaigns');
@@ -349,13 +375,44 @@ export async function fetchLocalEntities() {
       }).sort({ created_at: -1 }).lean(),
     ]);
     
+    // Transform local entities to add mongo_id field (consistent with API endpoint)
+    const transformedZones = localZones.map((z: any) => ({
+      ...z,
+      mongo_id: z._id.toString(),
+    }));
+
+    const transformedAdvertisers = localAdvertisers.map((a: any) => ({
+      ...a,
+      mongo_id: a._id.toString(),
+    }));
+
+    const transformedCampaigns = localCampaigns.map((c: any) => ({
+      ...c,
+      mongo_id: c._id.toString(),
+    }));
+
+    const transformedNetworks = localNetworks.map((n: any) => ({
+      ...n,
+      mongo_id: n._id.toString(),
+    }));
+
+    const transformedAdvertisements = localAdvertisements.map((ad: any) => ({
+      ...ad,
+      mongo_id: ad._id.toString(),
+    }));
+
+    const transformedPlacements = localPlacements.map((p: any) => ({
+      ...p,
+      mongo_id: p._id.toString(),
+    }));
+
     return {
-      zones: serializeEntities(localZones),
-      advertisers: serializeEntities(localAdvertisers),
-      campaigns: serializeEntities(localCampaigns),
-      networks: serializeEntities(localNetworks),
-      advertisements: serializeEntities(localAdvertisements),
-      placements: serializeEntities(localPlacements),
+      zones: serializeEntities(transformedZones),
+      advertisers: serializeEntities(transformedAdvertisers),
+      campaigns: serializeEntities(transformedCampaigns),
+      networks: serializeEntities(transformedNetworks),
+      advertisements: serializeEntities(transformedAdvertisements),
+      placements: serializeEntities(transformedPlacements),
     };
   } catch (error) {
     console.error('Error fetching local entities:', error);

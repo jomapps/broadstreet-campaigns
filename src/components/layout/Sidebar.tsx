@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import FiltersCard from './FiltersCard';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
-import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 import ThemeSelector from '@/components/themes/ThemeSelector';
 
 export default function Sidebar() {
+  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isCreatePlacementsOpen, setIsCreatePlacementsOpen] = useState(false);
   const entities = useSelectedEntities();
 
   const canCreatePlacements = !!entities.campaign && entities.zones.length > 0 && entities.advertisements.length > 0;
@@ -36,12 +36,8 @@ export default function Sidebar() {
 
   const handleUtilityAction = (action: string) => {
     if (action === 'create-placements') {
-      if (!canCreatePlacements) {
-        const msg = utilities[0]?.disabledReason || 'Missing prerequisites';
-        alert(`Cannot create placements: ${msg}`);
-        return;
-      }
-      setIsCreatePlacementsOpen(true);
+      // Navigate to the new placement creation page
+      router.push('/placements/create-placements');
       return;
     }
     console.log('Utility action:', action);
@@ -97,11 +93,6 @@ export default function Sidebar() {
             </Card>
           </>
         )}
-
-        <CreatePlacementsModal
-          isOpen={isCreatePlacementsOpen}
-          onClose={() => setIsCreatePlacementsOpen(false)}
-        />
       </div>
     </aside>
   );
