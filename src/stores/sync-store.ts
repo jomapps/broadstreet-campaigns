@@ -1,19 +1,19 @@
 /**
  * SYNC STORE - SYNC OPERATION STATE MANAGEMENT
- * 
+ *
  * This store manages sync operation state and progress tracking.
  * All variable names follow docs/variable-origins.md registry.
- * 
+ *
  * CRITICAL RULES:
  * 1. All variable names from docs/variable-origins.md registry
  * 2. Progress tracking with detailed phase information
  * 3. Error collection for comprehensive error reporting
- * 4. No TypeScript types - using plain JavaScript with JSDoc
+ * 4. Uses TypeScript for proper type safety
  */
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { SyncState, SyncActions, SyncStore } from './types';
+import { SyncState, SyncActions } from './types';
 
 // Initial state with proper typing and comprehensive coverage
 // Variable names follow docs/variable-origins.md registry
@@ -30,7 +30,7 @@ const initialState = {
  * Sync Store - Manages sync operation state and progress
  * Uses Zustand with Immer for immutable updates
  */
-export const useSyncStore = create(
+export const useSyncStore = create<SyncState & SyncActions>()(
   immer((set, get) => ({
     ...initialState,
 
@@ -47,9 +47,6 @@ export const useSyncStore = create(
 
     /**
      * Update sync progress with phase and message
-     * @param {number} progress - Progress percentage (0-100)
-     * @param {string} phase - Current sync phase description
-     * @param {string} message - Current status message
      */
     updateProgress: (progress, phase, message) => set((state) => {
       state.progress = Math.min(100, Math.max(0, progress));
@@ -59,7 +56,6 @@ export const useSyncStore = create(
 
     /**
      * Add error to sync error collection
-     * @param {string} error - Error message to add
      */
     addError: (error) => set((state) => {
       state.errors.push(error);
@@ -67,7 +63,6 @@ export const useSyncStore = create(
 
     /**
      * Complete sync operation with success/failure status
-     * @param {boolean} success - Whether sync completed successfully
      */
     completeSync: (success) => set((state) => {
       state.isActive = false;
@@ -132,8 +127,6 @@ export const useSyncStore = create(
 
     /**
      * Update sync phase without changing progress
-     * @param {string} phase - New phase description
-     * @param {string} message - New status message
      */
     updatePhase: (phase, message) => set((state) => {
       state.currentPhase = phase;
@@ -142,7 +135,6 @@ export const useSyncStore = create(
 
     /**
      * Set sync progress without changing phase
-     * @param {number} progress - Progress percentage (0-100)
      */
     setProgress: (progress) => set((state) => {
       state.progress = Math.min(100, Math.max(0, progress));
@@ -150,7 +142,6 @@ export const useSyncStore = create(
 
     /**
      * Increment progress by specified amount
-     * @param {number} increment - Amount to increment progress by
      */
     incrementProgress: (increment) => set((state) => {
       state.progress = Math.min(100, state.progress + increment);

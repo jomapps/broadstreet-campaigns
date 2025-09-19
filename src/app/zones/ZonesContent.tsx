@@ -62,8 +62,8 @@ function ZonesOverview() {
     );
   }
 
-  const apiZones = zones.filter(zone => zone.source === 'api' || !zone.created_locally);
-  const localZones = zones.filter(zone => zone.source === 'local' || (zone.created_locally && !zone.synced_with_api));
+  const apiZones = zones.filter(zone => (zone as any).source === 'api' || !(zone as any).created_locally);
+  const localZones = zones.filter(zone => (zone as any).source === 'local' || ((zone as any).created_locally && !(zone as any).synced_with_api));
   const totalZoneCount = zones.length;
 
   return (
@@ -118,7 +118,7 @@ function ZonesFilters() {
 
     // 1. Apply "Only Selected" filter first (highest priority)
     if (showOnlySelected && selectedZones.length > 0) {
-      filtered = filtered.filter(zone => selectedZones.includes(zoneSelectionKey(zone)));
+      filtered = filtered.filter(zone => selectedZones.includes(zoneSelectionKey(zone as any)));
     }
     
     // 2. Apply size filters
@@ -201,22 +201,22 @@ function ZonesFilters() {
         onSizeFilterChange={setSelectedSizes}
       />
       
-      <ZoneSelectionControls 
-        zones={filteredZones}
-        selectedZones={selectedZones}
+      <ZoneSelectionControls
+        zones={filteredZones as any}
+        selectedZones={selectedZones as any}
         showOnlySelected={showOnlySelected}
       />
       
-      <ZonesList 
-        zones={zones} 
+      <ZonesList
+        zones={zones as any}
         networkMap={networkMap}
         selectedSizes={selectedSizes}
         onSizeFilterChange={setSelectedSizes}
-        selectedZones={selectedZones}
+        selectedZones={selectedZones as any}
         showOnlySelected={showOnlySelected}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        filteredZones={filteredZones}
+        filteredZones={filteredZones as any}
       />
     </div>
   );

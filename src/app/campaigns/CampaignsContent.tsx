@@ -11,7 +11,6 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntityStore, useAllFilters, useFilterActions } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
@@ -108,9 +107,14 @@ function mapCampaignToUniversalProps(
 function CampaignsList() {
   // Get data from Zustand stores using exact names from docs/variable-origins.md registry
   const { campaigns, isLoading } = useEntityStore();
-  const { selectedCampaign } = useAllFilters();
+  const { selectedCampaign, selectedNetwork, selectedAdvertiser } = useAllFilters();
   const { setSelectedCampaign } = useFilterActions();
-  const entities = useSelectedEntities();
+
+  // Create entities object for compatibility with existing code
+  const entities = {
+    network: selectedNetwork,
+    advertiser: selectedAdvertiser
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
@@ -214,7 +218,7 @@ function CampaignsList() {
     if (String(currentId ?? '') === String(nextId ?? '')) {
       setSelectedCampaign(null);
     } else {
-      setSelectedCampaign(campaign);
+      setSelectedCampaign(campaign as any);
     }
   };
 
@@ -325,7 +329,7 @@ function CampaignsList() {
             return (
               <UniversalEntityCard
                 key={String(getEntityId(campaign))}
-                {...mapCampaignToUniversalProps(campaign, {
+                {...mapCampaignToUniversalProps(campaign as any, {
                   isSelected,
                   onSelect: handleCampaignSelect,
                   onDelete: handleDelete,

@@ -24,8 +24,8 @@ export default function AdvertisementSelectionControls({
 }: AdvertisementSelectionControlsProps) {
   const filters = useAllFilters();
   const {
-    selectAdvertisements,
-    deselectAdvertisements,
+    selectAllAdvertisements,
+    deselectAllAdvertisements,
     setShowOnlySelectedAds
   } = useFilterActions();
   const entities = useSelectedEntities();
@@ -46,12 +46,12 @@ export default function AdvertisementSelectionControls({
 
   // Handle select all visible advertisements
   const handleSelectAll = () => {
-    selectAdvertisements(visibleAdvertisementIds);
+    selectAllAdvertisements(visibleAdvertisementIds);
   };
 
   // Handle deselect all visible advertisements
   const handleDeselectAll = () => {
-    deselectAdvertisements(visibleAdvertisementIds);
+    deselectAllAdvertisements();
   };
 
   // Handle toggle only selected filter

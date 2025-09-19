@@ -26,7 +26,7 @@ export default function ThemeSelector() {
           _id: theme._id,
           name: theme.name,
           zone_ids: theme.zone_ids
-        });
+        } as any);
       }
     }
   };

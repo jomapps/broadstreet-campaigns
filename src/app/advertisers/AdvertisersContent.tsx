@@ -162,7 +162,7 @@ function AdvertisersList() {
     if (String(currentId ?? '') === String(nextId ?? '')) {
       setSelectedAdvertiser(null);
     } else {
-      setSelectedAdvertiser(advertiser);
+      setSelectedAdvertiser(advertiser as any);
     }
   };
 

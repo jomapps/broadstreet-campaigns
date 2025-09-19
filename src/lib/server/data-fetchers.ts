@@ -34,7 +34,7 @@ import Theme from '@/lib/models/theme';
  * @param {any} entity - Entity to serialize
  * @returns {any} Serialized entity safe for client transfer
  */
-function serializeEntity(entity) {
+function serializeEntity(entity: any): any {
   if (!entity) return null;
 
   // Handle primitive types
@@ -56,7 +56,7 @@ function serializeEntity(entity) {
   }
 
   // Handle plain objects
-  const serialized = {};
+  const serialized: any = {};
   for (const [key, value] of Object.entries(entity)) {
     serialized[key] = serializeEntity(value);
   }
@@ -69,7 +69,7 @@ function serializeEntity(entity) {
  * @param {any[]} entities - Array of entities to serialize
  * @returns {any[]} Array of serialized entities
  */
-function serializeEntities(entities) {
+function serializeEntities(entities: any[]): any[] {
   if (!Array.isArray(entities)) return [];
   return entities.map(serializeEntity);
 }
@@ -84,12 +84,12 @@ function serializeEntities(entities) {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of network entities
  */
-export async function fetchNetworks(params = {}) {
+export async function fetchNetworks(params: any = {}) {
   try {
     await connectDB();
     
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
     
     // Add search filter if provided
     if (params.search) {
@@ -100,7 +100,7 @@ export async function fetchNetworks(params = {}) {
     }
     
     // Build sort options
-    const sortOptions = {};
+    const sortOptions: any = {};
     if (params.sort) {
       const order = params.order === 'desc' ? -1 : 1;
       sortOptions[params.sort] = order;
@@ -126,12 +126,12 @@ export async function fetchNetworks(params = {}) {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of advertiser entities
  */
-export async function fetchAdvertisers(networkId, params = {}) {
+export async function fetchAdvertisers(networkId: any, params: any = {}) {
   try {
     await connectDB();
-    
+
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
     
     // Add network filter if provided
     if (networkId) {
@@ -173,12 +173,12 @@ export async function fetchAdvertisers(networkId, params = {}) {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of zone entities with source information
  */
-export async function fetchZones(networkId, params = {}) {
+export async function fetchZones(networkId: any, params: any = {}) {
   try {
     await connectDB();
 
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
 
     // Add network filter if provided
     if (networkId) {
@@ -220,12 +220,12 @@ export async function fetchZones(networkId, params = {}) {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of campaign entities
  */
-export async function fetchCampaigns(advertiserId, params = {}) {
+export async function fetchCampaigns(advertiserId: any, params: any = {}) {
   try {
     await connectDB();
 
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
 
     // Add advertiser filter if provided
     if (advertiserId) {
@@ -277,12 +277,12 @@ export async function fetchCampaigns(advertiserId, params = {}) {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of advertisement entities
  */
-export async function fetchAdvertisements(advertiserId, params = {}) {
+export async function fetchAdvertisements(advertiserId: any, params: any = {}) {
   try {
     await connectDB();
 
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
 
     // Add advertiser filter if provided
     if (advertiserId) {
@@ -372,12 +372,12 @@ export async function fetchLocalEntities() {
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of placement entities
  */
-export async function fetchPlacements(networkId, advertiserId, campaignId, params = {}) {
+export async function fetchPlacements(networkId: any, advertiserId: any, campaignId: any, params: any = {}) {
   try {
     await connectDB();
 
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
 
     // Add network filter if provided
     if (networkId) {
@@ -443,12 +443,12 @@ export async function fetchPlacements(networkId, advertiserId, campaignId, param
  * @param {Object} params - Optional query parameters
  * @returns {Promise<any[]>} Array of theme entities
  */
-export async function fetchThemes(params = {}) {
+export async function fetchThemes(params: any = {}) {
   try {
     await connectDB();
 
     // Build query based on parameters
-    const query = {};
+    const query: any = {};
 
     // Add search filter if provided
     if (params.search) {
@@ -475,7 +475,7 @@ export async function fetchThemes(params = {}) {
  * @param {string} themeId - Theme ID to fetch
  * @returns {Promise<any|null>} Theme entity with zones or null if not found
  */
-export async function fetchThemeById(themeId) {
+export async function fetchThemeById(themeId: any) {
   try {
     await connectDB();
 
@@ -487,7 +487,7 @@ export async function fetchThemeById(themeId) {
 
     // Fetch zones that belong to this theme
     const zones = await Zone.find({
-      broadstreet_id: { $in: theme.zone_ids || [] }
+      broadstreet_id: { $in: (theme as any).zone_ids || [] }
     }).sort({ name: 1 }).lean();
 
     return {
@@ -506,7 +506,7 @@ export async function fetchThemeById(themeId) {
  * @param {Object} params - Query parameters
  * @returns {Promise<Object>} Audit data with entities, summary, and pagination
  */
-export async function fetchAuditData(params = {}) {
+export async function fetchAuditData(params: any = {}) {
   try {
     await connectDB();
 
@@ -528,8 +528,8 @@ export async function fetchAuditData(params = {}) {
     } : {};
 
     // Fetch entities from different collections based on type filter
-    let entities = [];
-    let summary = {
+    const entities: any[] = [];
+    const summary: any = {
       total_synced: 0,
       by_type: {
         advertisers: 0,
@@ -548,7 +548,7 @@ export async function fetchAuditData(params = {}) {
       entities.push(...advertisers.map(a => ({
         ...a,
         type: 'advertiser',
-        entity_id: a._id.toString()
+        entity_id: (a._id as any).toString()
       })));
       summary.by_type.advertisers = advertisers.length;
     }
@@ -562,7 +562,7 @@ export async function fetchAuditData(params = {}) {
       entities.push(...campaigns.map(c => ({
         ...c,
         type: 'campaign',
-        entity_id: c._id.toString()
+        entity_id: (c._id as any).toString()
       })));
       summary.by_type.campaigns = campaigns.length;
     }
@@ -576,13 +576,13 @@ export async function fetchAuditData(params = {}) {
       entities.push(...zones.map(z => ({
         ...z,
         type: 'zone',
-        entity_id: z._id.toString()
+        entity_id: (z._id as any).toString()
       })));
       summary.by_type.zones = zones.length;
     }
 
     // Sort all entities by synced_at descending
-    entities.sort((a, b) => new Date(b.synced_at) - new Date(a.synced_at));
+    entities.sort((a, b) => new Date((b as any).synced_at).getTime() - new Date((a as any).synced_at).getTime());
 
     // Calculate totals
     summary.total_synced = entities.length;
@@ -623,7 +623,7 @@ export async function fetchAuditData(params = {}) {
  * @param {number} networkId - Optional network ID filter
  * @returns {Promise<Object>} Object containing entity counts
  */
-export async function getEntityCounts(networkId) {
+export async function getEntityCounts(networkId: any) {
   try {
     await connectDB();
 

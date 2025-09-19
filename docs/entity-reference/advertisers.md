@@ -2,7 +2,7 @@
 
 ## Overview
 
-Advertisers represent companies that run advertising campaigns. Each advertiser belongs to a single network.
+Advertisers represent companies that run advertising campaigns. Each advertiser belongs to a single network. Advertisers are fully integrated with the **Zustand store architecture** for consistent state management across the application.
 
 ## ID Management
 
@@ -12,6 +12,29 @@ Advertisers follow the standardized three-tier ID system:
 - **`_id`**: MongoDB native ObjectId - for internal database operations only
 
 **Business Rule**: Advertisements cannot exist without synced advertisers (never local-only).
+
+## Zustand Store Integration
+
+### Store Location
+- **Synced Advertisers**: `EntityState.advertisers` array (have `broadstreet_id`)
+- **Local Advertisers**: `EntityState.localAdvertisers` array (local-only, no `broadstreet_id` yet)
+
+### Selection Management
+- **Filter State**: `FilterState.selectedAdvertiser` (can be synced or local)
+- **ID Resolution**: Uses `EntitySelectionKey` for consistent handling of both ID types
+- **Display**: Local advertisers show with yellowish styling cards and local badges
+
+### Server-Side Integration
+```typescript
+// Server-side data fetching
+const advertisers = await fetchAdvertisers(networkId);
+
+// Client-side store initialization
+const { setAdvertisers } = useEntityStore();
+useEffect(() => {
+  setAdvertisers(advertisers);  // Preserves all ID fields and entity types
+}, [advertisers]);
+```
 
 ## How to create an advertiser
 
@@ -174,3 +197,60 @@ Advertiser sync functionality has been successfully implemented and is fully ope
 - ✅ **Dependency Management**: First entity in sync hierarchy (no dependencies)
 
 **System Status: ✅ FULLY OPERATIONAL**
+
+## Zustand Store Usage Patterns
+
+### Entity Store Actions
+```typescript
+// Setting advertisers with validation
+const { setAdvertisers, setLocalAdvertisers } = useEntityStore();
+
+// Synced advertisers (from Broadstreet API)
+setAdvertisers(advertisers.filter(a => a.name && (a.broadstreet_id || a.mongo_id)));
+
+// Local advertisers (created locally)
+setLocalAdvertisers(localAdvertisers.filter(a => a.name && a.network_id && a.mongo_id));
+```
+
+### Filter Store Integration
+```typescript
+// Advertiser selection with ID resolution
+const { selectedAdvertiser, setSelectedAdvertiser } = useFilterStore();
+
+// Handle advertiser selection (can be synced or local)
+const handleAdvertiserSelect = (advertiser: AdvertiserEntity) => {
+  setSelectedAdvertiser(advertiser);
+  // Automatically clears dependent selections (campaigns)
+};
+
+// Check if advertiser is selected
+const isSelected = selectedAdvertiser &&
+  getEntityId(selectedAdvertiser) === getEntityId(advertiser);
+```
+
+### Component Integration
+```typescript
+// Using advertisers in components
+const advertisers = useEntityStore(state => state.advertisers);
+const localAdvertisers = useEntityStore(state => state.localAdvertisers);
+const selectedAdvertiser = useFilterStore(state => state.selectedAdvertiser);
+
+// Combined advertiser list for display
+const allAdvertisers = useMemo(() => [
+  ...advertisers,
+  ...localAdvertisers
+], [advertisers, localAdvertisers]);
+
+// Filter by network
+const filteredAdvertisers = allAdvertisers.filter(advertiser =>
+  !selectedNetwork || advertiser.network_id === selectedNetwork.broadstreet_id
+);
+```
+
+### Variable Naming Compliance
+Following `docs/variable-origins.md` standards:
+- `selectedAdvertiser` - Currently selected advertiser entity in filter state
+- `advertisers` - Collection of all synced advertiser entities from API/database
+- `localAdvertisers` - Collection of locally created advertiser entities
+- `isLoadingAdvertisers` - Loading state for advertiser data fetching operations
+- `advertiserError` - Error state for advertiser-related operations

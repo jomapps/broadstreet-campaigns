@@ -1,8 +1,8 @@
-# Campaigns
+500631# Campaigns
 
 ## Overview
 
-Campaigns represent advertising campaigns that run on a network. Each campaign belongs to a single network and a single advertiser.
+Campaigns represent advertising campaigns that run on a network. Each campaign belongs to a single network and a single advertiser. Campaigns are fully integrated with the **Zustand store architecture** for advanced functionality including copy-to-theme, delete operations, and status filtering.
 
 ## ID Management
 
@@ -10,6 +10,29 @@ Campaigns follow the standardized three-tier ID system:
 - **`broadstreet_id`**: Broadstreet API identifier (number) - for synced campaigns
 - **`mongo_id`**: MongoDB ObjectId (string) - for local storage and local-only campaigns
 - **`_id`**: MongoDB native ObjectId - for internal database operations only
+
+## Zustand Store Integration
+
+### Store Location
+- **Synced Campaigns**: `EntityState.campaigns` array (have `broadstreet_id`)
+- **Local Campaigns**: `EntityState.localCampaigns` array (local-only, no `broadstreet_id` yet)
+
+### Selection Management
+- **Filter State**: `FilterState.selectedCampaign` (can be synced or local)
+- **Placement Management**: Complex relationships with creation modal integration
+- **Advanced Functionality**: Copy-to-theme, delete operations, status filtering
+
+### Server-Side Integration
+```typescript
+// Server-side data fetching with parameters
+const campaigns = await fetchCampaigns({ networkId, advertiserId });
+
+// Client-side store initialization
+const { setCampaigns, setLocalCampaigns } = useEntityStore();
+useEffect(() => {
+  setCampaigns(campaigns.filter(c => c.name && (c.broadstreet_id || c.mongo_id)));
+}, [campaigns]);
+```
 
 ## Parents relationship
 Campaigns are children of advertisers and networks.
@@ -214,3 +237,76 @@ Campaign sync functionality has been successfully implemented and is fully opera
 - ✅ **Placement Migration**: Handles embedded placements during sync
 
 **System Status: ✅ FULLY OPERATIONAL**
+
+## Zustand Store Usage Patterns
+
+### Entity Store Actions
+```typescript
+// Setting campaigns with validation
+const { setCampaigns, setLocalCampaigns } = useEntityStore();
+
+// Synced campaigns (from Broadstreet API)
+setCampaigns(campaigns.filter(c => c.name && (c.broadstreet_id || c.mongo_id)));
+
+// Local campaigns (created locally with embedded placements)
+setLocalCampaigns(localCampaigns.filter(c => c.name && c.network_id && c.mongo_id));
+```
+
+### Filter Store Integration
+```typescript
+// Campaign selection with dependency management
+const { selectedCampaign, setSelectedCampaign, selectedAdvertiser } = useFilterStore();
+
+// Handle campaign selection
+const handleCampaignSelect = (campaign: CampaignEntity) => {
+  setSelectedCampaign(campaign);
+  // Campaign selection doesn't clear other selections
+};
+
+// Filter campaigns by advertiser
+const filteredCampaigns = campaigns.filter(campaign =>
+  !selectedAdvertiser || campaign.advertiser_id === getEntityId(selectedAdvertiser)
+);
+```
+
+### Advanced Campaign Features
+```typescript
+// Copy-to-theme functionality
+const { setSelectedTheme, setSelectedZones } = useFilterStore();
+
+const copyToTheme = (campaign: CampaignEntity, theme: ThemeEntity) => {
+  setSelectedTheme(theme);
+  setSelectedZones(theme.zone_ids.map(String)); // Convert to EntitySelectionKey array
+};
+
+// Status filtering
+const activeCampaigns = campaigns.filter(c => c.active);
+const pausedCampaigns = campaigns.filter(c => c.paused);
+const archivedCampaigns = campaigns.filter(c => c.archived);
+```
+
+### Placement Management Integration
+```typescript
+// Campaign-placement relationships
+const { localPlacements } = useEntityStore();
+
+// Get placements for a campaign
+const getCampaignPlacements = (campaign: CampaignEntity) => {
+  const campaignId = getEntityId(campaign);
+  return localPlacements.filter(placement => {
+    if (typeof campaignId === 'number') {
+      return placement.campaign_id === campaignId;
+    } else {
+      return placement.campaign_mongo_id === campaignId;
+    }
+  });
+};
+```
+
+### Variable Naming Compliance
+Following `docs/variable-origins.md` standards:
+- `selectedCampaign` - Currently selected campaign entity in filter state
+- `campaigns` - Collection of all synced campaign entities from API/database
+- `localCampaigns` - Collection of locally created campaign entities
+- `isLoadingCampaigns` - Loading state for campaign data fetching operations
+- `campaignError` - Error state for campaign-related operations

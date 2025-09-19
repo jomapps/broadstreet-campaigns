@@ -9,8 +9,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useEntityStore } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { useEntityStore, useAllFilters } from '@/stores';
 import { Button } from '@/components/ui/button';
 import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 import PlacementsList from './PlacementsList';
@@ -21,14 +20,14 @@ import LoadingSkeleton from './LoadingSkeleton';
  * Variable names follow docs/variable-origins.md registry
  */
 function PlacementsActions() {
-  const entities = useSelectedEntities();
+  const { selectedNetwork, selectedCampaign, selectedZones, selectedAdvertisements } = useAllFilters();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const canCreatePlacements = Boolean(
-    entities.network &&
-    entities.campaign &&
-    entities.advertisements.length > 0 &&
-    entities.zones.length > 0
+    selectedNetwork &&
+    selectedCampaign &&
+    selectedAdvertisements.length > 0 &&
+    selectedZones.length > 0
   );
 
   return (
@@ -58,7 +57,16 @@ function PlacementsActions() {
 function PlacementsData() {
   // Get data from Zustand stores using exact names from docs/variable-origins.md registry
   const { placements, isLoading } = useEntityStore();
-  const entities = useSelectedEntities();
+  const { selectedNetwork, selectedAdvertiser, selectedCampaign, selectedZones, selectedAdvertisements } = useAllFilters();
+
+  // Create entities object for compatibility with existing code
+  const entities = {
+    network: selectedNetwork,
+    advertiser: selectedAdvertiser,
+    campaign: selectedCampaign,
+    zones: selectedZones,
+    advertisements: selectedAdvertisements
+  };
 
   if (isLoading.placements) {
     return (
@@ -87,7 +95,7 @@ function PlacementsData() {
     );
   }
 
-  return <PlacementsList placements={placements} entities={entities} />;
+  return <PlacementsList placements={placements as any} entities={entities as any} />;
 }
 
 /**

@@ -16,7 +16,7 @@ import LoadingSkeleton from './LoadingSkeleton';
  * ThemesPage - Server component that fetches data and renders client
  * Variable names follow docs/variable-origins.md registry
  */
-export default async function ThemesPage({ searchParams }) {
+export default async function ThemesPage({ searchParams }: { searchParams: any }) {
   // Await searchParams for Next.js 15 compatibility
   const params = await searchParams;
 

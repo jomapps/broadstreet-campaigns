@@ -9,7 +9,7 @@ import { useState } from 'react';
  * Provides React Query client to the application with optimized configuration
  * for the Broadstreet Campaigns application
  */
-export default function QueryProvider({ children }) {
+export default function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {

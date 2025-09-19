@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 // Comprehensive verification of placement creation & visibility flow
 const axios = require('axios');
 

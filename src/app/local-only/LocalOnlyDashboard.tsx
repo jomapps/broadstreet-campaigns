@@ -10,6 +10,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAllFilters } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -257,6 +258,9 @@ export default function LocalOnlyDashboard() {
     completeSync
   } = useSyncProgress();
 
+  // Get selected network from filter store using new Zustand pattern
+  const { selectedNetwork } = useAllFilters();
+
   const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length + data.placements.length;
 
   const toggleSelection = (entityId: string) => {
@@ -321,14 +325,14 @@ export default function LocalOnlyDashboard() {
     }
 
     // Initialize progress modal with entity counts for the selected network
-    if (!entities.network) {
+    if (!selectedNetwork) {
       alert('Please select a network in the sidebar before syncing');
       return;
     }
 
-    const networkId = entities.network.entityId;
+    const networkId = selectedNetwork.broadstreet_id;
     const entityCounts = {
-      networks: data.networks.filter(n => !n.synced_with_api && String(n.network_id || n._id) === String(networkId)).length,
+      networks: data.networks.filter(n => !n.synced_with_api && String(n.broadstreet_id || n._id) === String(networkId)).length,
       advertisers: data.advertisers.filter(a => !a.synced_with_api && String(a.network_id) === String(networkId)).length,
       zones: data.zones.filter(z => !z.synced_with_api && String(z.network_id) === String(networkId)).length,
       advertisements: data.advertisements.filter(ad => !ad.synced_with_api && String(ad.network_id) === String(networkId)).length,
@@ -344,11 +348,11 @@ export default function LocalOnlyDashboard() {
       setStepInProgress('dry-run');
 
       // Use the selected network from the sidebar
-      if (!entities.network) {
+      if (!selectedNetwork) {
         throw new Error('Please select a network in the sidebar before syncing');
       }
 
-      const networkId = entities.network.entityId;
+      const networkId = selectedNetwork.broadstreet_id;
       console.info('[LocalOnly] Starting sync for network:', networkId);
 
       const response = await fetch('/api/sync/local-all', {
@@ -576,7 +580,7 @@ export default function LocalOnlyDashboard() {
       {/* Entity Sections */}
       <EntitySection
         title="Zones"
-        entities={data.zones}
+        entities={data.zones as any}
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
@@ -586,7 +590,7 @@ export default function LocalOnlyDashboard() {
 
       <EntitySection
         title="Advertisers"
-        entities={data.advertisers}
+        entities={data.advertisers as any}
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
@@ -596,7 +600,7 @@ export default function LocalOnlyDashboard() {
 
       <EntitySection
         title="Campaigns"
-        entities={data.campaigns}
+        entities={data.campaigns as any}
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
@@ -606,7 +610,7 @@ export default function LocalOnlyDashboard() {
 
       <EntitySection
         title="Networks"
-        entities={data.networks}
+        entities={data.networks as any}
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
@@ -616,7 +620,7 @@ export default function LocalOnlyDashboard() {
 
       <EntitySection
         title="Advertisements"
-        entities={data.advertisements}
+        entities={data.advertisements as any}
         networkMap={networkMap}
         advertiserMap={advertiserMap}
         onDelete={handleDelete}
@@ -672,7 +676,7 @@ export default function LocalOnlyDashboard() {
             {data.placements.map((placement) => (
               <LocalPlacementCard
                 key={placement._id}
-                placement={placement}
+                placement={placement as any}
                 networkMap={networkMap}
                 advertiserMap={advertiserMap}
                 onDelete={handleDelete}

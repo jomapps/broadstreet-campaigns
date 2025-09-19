@@ -98,9 +98,9 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
        * Note: Network gating is intentionally handled inside `ZonesList` to avoid duplicating gate logic here.
        * This keeps the wrapper focused on size/search filters and selection state.
        */}
-      <ZoneSelectionControls 
+      <ZoneSelectionControls
         zones={filteredZones}
-        selectedZones={selectedZones}
+        selectedZones={selectedZones as any}
         showOnlySelected={showOnlySelected}
       />
       
@@ -109,7 +109,7 @@ export default function ZoneFiltersWrapper({ zones, networkMap }: ZoneFiltersWra
         networkMap={networkMap}
         selectedSizes={selectedSizes}
         onSizeFilterChange={setSelectedSizes}
-        selectedZones={selectedZones}
+        selectedZones={selectedZones as any}
         showOnlySelected={showOnlySelected}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}

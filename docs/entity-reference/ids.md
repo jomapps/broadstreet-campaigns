@@ -513,7 +513,7 @@ Following these patterns ensures consistent, maintainable ID management across t
 
 ### Store State Management with ID System
 
-The Zustand stores must integrate seamlessly with the three-tier ID system:
+The Zustand stores integrate seamlessly with the three-tier ID system as implemented in the production system:
 
 ```typescript
 // Store state follows database model interfaces exactly
@@ -524,23 +524,47 @@ interface EntityState {
   zones: ZoneEntity[];                 // May have broadstreet_id (synced) or only mongo_id (local)
   advertisements: AdvertisementEntity[]; // Always have broadstreet_id
 
-  // Local entities (created locally before sync)
+  // Local entities (created locally before sync) - MUST use Local*Entity interfaces
   localZones: LocalZoneEntity[];
   localAdvertisers: LocalAdvertiserEntity[];
   localCampaigns: LocalCampaignEntity[];
   localNetworks: LocalNetworkEntity[];
   localAdvertisements: LocalAdvertisementEntity[];
   localPlacements: PlacementEntity[];
+
+  // Loading states - granular control for better UX
+  isLoading: {
+    networks: boolean;
+    advertisers: boolean;
+    campaigns: boolean;
+    zones: boolean;
+    advertisements: boolean;
+    localEntities: boolean;
+    placements: boolean;
+    themes: boolean;
+  };
+
+  // Error states - specific error tracking
+  errors: {
+    networks: string | null;
+    advertisers: string | null;
+    campaigns: string | null;
+    zones: string | null;
+    advertisements: string | null;
+    localEntities: string | null;
+    placements: string | null;
+    themes: string | null;
+  };
 }
 
-// Filter state uses entity selection keys consistently
+// Filter state uses EntitySelectionKey for consistent ID handling
 interface FilterState {
-  selectedNetwork: NetworkEntity | null;
-  selectedAdvertiser: AdvertiserEntity | null;
-  selectedCampaign: CampaignEntity | null;
-  selectedZones: string[];              // Array of entity selection keys
-  selectedAdvertisements: string[];     // Array of entity selection keys
-  selectedTheme: ThemeEntity | null;
+  selectedNetwork: NetworkEntity | null;       // Always required, always has broadstreet_id
+  selectedAdvertiser: AdvertiserEntity | null; // Can be synced or local
+  selectedCampaign: CampaignEntity | null;     // Can be synced or local
+  selectedZones: EntitySelectionKey[];         // Array of broadstreet_id or mongo_id strings
+  selectedAdvertisements: EntitySelectionKey[]; // Array of broadstreet_id or mongo_id strings
+  selectedTheme: ThemeEntity | null;           // Local-only entity with zone_ids array
 }
 ```
 
@@ -548,17 +572,35 @@ interface FilterState {
 
 ```typescript
 interface EntityActions {
-  // Standard setters that preserve ID integrity
+  // Setters - MUST use proper entity types with validation
   setNetworks: (networks: NetworkEntity[]) => void;
   setAdvertisers: (advertisers: AdvertiserEntity[]) => void;
+  setCampaigns: (campaigns: CampaignEntity[]) => void;
+  setZones: (zones: ZoneEntity[]) => void;
+  setAdvertisements: (advertisements: AdvertisementEntity[]) => void;
+
+  // Local entity setters - MUST use proper Local*Entity types
+  setLocalEntities: (entities: {
+    zones: LocalZoneEntity[];
+    advertisers: LocalAdvertiserEntity[];
+    campaigns: LocalCampaignEntity[];
+    networks: LocalNetworkEntity[];
+    advertisements: LocalAdvertisementEntity[];
+    placements: PlacementEntity[];
+  }) => void;
+
+  // Entity operations with ID resolution using EntitySelectionKey
+  addEntity: (entityType: keyof EntityState, entity: any) => void;
+  updateEntity: (entityType: keyof EntityState, entityId: string | number, updates: any) => void;
+  removeEntity: (entityType: keyof EntityState, entityId: string | number) => void;
 
   // Selection actions using utility functions
   setSelectedNetwork: (network: NetworkEntity | null) => void;
-  toggleZoneSelection: (zoneId: string) => void;  // Uses getEntityId() internally
+  toggleZoneSelection: (zoneId: EntitySelectionKey) => void;  // Uses getEntityId() internally
 
   // Bulk selection with ID resolution
-  selectAllZones: (zones: ZoneEntity[]) => void;  // Converts to selection keys
-  selectZonesByTheme: (theme: ThemeEntity) => void; // Maps theme.zone_ids to selection keys
+  selectAllZones: (zones: ZoneEntity[]) => void;  // Converts to EntitySelectionKey array
+  selectZonesByTheme: (theme: ThemeEntity) => void; // Maps theme.zone_ids to EntitySelectionKey array
 }
 ```
 

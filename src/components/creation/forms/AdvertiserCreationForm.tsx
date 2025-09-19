@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAllFilters, useFilterActions } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { useAllFilters, useFilterActions, useEntityStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,9 +23,8 @@ interface AdminContact {
 }
 
 export default function AdvertiserCreationForm({ onClose, setIsLoading }: AdvertiserCreationFormProps) {
-  const entities = useSelectedEntities();
-  const filters = useAllFilters();
-  const { setAdvertisers } = useFilterActions();
+  const { selectedNetwork } = useAllFilters();
+  const { setAdvertisers } = useEntityStore();
   const router = useRouter();
   const [formData, setFormData] = useState({
     // Required fields
@@ -66,9 +64,9 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     });
 
     // Network selection and Broadstreet ID availability validation (required for advertiser creation)
-    if (!entities.network) {
+    if (!selectedNetwork) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids?.broadstreet_id) {
+    } else if (!(selectedNetwork as any).broadstreet_id) {
       newErrors.network = 'Network must be synced with Broadstreet to create advertisers';
     }
 
@@ -180,7 +178,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     try {
       // Build payload with only non-empty optional fields
       // For advertiser creation, Broadstreet network ID is required
-      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
+      const networkBroadstreetId = (selectedNetwork as any)?.broadstreet_id;
       if (!networkBroadstreetId) {
         throw new Error('Network must be synced with Broadstreet to create advertisers');
       }
@@ -188,8 +186,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
         name: formData.name.trim(),
         network_id: networkBroadstreetId,
         network: {
-          broadstreet_id: entities.network?.ids.broadstreet_id,
-          mongo_id: entities.network?.ids.mongo_id,
+          broadstreet_id: (selectedNetwork as any)?.broadstreet_id,
+          mongo_id: (selectedNetwork as any)?.mongo_id,
         },
       };
 
@@ -226,8 +224,8 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
 
       // Immediately reload advertisers for the current network so the list updates without a full reload
       try {
-        if (entities.network?.ids?.broadstreet_id) {
-          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String(entities.network.ids.broadstreet_id))}` , { cache: 'no-store' });
+        if ((selectedNetwork as any)?.broadstreet_id) {
+          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String((selectedNetwork as any).broadstreet_id))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);
@@ -258,7 +256,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800 flex items-center gap-2">
-          <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
+          <strong>Network:</strong> {(selectedNetwork as any)?.name} <EntityIdBadge broadstreet_id={(selectedNetwork as any)?.broadstreet_id} mongo_id={(selectedNetwork as any)?.mongo_id} />
         </p>
       </div>
 
@@ -284,7 +282,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network?.ids?.broadstreet_id
+            !(selectedNetwork as any)?.broadstreet_id
           }
           className="min-w-[120px]"
           data-testid="submit-button"
@@ -439,7 +437,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
           disabled={
             isSubmitting ||
             !formData.name ||
-            !entities.network?.ids?.broadstreet_id
+            !(selectedNetwork as any)?.broadstreet_id
           }
           className="min-w-[120px]"
           data-testid="submit-button"

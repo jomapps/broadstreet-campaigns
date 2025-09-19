@@ -9,8 +9,6 @@
 
 'use client';
 
-import { useEffect } from 'react';
-import { useEntityStore } from '@/stores';
 import AuditContent from './AuditContent';
 
 /**
@@ -30,21 +28,6 @@ export default function AuditClient({
   initialAuditData,
   searchParams 
 }: AuditClientProps) {
-  // Get store actions using exact names from docs/variable-origins.md registry
-  const { setAuditData } = useEntityStore();
-  
-  // Initialize store with server data on mount
-  useEffect(() => {
-    // Set audit data using exact variable names from registry
-    if (setAuditData) {
-      setAuditData(initialAuditData);
-    }
-  }, [
-    initialAuditData,
-    setAuditData
-  ]);
-  
-  // Render the audit content component
-  // The content will read from Zustand stores instead of props
+  // Pass audit data directly to content component (no store needed for audit)
   return <AuditContent initialData={initialAuditData} searchParams={searchParams} />;
 }

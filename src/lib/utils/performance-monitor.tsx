@@ -196,7 +196,7 @@ export function measureApiCall(endpoint: string) {
   ) {
     const method = descriptor.value!;
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: any, ...args: any[]) {
       return performanceMonitor.measure(
         `api-${endpoint}`,
         () => method.apply(this, args),
@@ -239,12 +239,12 @@ export function initWebVitals() {
   if (typeof window === 'undefined') return;
 
   // Core Web Vitals
-  import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-    getCLS(console.log);
-    getFID(console.log);
-    getFCP(console.log);
-    getLCP(console.log);
-    getTTFB(console.log);
+  import('web-vitals').then(({ onCLS, onFID, onFCP, onLCP, onTTFB }: any) => {
+    onCLS?.(console.log);
+    onFID?.(console.log);
+    onFCP?.(console.log);
+    onLCP?.(console.log);
+    onTTFB?.(console.log);
   }).catch(() => {
     // web-vitals not available, skip
   });

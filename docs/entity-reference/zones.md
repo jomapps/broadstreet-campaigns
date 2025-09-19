@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zones represent ad slots/placements within a network where advertisements can be displayed. Each zone belongs to a single network.
+Zones represent ad slots/placements within a network where advertisements can be displayed. Each zone belongs to a single network. Zones are fully integrated with the **Zustand store architecture** for complex filtering by size types, network gating, search, and theme integration.
 
 ## ID Management
 
@@ -12,6 +12,29 @@ Zones follow the standardized three-tier ID system:
 - **`_id`**: MongoDB native ObjectId - for internal database operations only
 
 **Display Rule**: Local zones should display MongoDB IDs with local badges when `broadstreet_id` is undefined.
+
+## Zustand Store Integration
+
+### Store Location
+- **Synced Zones**: `EntityState.zones` array (have `broadstreet_id`)
+- **Local Zones**: `EntityState.localZones` array (local-only, no `broadstreet_id` yet)
+
+### Selection Management
+- **Filter State**: `FilterState.selectedZones` array of `EntitySelectionKey` values
+- **Theme Integration**: Zone selection automatically updates when theme is selected
+- **Complex Filtering**: Size types, network gating, search, and theme integration
+
+### Server-Side Integration
+```typescript
+// Server-side data fetching with network filtering
+const zones = await fetchZones(networkId);
+
+// Client-side store initialization
+const { setZones, setLocalZones } = useEntityStore();
+useEffect(() => {
+  setZones(zones.filter(z => z.name && z.network_id && (z.broadstreet_id || z.mongo_id)));
+}, [zones]);
+```
 
 ## How to create a zone
 
@@ -160,4 +183,116 @@ Zone sync functionality has been successfully implemented and is fully operation
 - ✅ **Dependency Management**: Independent entity (no dependencies except network)
 
 **System Status: ✅ FULLY OPERATIONAL**
+
+## Zustand Store Usage Patterns
+
+### Entity Store Actions
+```typescript
+// Setting zones with validation
+const { setZones, setLocalZones } = useEntityStore();
+
+// Synced zones (from Broadstreet API)
+setZones(zones.filter(z => z.name && z.network_id && (z.broadstreet_id || z.mongo_id)));
+
+// Local zones (created locally)
+setLocalZones(localZones.filter(z => z.name && z.network_id && z.mongo_id));
+```
+
+### Filter Store Integration with Theme Support
+```typescript
+// Zone selection with theme integration
+const { selectedZones, setSelectedZones, selectedTheme, setSelectedTheme } = useFilterStore();
+
+// Handle zone selection
+const handleZoneToggle = (zone: ZoneEntity) => {
+  const zoneId = String(getEntityId(zone));
+  const newSelection = selectedZones.includes(zoneId)
+    ? selectedZones.filter(id => id !== zoneId)
+    : [...selectedZones, zoneId];
+
+  setSelectedZones(newSelection);
+  // Automatically clears theme if zones no longer match
+};
+
+// Theme selection with automatic zone mapping
+const handleThemeSelect = (theme: ThemeEntity) => {
+  setSelectedTheme(theme);
+  // Automatically sets selectedZones to theme's zone IDs
+  setSelectedZones(theme.zone_ids.map(String));
+};
+
+// Bulk zone operations
+const selectAllZones = (zones: ZoneEntity[]) => {
+  const zoneIds = zones.map(z => String(getEntityId(z)));
+  setSelectedZones(zoneIds);
+};
+```
+
+### Complex Zone Filtering
+```typescript
+// Multi-dimensional zone filtering
+const zones = useEntityStore(state => state.zones);
+const localZones = useEntityStore(state => state.localZones);
+const selectedNetwork = useFilterStore(state => state.selectedNetwork);
+
+// Combined zone list with network filtering
+const allZones = useMemo(() => [
+  ...zones,
+  ...localZones
+], [zones, localZones]);
+
+const filteredZones = allZones.filter(zone => {
+  // Network filtering
+  if (selectedNetwork && zone.network_id !== selectedNetwork.broadstreet_id) {
+    return false;
+  }
+
+  // Size type filtering
+  if (sizeTypeFilter && zone.size_type !== sizeTypeFilter) {
+    return false;
+  }
+
+  // Search filtering
+  if (searchQuery && !zone.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    return false;
+  }
+
+  return true;
+});
+```
+
+### Theme Integration Patterns
+```typescript
+// Sidebar filter mutual exclusivity
+const { selectedTheme, selectedZones, setSelectedTheme, setSelectedZones } = useFilterStore();
+
+// Selecting a theme replaces currently selected zones
+const selectTheme = (theme: ThemeEntity) => {
+  setSelectedTheme(theme);
+  setSelectedZones(theme.zone_ids.map(String)); // Replace current selection
+};
+
+// Selecting zones manually clears theme if they don't match
+const updateZoneSelection = (newZones: string[]) => {
+  setSelectedZones(newZones);
+
+  // Clear theme if zones don't match theme's zones
+  if (selectedTheme) {
+    const themeZoneIds = selectedTheme.zone_ids.map(String);
+    const zonesMatch = newZones.length === themeZoneIds.length &&
+      newZones.every(id => themeZoneIds.includes(id));
+    if (!zonesMatch) {
+      setSelectedTheme(null);
+    }
+  }
+};
+```
+
+### Variable Naming Compliance
+Following `docs/variable-origins.md` standards:
+- `selectedZones` - Array of selected zone IDs for filtering operations
+- `zones` - Collection of all synced zone entities from API/database
+- `localZones` - Collection of locally created zone entities
+- `isLoadingZones` - Loading state for zone data fetching operations
+- `zoneError` - Error state for zone-related operations
 

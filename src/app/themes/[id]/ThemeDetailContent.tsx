@@ -51,18 +51,18 @@ export default function ThemeDetailContent() {
 
   // Filter zones based on search term
   const filteredZones = useMemo(() => {
-    if (!currentTheme?.zones) return [];
-    
-    if (!searchTerm.trim()) return currentTheme.zones;
+    if (!(currentTheme as any)?.zones) return [];
+
+    if (!searchTerm.trim()) return (currentTheme as any).zones;
     
     const search = searchTerm.toLowerCase();
-    return currentTheme.zones.filter((zone: any) => 
+    return (currentTheme as any).zones.filter((zone: any) =>
       zone.name.toLowerCase().includes(search) ||
       zone.alias?.toLowerCase().includes(search) ||
       zone.category?.toLowerCase().includes(search) ||
       zone.block?.toLowerCase().includes(search)
     );
-  }, [currentTheme?.zones, searchTerm]);
+  }, [(currentTheme as any)?.zones, searchTerm]);
 
   // Handle zone removal from theme
   const handleRemoveZone = async (zoneId: number) => {
@@ -112,7 +112,7 @@ export default function ThemeDetailContent() {
     );
   }
 
-  const themeZones = currentTheme.zones || [];
+  const themeZones = (currentTheme as any).zones || [];
 
   return (
     <div className="space-y-6">

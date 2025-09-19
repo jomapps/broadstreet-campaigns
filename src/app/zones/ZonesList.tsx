@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useAllFilters, useFilterActions } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { SearchInput } from '@/components/ui/search-input';
 import { getSizeInfo, hasMultipleSizeTypes } from '@/lib/utils/zone-parser';
 import { ThemeBadges } from '@/components/themes/ThemeBadge';
@@ -82,7 +81,7 @@ export default function ZonesList({
   onSearchChange,
   filteredZones
 }: ZonesListProps) {
-  const entities = useSelectedEntities();
+  const { selectedNetwork, selectedAdvertiser } = useAllFilters();
   const { toggleZoneSelection } = useFilterActions();
 
   // Use filtered zones if provided, otherwise fall back to local filtering
@@ -100,7 +99,7 @@ export default function ZonesList({
   const { themesByZone } = useZoneThemes(syncedZoneIds);
 
   // Check if network is selected
-  if (!entities.network) {
+  if (!selectedNetwork) {
     return (
       <div className="text-center py-12">
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">

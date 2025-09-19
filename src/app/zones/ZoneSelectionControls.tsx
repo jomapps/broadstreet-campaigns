@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useAllFilters, useFilterActions } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +23,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
     deselectAllZones,
     setShowOnlySelected
   } = useFilterActions();
-  const entities = useSelectedEntities();
+  const { selectedNetwork, selectedAdvertiser } = useAllFilters();
 
   // The zones prop now contains the filtered zones from ZoneFiltersWrapper
   const visibleZones = zones;
@@ -104,7 +103,7 @@ export default function ZoneSelectionControls({ zones, selectedZones, showOnlySe
     }
   };
 
-  if (!entities.network) {
+  if (!selectedNetwork) {
     return null;
   }
 

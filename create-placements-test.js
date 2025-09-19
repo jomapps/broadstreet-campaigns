@@ -1,5 +1,5 @@
 // Create placements using existing API with documented test data
-/* eslint-disable no-console */
+ 
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:3005';

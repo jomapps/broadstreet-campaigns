@@ -53,7 +53,7 @@ function mapAuditEntityToUniversalProps(entity: any) {
     title: entity.name,
     broadstreet_id: entity.broadstreet_id,
     mongo_id: entity.entity_id, // entity_id is the MongoDB ID in audit context
-    entityType: entityTypeMap[entity.type],
+    entityType: entityTypeMap[entity.type as keyof typeof entityTypeMap] || 'unknown' as const,
     isLocal: false, // Audit entities are always synced
     statusBadge: {
       label: 'Synced',

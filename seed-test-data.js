@@ -1,7 +1,7 @@
 // Seed required test data by syncing from Broadstreet into the local DB when missing
 // Uses local API endpoints on http://localhost:3005
 
-/* eslint-disable no-console */
+ 
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:3005';

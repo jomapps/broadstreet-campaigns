@@ -1,28 +1,23 @@
 /**
  * FILTER STORE - SELECTION AND FILTERING STATE MANAGEMENT
- * 
+ *
  * This store manages all selection and filtering state with theme integration.
  * Follows the three-tier ID system and uses database model interfaces.
  * All variable names follow docs/variable-origins.md registry.
- * 
+ *
  * CRITICAL RULES:
  * 1. All variable names from docs/variable-origins.md registry
  * 2. All entity types from database-models.ts interfaces
  * 3. All ID handling uses EntitySelectionKey from entity-helpers.ts
  * 4. Theme selection enforces mutual exclusivity with zones
- * 5. No TypeScript types - using plain JavaScript with JSDoc
+ * 5. Uses TypeScript for proper type safety
  */
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
-import { FilterState, FilterActions, FilterStore } from './types';
-import {
-  NetworkEntity,
-  AdvertiserEntity,
-  CampaignEntity,
-  ThemeEntity
-} from '@/lib/types/database-models';
+import { FilterState, FilterActions } from './types';
+import { NetworkEntity } from '@/lib/types/database-models';
 import { EntitySelectionKey } from '@/lib/utils/entity-helpers';
 
 // Default network configuration - FASH Medien Verlag GmbH - SCHWULISSIMO
@@ -58,7 +53,7 @@ const initialState = {
  * Filter Store - Manages selection and filtering state
  * Uses Zustand with Immer for immutable updates and persistence
  */
-export const useFilterStore = create(
+export const useFilterStore = create<FilterState & FilterActions>()(
   persist(
     immer((set, get) => ({
       ...initialState,
@@ -67,7 +62,6 @@ export const useFilterStore = create(
       
       /**
        * Set selected network - clears dependent selections
-       * @param {NetworkEntity|null} network - Network entity to select
        */
       setSelectedNetwork: (network) => set((state) => {
         state.selectedNetwork = network;
@@ -83,7 +77,6 @@ export const useFilterStore = create(
 
       /**
        * Set selected advertiser - clears dependent selections
-       * @param {AdvertiserEntity|null} advertiser - Advertiser entity to select
        */
       setSelectedAdvertiser: (advertiser) => set((state) => {
         state.selectedAdvertiser = advertiser;
@@ -95,7 +88,6 @@ export const useFilterStore = create(
 
       /**
        * Set selected campaign
-       * @param {CampaignEntity|null} campaign - Campaign entity to select
        */
       setSelectedCampaign: (campaign) => set((state) => {
         state.selectedCampaign = campaign;
@@ -105,7 +97,6 @@ export const useFilterStore = create(
 
       /**
        * Set selected zones - enforces theme mutual exclusivity
-       * @param {EntitySelectionKey[]} zones - Array of zone IDs to select
        */
       setSelectedZones: (zones) => set((state) => {
         state.selectedZones = zones;
@@ -126,7 +117,6 @@ export const useFilterStore = create(
 
       /**
        * Set selected advertisements
-       * @param {EntitySelectionKey[]} advertisements - Array of advertisement IDs to select
        */
       setSelectedAdvertisements: (advertisements) => set((state) => {
         state.selectedAdvertisements = advertisements;
@@ -136,7 +126,6 @@ export const useFilterStore = create(
 
       /**
        * Set selected theme - updates zones to match theme
-       * @param {ThemeEntity|null} theme - Theme entity to select
        */
       setSelectedTheme: (theme) => set((state) => {
         state.selectedTheme = theme;
@@ -154,7 +143,6 @@ export const useFilterStore = create(
 
       /**
        * Toggle individual zone selection - maintains theme consistency
-       * @param {EntitySelectionKey} zoneId - Zone ID to toggle
        */
       toggleZoneSelection: (zoneId) => set((state) => {
         const index = state.selectedZones.indexOf(zoneId);
@@ -182,7 +170,6 @@ export const useFilterStore = create(
 
       /**
        * Toggle individual advertisement selection
-       * @param {EntitySelectionKey} adId - Advertisement ID to toggle
        */
       toggleAdvertisementSelection: (adId) => set((state) => {
         const index = state.selectedAdvertisements.indexOf(adId);
@@ -202,7 +189,6 @@ export const useFilterStore = create(
 
       /**
        * Select all zones from provided array
-       * @param {EntitySelectionKey[]} zoneIds - Array of all available zone IDs
        */
       selectAllZones: (zoneIds) => set((state) => {
         state.selectedZones = [...zoneIds];
@@ -223,7 +209,6 @@ export const useFilterStore = create(
 
       /**
        * Select all advertisements from provided array
-       * @param {EntitySelectionKey[]} adIds - Array of all available advertisement IDs
        */
       selectAllAdvertisements: (adIds) => set((state) => {
         state.selectedAdvertisements = [...adIds];
@@ -244,7 +229,6 @@ export const useFilterStore = create(
 
       /**
        * Set show only selected zones flag
-       * @param {boolean} show - Whether to show only selected zones
        */
       setShowOnlySelected: (show) => set((state) => {
         state.showOnlySelected = show;
@@ -254,7 +238,6 @@ export const useFilterStore = create(
 
       /**
        * Set show only selected advertisements flag
-       * @param {boolean} show - Whether to show only selected advertisements
        */
       setShowOnlySelectedAds: (show) => set((state) => {
         state.showOnlySelectedAds = show;
@@ -290,7 +273,6 @@ export const useFilterStore = create(
 
       /**
        * Set default network if none is selected
-       * @param {NetworkEntity[]} networks - Available networks to choose from
        */
       setDefaultNetworkIfNone: (networks) => set((state) => {
         // Only set default if no network is currently selected
@@ -315,7 +297,6 @@ export const useFilterStore = create(
 
       /**
        * Set filters from URL search parameters
-       * @param {any} params - URL search parameters object
        */
       setFiltersFromParams: (params) => set((state) => {
         // Parse network parameter

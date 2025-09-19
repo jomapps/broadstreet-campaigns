@@ -219,19 +219,19 @@ function AdvertisementsFilters() {
         onActiveToggle={setShowActiveOnly}
       />
       
-      <AdvertisementSelectionControls 
-        advertisements={filteredAdvertisements}
-        selectedAdvertisements={selectedAdvertisements}
+      <AdvertisementSelectionControls
+        advertisements={filteredAdvertisements as any}
+        selectedAdvertisements={selectedAdvertisements.map(String)}
         showOnlySelectedAds={showOnlySelectedAds}
       />
-      
-      <AdvertisementsList 
-        advertisements={advertisements} 
-        selectedAdvertisements={selectedAdvertisements}
+
+      <AdvertisementsList
+        advertisements={advertisements as any}
+        selectedAdvertisements={selectedAdvertisements.map(String)}
         showOnlySelectedAds={showOnlySelectedAds}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        filteredAdvertisements={filteredAdvertisements}
+        filteredAdvertisements={filteredAdvertisements as any}
       />
     </div>
   );

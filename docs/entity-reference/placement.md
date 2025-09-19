@@ -2,7 +2,7 @@
 
 ## Overview
 
-Placements represent combinations of advertisements and zones within campaigns. The system supports both embedded placements (within campaigns) and standalone placement collections with comprehensive sync capabilities.
+Placements represent combinations of advertisements and zones within campaigns. The system supports both embedded placements (within campaigns) and standalone placement collections with comprehensive sync capabilities. Placements are fully integrated with the **Zustand store architecture** for complex relationships and creation modal integration.
 
 ## ID Management
 
@@ -14,6 +14,35 @@ Placements use a flexible ID system to support both local and synced entities:
 **Business Rules**:
 - Placement cards should show campaign name/id, advertisement name/id, and zone name/id
 - Local-only entities should be displayed with yellowish styling cards
+- **CRITICAL**: Never delete synced placements from the Placement collection during normal operations
+
+## Zustand Store Integration
+
+### Store Location
+- **Local Placements**: `EntityState.localPlacements` array (local-only placements in dedicated collection)
+- **Embedded Placements**: Stored within campaign documents (existing pattern continues)
+
+### Complex Relationships
+- **Creation Modal Integration**: Campaign/zone/advertisement selection with validation
+- **Flexible ID Support**: Uses `EntitySelectionKey` for consistent ID handling across local/synced entities
+- **Entity Enrichment**: Displays campaign, zone, and advertisement information with proper badges
+
+### Server-Side Integration
+```typescript
+// Server-side data fetching includes local placements
+const localEntities = await fetchLocalEntities();
+const { placements } = localEntities;
+
+// Client-side store initialization
+const { setLocalPlacements } = useEntityStore();
+useEffect(() => {
+  setLocalPlacements(placements.filter(p =>
+    p.network_id && p.advertiser_id && p.advertisement_id &&
+    ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+    ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+  ));
+}, [placements]);
+```
 
 ## Parents relationship
 Placements are children of campaigns.
@@ -487,3 +516,148 @@ The dual placement storage architecture has been successfully implemented and is
 **System Status: ✅ FULLY OPERATIONAL**
 
 All placement functionality is production-ready with comprehensive sync capabilities.
+
+## Zustand Store Usage Patterns
+
+### Entity Store Actions
+```typescript
+// Setting local placements with validation
+const { setLocalPlacements } = useEntityStore();
+
+// Local placements with XOR constraint validation
+setLocalPlacements(placements.filter(p =>
+  p.network_id && p.advertiser_id && p.advertisement_id &&
+  ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+  ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+));
+```
+
+### Complex Relationship Management
+```typescript
+// Placement creation with entity relationships
+const { localPlacements } = useEntityStore();
+const { selectedCampaign, selectedZones, selectedAdvertisements } = useFilterStore();
+
+// Create placements for selected entities
+const createPlacements = async () => {
+  if (!selectedCampaign) return;
+
+  const campaignId = getEntityId(selectedCampaign);
+  const placements = [];
+
+  for (const zoneId of selectedZones) {
+    for (const adId of selectedAdvertisements) {
+      const placement = {
+        network_id: selectedNetwork.broadstreet_id,
+        advertiser_id: selectedCampaign.advertiser_id,
+        advertisement_id: parseInt(adId),
+
+        // Flexible campaign reference
+        ...(typeof campaignId === 'number'
+          ? { campaign_id: campaignId }
+          : { campaign_mongo_id: campaignId }
+        ),
+
+        // Flexible zone reference
+        ...(zoneId.match(/^[0-9]+$/)
+          ? { zone_id: parseInt(zoneId) }
+          : { zone_mongo_id: zoneId }
+        ),
+
+        created_locally: true,
+        synced_with_api: false,
+      };
+
+      placements.push(placement);
+    }
+  }
+
+  // Create placements via API
+  await createLocalPlacements(placements);
+};
+```
+
+### Placement Filtering and Display
+```typescript
+// Filter placements by various criteria
+const { localPlacements } = useEntityStore();
+const { selectedNetwork, selectedCampaign } = useFilterStore();
+
+// Network-based filtering
+const networkPlacements = localPlacements.filter(placement =>
+  placement.network_id === selectedNetwork?.broadstreet_id
+);
+
+// Campaign-based filtering (handles both ID types)
+const campaignPlacements = localPlacements.filter(placement => {
+  if (!selectedCampaign) return true;
+
+  const campaignId = getEntityId(selectedCampaign);
+  if (typeof campaignId === 'number') {
+    return placement.campaign_id === campaignId;
+  } else {
+    return placement.campaign_mongo_id === campaignId;
+  }
+});
+
+// Entity enrichment for display
+const enrichedPlacements = networkPlacements.map(placement => ({
+  ...placement,
+  campaign: findCampaignById(placement.campaign_id || placement.campaign_mongo_id),
+  zone: findZoneById(placement.zone_id || placement.zone_mongo_id),
+  advertisement: findAdvertisementById(placement.advertisement_id),
+}));
+```
+
+### Sync Integration Patterns
+```typescript
+// Placement sync with ID resolution
+const syncPlacements = async () => {
+  const { localPlacements } = useEntityStore();
+  const unsyncedPlacements = localPlacements.filter(p => !p.synced_with_api);
+
+  for (const placement of unsyncedPlacements) {
+    // Resolve MongoDB IDs to Broadstreet IDs for sync
+    const syncData = {
+      campaign_id: placement.campaign_id || await resolveCampaignId(placement.campaign_mongo_id),
+      zone_id: placement.zone_id || await resolveZoneId(placement.zone_mongo_id),
+      advertisement_id: placement.advertisement_id,
+      restrictions: placement.restrictions,
+    };
+
+    await syncPlacementToBroadstreet(syncData);
+  }
+};
+```
+
+### Local-Only Page Integration
+```typescript
+// Display local placements with entity information
+const LocalPlacementCard = ({ placement }) => {
+  const campaign = findCampaignById(placement.campaign_id || placement.campaign_mongo_id);
+  const zone = findZoneById(placement.zone_id || placement.zone_mongo_id);
+  const advertisement = findAdvertisementById(placement.advertisement_id);
+
+  return (
+    <div className="placement-card local-styling">
+      <div className="placement-info">
+        <div>Campaign: {campaign?.name}
+          {placement.campaign_mongo_id && <LocalBadge />}
+        </div>
+        <div>Zone: {zone?.name}
+          {placement.zone_mongo_id && <LocalBadge />}
+        </div>
+        <div>Advertisement: {advertisement?.name}</div>
+      </div>
+      <button onClick={() => deletePlacement(placement._id)}>×</button>
+    </div>
+  );
+};
+```
+
+### Variable Naming Compliance
+Following `docs/variable-origins.md` standards:
+- `localPlacements` - Collection of locally created placement entities
+- `isLoadingPlacements` - Loading state for placement data fetching operations
+- `placementError` - Error state for placement-related operations
+- `selectedPlacements` - Array of selected placement IDs for bulk operations

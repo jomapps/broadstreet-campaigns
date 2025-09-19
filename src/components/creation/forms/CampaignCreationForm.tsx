@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAllFilters, useFilterActions } from '@/stores';
-import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { useAllFilters, useEntityStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,8 +18,14 @@ interface CampaignCreationFormProps {
 }
 
 export default function CampaignCreationForm({ onClose, setIsLoading }: CampaignCreationFormProps) {
-  const entities = useSelectedEntities();
-  const { setCampaigns } = useFilters();
+  const { selectedNetwork, selectedAdvertiser } = useAllFilters();
+  const { setCampaigns } = useEntityStore();
+
+  // Create entities object for compatibility with existing code
+  const entities = {
+    network: selectedNetwork,
+    advertiser: selectedAdvertiser
+  };
   const router = useRouter();
   
   // Get today's date in datetime-local format
@@ -87,14 +92,14 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
     if (!entities.network) {
       newErrors.network = 'Network selection is required';
-    } else if (!entities.network.ids?.broadstreet_id) {
+    } else if (!(entities.network as any).broadstreet_id) {
       // Campaign creation requires a Broadstreet network ID
       newErrors.network = 'Network must be synced with Broadstreet to create campaigns';
     }
 
     if (!entities.advertiser) {
       newErrors.advertiser = 'Advertiser selection is required';
-    } else if (!entities.advertiser.ids || (!entities.advertiser.ids.broadstreet_id && !entities.advertiser.ids.mongo_id)) {
+    } else if (!(entities.advertiser as any).broadstreet_id && !(entities.advertiser as any).mongo_id) {
       // Ensure at least one ID type is available
       newErrors.advertiser = 'Advertiser must have at least one ID (broadstreet_id or mongo_id)';
     }
@@ -203,8 +208,8 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
     try {
       // Build payload with required fields
       // For campaign creation, Broadstreet network ID is required
-      const networkBroadstreetId = entities.network?.ids.broadstreet_id;
-      const advertiserIdValue = entities.advertiser?.entityId;
+      const networkBroadstreetId = (entities.network as any)?.broadstreet_id;
+      const advertiserIdValue = (entities.advertiser as any)?.broadstreet_id || (entities.advertiser as any)?.mongo_id;
       // Validate that we have the required Broadstreet network ID
       if (!networkBroadstreetId) {
         throw new Error('Network must be synced with Broadstreet to create campaigns');
@@ -221,12 +226,12 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
         // Also include explicit ID objects to avoid ambiguity downstream
         network: {
-          broadstreet_id: entities.network?.ids.broadstreet_id,
-          mongo_id: entities.network?.ids.mongo_id,
+          broadstreet_id: (entities.network as any)?.broadstreet_id,
+          mongo_id: (entities.network as any)?.mongo_id,
         },
         advertiser: {
-          broadstreet_id: entities.advertiser?.ids.broadstreet_id,
-          mongo_id: entities.advertiser?.ids.mongo_id,
+          broadstreet_id: (entities.advertiser as any)?.broadstreet_id,
+          mongo_id: (entities.advertiser as any)?.mongo_id,
         },
         start_date: formData.start_date,
         weight: parseFloat(formData.weight.toString()), // Ensure weight is a number
@@ -296,7 +301,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       // Immediately reload campaigns for the current advertiser so the list updates without a full reload
       try {
         if (entities.advertiser) {
-          const advId = entities.advertiser.entityId;
+          const advId = (entities.advertiser as any).broadstreet_id || (entities.advertiser as any).mongo_id;
           const listRes = await fetch(`/api/campaigns?advertiser_id=${encodeURIComponent(String(advId ?? ''))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
@@ -327,12 +332,12 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <p className="text-sm text-blue-800 flex items-center gap-2">
-          <strong>Network:</strong> {entities.network?.name}
-          <EntityIdBadge {...(entities.network?.ids || {})} />
+          <strong>Network:</strong> {(entities.network as any)?.name}
+          <EntityIdBadge broadstreet_id={(entities.network as any)?.broadstreet_id} mongo_id={(entities.network as any)?.mongo_id} />
         </p>
         {entities.advertiser && (
           <p className="text-sm text-blue-800 flex items-center gap-2">
-            <strong>Advertiser:</strong> {entities.advertiser.name} <EntityIdBadge {...(entities.advertiser?.ids || {})} />
+            <strong>Advertiser:</strong> {(entities.advertiser as any).name} <EntityIdBadge broadstreet_id={(entities.advertiser as any)?.broadstreet_id} mongo_id={(entities.advertiser as any)?.mongo_id} />
           </p>
         )}
       </div>
@@ -350,7 +355,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network?.ids?.broadstreet_id || !entities.advertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !(entities.network as any)?.broadstreet_id || !entities.advertiser}
           className="min-w-[120px]"
           data-testid="submit-button"
         >
@@ -581,7 +586,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         </Button>
         <Button
           type="submit"
-          disabled={isSubmitting || !formData.name || !formData.start_date || !entities.network?.ids?.broadstreet_id || !entities.advertiser}
+          disabled={isSubmitting || !formData.name || !formData.start_date || !(entities.network as any)?.broadstreet_id || !entities.advertiser}
           className="min-w-[120px]"
           data-testid="submit-button"
         >

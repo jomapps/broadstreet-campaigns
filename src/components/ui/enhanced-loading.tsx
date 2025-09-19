@@ -6,12 +6,18 @@ import { useState, useEffect } from 'react';
  * Enhanced Loading Component with Progressive States
  * Provides better UX with progressive loading states and timeout handling
  */
-export default function EnhancedLoading({ 
-  message = 'Loading...', 
+export default function EnhancedLoading({
+  message = 'Loading...',
   showProgress = false,
   timeout = 10000,
   onTimeout,
   className = ''
+}: {
+  message?: string;
+  showProgress?: boolean;
+  timeout?: number;
+  onTimeout?: () => void;
+  className?: string;
 }) {
   const [loadingState, setLoadingState] = useState('initial');
   const [progress, setProgress] = useState(0);

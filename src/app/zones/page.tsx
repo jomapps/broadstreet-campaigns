@@ -31,7 +31,7 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
   const params = await searchParams;
 
   // Extract network filter from parameters
-  const networkId = params?.network ? parseInt(params.network) : null;
+  const networkId = params?.network ? parseInt(Array.isArray(params.network) ? params.network[0] : params.network) : null;
 
   // Fetch zones and networks data in parallel using existing data fetchers
   const [zones, networks] = await Promise.all([

@@ -75,7 +75,7 @@ export default function AdvertisementsList({
   filteredAdvertisements
 }: AdvertisementsListProps) {
   const entities = useSelectedEntities();
-  const { toggleAdvertisementSelection } = useFilters();
+  const { toggleAdvertisementSelection } = useFilterActions();
   const [localSearchTerm, setLocalSearchTerm] = useState('');
 
   // Use provided search term or local one

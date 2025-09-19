@@ -2,9 +2,18 @@
 
 ## Overview
 
-This document serves as the **single source of truth** for all database model definitions in the Broadstreet Campaigns application. It provides a comprehensive overview of each entity's structure, relationships, and business rules.
+This document serves as the **single source of truth** for all database model definitions in the Broadstreet Campaigns application. It provides a comprehensive overview of each entity's structure, relationships, business rules, and **Zustand store integration patterns**.
 
 The application uses a **dual-database architecture** with MongoDB as the local database and the Broadstreet API as the remote data source. Data synchronization occurs at two specific points: Dashboard "Sync Data" (download from Broadstreet) and Local-Only "Upload to Broadstreet" (upload to Broadstreet).
+
+## Zustand Store Integration
+
+All database models are fully integrated with the **Zustand store architecture** as defined in `docs/implementation/zustand-implementation.md`. Key integration points:
+
+- **Server-Side Data Fetching**: Models are fetched server-side and passed to client components for store initialization
+- **Type Safety**: All models use comprehensive TypeScript interfaces that align with store state types
+- **ID Management**: Models follow the three-tier ID system with proper `EntitySelectionKey` support
+- **Variable Naming**: All model fields follow the standardized naming conventions from `docs/variable-origins.md`
 
 ## Database Configuration
 
@@ -46,6 +55,8 @@ Entities that originate from Broadstreet API and are synced to local MongoDB:
 - Campaigns
 - Advertisements
 
+**Zustand Store Integration**: Stored in main entity collections (`networks`, `advertisers`, `zones`, `campaigns`, `advertisements`) within the `EntityState`.
+
 ### Local-Only Entities
 Entities created locally that can optionally be uploaded to Broadstreet:
 - Local Advertisers
@@ -54,14 +65,20 @@ Entities created locally that can optionally be uploaded to Broadstreet:
 - Local Advertisements
 - Local Networks
 
+**Zustand Store Integration**: Stored in separate local collections (`localAdvertisers`, `localZones`, `localCampaigns`, `localAdvertisements`, `localNetworks`) within the `EntityState`.
+
 ### Hybrid Entities
 Entities that can reference both synced and local entities:
 - Placements (can reference local campaigns/zones or synced ones)
+
+**Zustand Store Integration**: Stored in `localPlacements` collection with flexible ID referencing using `EntitySelectionKey` patterns.
 
 ### Application-Specific Entities
 Entities that exist only in the local application:
 - Themes
 - Sync Logs
+
+**Zustand Store Integration**: Themes are managed through the filter store (`selectedTheme`) and entity store for theme data.
 
 ---
 
@@ -102,6 +119,13 @@ interface INetwork extends Document {
 - `broadstreet_id` must be unique across all networks
 - `path` is required and represents the network's URL path
 - Sync tracking fields help manage data synchronization state
+- **Default network**: Hardcoded to 'FASH Medien Verlag GmbH - SCHWULISSIMO 9396' (ID: 9396) on app initialization
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.networks` array
+- **Selection**: `FilterState.selectedNetwork` (always required, always has `broadstreet_id`)
+- **Server Fetching**: `fetchNetworks()` in `src/lib/server/data-fetchers.ts`
+- **Variable Naming**: Uses `selectedNetwork` (not `selectedNetworkId`) as per `docs/variable-origins.md`
 
 #### Indexes
 - `broadstreet_id` (unique)
@@ -145,6 +169,13 @@ interface IAdvertiser extends Document {
 - `broadstreet_id` must be unique across all advertisers
 - Admin contacts are optional but when present, both name and email are required
 - `notes` can be explicitly null
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.advertisers` array (synced) + `EntityState.localAdvertisers` array (local-only)
+- **Selection**: `FilterState.selectedAdvertiser` (can be synced or local)
+- **Server Fetching**: `fetchAdvertisers(networkId)` in `src/lib/server/data-fetchers.ts`
+- **ID Resolution**: Uses `EntitySelectionKey` for consistent ID handling across synced/local entities
+- **Display**: Local advertisers show with yellowish styling cards and local badges
 
 #### Indexes
 - `broadstreet_id` (unique)
@@ -190,6 +221,13 @@ interface IZone extends Document {
 - `network_id` is required and references the parent network
 - Parsed fields (`size_type`, `size_number`, etc.) are extracted from zone names for easier querying
 - Local zones should display MongoDB IDs with local badges when `broadstreet_id` is undefined
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.zones` array (synced) + `EntityState.localZones` array (local-only)
+- **Selection**: `FilterState.selectedZones` array of `EntitySelectionKey` values
+- **Server Fetching**: `fetchZones(networkId)` in `src/lib/server/data-fetchers.ts`
+- **Theme Integration**: Zone selection automatically updates when theme is selected (`setSelectedTheme`)
+- **Filtering**: Complex filtering by size types, network gating, search, and theme integration
 
 #### Indexes
 - `broadstreet_id` (unique)
@@ -254,6 +292,14 @@ interface ICampaign extends Document {
 - `active` status is required for campaign state management
 - Raw fields preserve original API values for robust round-tripping
 - Placements array contains advertisement and zone references with optional restrictions
+- **Display Rule**: Placements should not be displayed on the campaigns page even though they are attached to campaigns
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.campaigns` array (synced) + `EntityState.localCampaigns` array (local-only)
+- **Selection**: `FilterState.selectedCampaign` (can be synced or local)
+- **Server Fetching**: `fetchCampaigns({ networkId, advertiserId })` in `src/lib/server/data-fetchers.ts`
+- **Advanced Functionality**: Copy-to-theme, delete operations, status filtering
+- **Placement Management**: Complex relationships with creation modal integration
 
 #### Indexes
 - `broadstreet_id` (unique)
@@ -297,9 +343,16 @@ interface IAdvertisement extends Document {
 
 #### Business Rules
 - `broadstreet_id` must be unique across all advertisements
-- `preview_url` is required and may need special handling patterns
+- `preview_url` is required and may need special handling patterns (check advertisements page for correct image display pattern)
 - `active_placement` indicates if the advertisement is currently placed
 - `active.url` can be explicitly null
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.advertisements` array (always synced - never local-only)
+- **Selection**: `FilterState.selectedAdvertisements` array of `EntitySelectionKey` values
+- **Server Fetching**: `fetchAdvertisements(networkId)` in `src/lib/server/data-fetchers.ts`
+- **Filtering**: Type filtering, active status filtering, advertiser-specific filtering
+- **Display**: Broadstreet preview URLs may need special handling patterns
 
 #### Indexes
 - `broadstreet_id` (unique)
@@ -348,6 +401,12 @@ interface ILocalAdvertiser extends Document {
 - `broadstreet_id` is set only after successful sync
 - `sync_errors` array tracks any synchronization issues
 - Should display with yellowish styling cards when local-only
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.localAdvertisers` array
+- **Server Fetching**: Included in `fetchLocalEntities()` in `src/lib/server/data-fetchers.ts`
+- **Sync Integration**: Managed through sync store and entity store actions
+- **Display**: Local-only page displays with proper filtering and management
 
 #### Indexes
 - `network_id`
@@ -406,6 +465,12 @@ interface ILocalZone extends Document {
 - `advertisement_count` allows 0 since zones don't need advertisements to be created
 - `rotation_interval` minimum is 1000ms (1 second)
 - Dimensions (`width`, `height`) must be at least 1 pixel
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.localZones` array
+- **Server Fetching**: Included in `fetchLocalEntities()` in `src/lib/server/data-fetchers.ts`
+- **Theme Integration**: Can be included in theme zone selections after sync
+- **Filtering**: Complex filtering by size types, network gating, search integration
 
 #### Indexes
 - `network_id, name` (non-unique, allows duplicates)
@@ -472,6 +537,12 @@ interface ILocalCampaign extends Document {
 - `advertiser_id` can be either a number (Broadstreet ID) or string (MongoDB ObjectId)
 - `active` status is required for campaign management
 - Raw fields preserve original values for API compatibility
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.localCampaigns` array
+- **Server Fetching**: Included in `fetchLocalEntities()` in `src/lib/server/data-fetchers.ts`
+- **Placement Management**: Embedded placements handled during sync and creation
+- **Advanced Functionality**: Copy-to-theme, delete operations, status filtering
 
 #### Indexes
 - `network_id`
@@ -621,6 +692,14 @@ interface IPlacement extends Document {
 - `network_id`, `advertiser_id`, and `advertisement_id` are always Broadstreet IDs
 - Placement cards should show campaign name/id, advertisement name/id, and zone name/id
 - Can reference both local and synced campaigns/zones
+- **CRITICAL**: Never delete synced placements from the Placement collection during normal operations
+
+#### Zustand Store Integration
+- **Store Location**: `EntityState.localPlacements` array (local-only placements)
+- **Server Fetching**: Included in `fetchLocalEntities()` in `src/lib/server/data-fetchers.ts`
+- **Complex Relationships**: Creation modal integration with campaign/zone/advertisement selection
+- **Flexible ID Support**: Uses `EntitySelectionKey` for consistent ID handling across local/synced entities
+- **Display**: Local-only page displays with proper entity relationship information
 
 #### Indexes
 - `network_id`
@@ -660,6 +739,14 @@ interface ITheme extends Document {
 - `name` is required and limited to 100 characters
 - `description` is optional and limited to 500 characters
 - `zone_count` is a virtual field calculated from `zone_ids.length`
+- **Theme Selection**: Selecting a theme should clear currently selected zones and set all zones of the selected theme as selected
+- **Mutual Exclusivity**: Selecting a theme should replace currently selected zones with the theme's zones
+
+#### Zustand Store Integration
+- **Store Location**: Managed through filter store (`FilterState.selectedTheme`)
+- **Zone Integration**: Theme selection automatically updates `FilterState.selectedZones` with theme's zone IDs
+- **Server Fetching**: Themes are fetched as needed for theme-specific functionality
+- **Sidebar Filters**: Theme selection follows existing Zustand patterns from `zustand-implementation.md`
 
 #### Indexes
 - `name`
@@ -889,5 +976,162 @@ All schemas use these common options:
 
 ---
 
-*This document serves as the single source of truth for database models. All model changes should be reflected here immediately to maintain accuracy.*
+## Zustand Store Integration Patterns
+
+### Server-Side Data Fetching Pattern
+
+All database models follow the standardized server-side data fetching pattern as defined in `docs/implementation/zustand-implementation.md`:
+
+```typescript
+// Server-side page component
+export default async function Page({ searchParams }: PageProps) {
+  // 1. Await searchParams (Next.js 15 requirement)
+  const params = await searchParams;
+
+  // 2. Fetch necessary data server-side using data fetchers
+  const [networks, advertisers, zones] = await Promise.all([
+    fetchNetworks(),
+    fetchAdvertisers(networkId),
+    fetchZones(networkId),
+  ]);
+
+  // 3. Pass data to client component for store initialization
+  return (
+    <PageClient
+      initialNetworks={networks}
+      initialAdvertisers={advertisers}
+      initialZones={zones}
+      searchParams={params}
+    />
+  );
+}
+
+// Client component initializes stores with server data
+'use client';
+export default function PageClient({ initialNetworks, initialAdvertisers, initialZones, searchParams }) {
+  const { setNetworks, setAdvertisers, setZones } = useEntityStore();
+  const { setFiltersFromParams } = useFilterStore();
+
+  useEffect(() => {
+    // Initialize entity store with server data
+    setNetworks(initialNetworks);
+    setAdvertisers(initialAdvertisers);
+    setZones(initialZones);
+
+    // Initialize filters from URL parameters
+    setFiltersFromParams(searchParams);
+  }, [initialNetworks, initialAdvertisers, initialZones, searchParams]);
+
+  return <PageContent />;
+}
+```
+
+### Entity Store Type Integration
+
+All database models are fully integrated with the `EntityState` type system:
+
+```typescript
+// Store state follows database model interfaces exactly
+interface EntityState {
+  // Synced entities (always have broadstreet_id)
+  networks: NetworkEntity[];
+  advertisers: AdvertiserEntity[];
+  campaigns: CampaignEntity[];
+  zones: ZoneEntity[];
+  advertisements: AdvertisementEntity[];
+
+  // Local entities (created locally before sync)
+  localZones: LocalZoneEntity[];
+  localAdvertisers: LocalAdvertiserEntity[];
+  localCampaigns: LocalCampaignEntity[];
+  localNetworks: LocalNetworkEntity[];
+  localAdvertisements: LocalAdvertisementEntity[];
+  localPlacements: PlacementEntity[];
+
+  // Loading and error states for each entity type
+  isLoading: { networks: boolean; advertisers: boolean; /* ... */ };
+  errors: { networks: string | null; advertisers: string | null; /* ... */ };
+}
+```
+
+### Filter Store Integration
+
+Database models integrate with the filter store for entity selection:
+
+```typescript
+interface FilterState {
+  // Selected entities use full entity objects for rich data access
+  selectedNetwork: NetworkEntity | null;       // Always required, always has broadstreet_id
+  selectedAdvertiser: AdvertiserEntity | null; // Can be synced or local
+  selectedCampaign: CampaignEntity | null;     // Can be synced or local
+
+  // Selection arrays use EntitySelectionKey for consistent ID handling
+  selectedZones: EntitySelectionKey[];         // Array of broadstreet_id or mongo_id strings
+  selectedAdvertisements: EntitySelectionKey[]; // Array of broadstreet_id or mongo_id strings
+
+  // Theme selection with automatic zone mapping
+  selectedTheme: ThemeEntity | null;           // Local-only entity with zone_ids array
+}
+```
+
+### Variable Naming Compliance
+
+All database model integrations follow the standardized variable naming from `docs/variable-origins.md`:
+
+- **Entity Variables**: `selectedNetwork`, `selectedAdvertiser`, `selectedCampaign` (not `selectedNetworkId`)
+- **Collection Variables**: `networks`, `advertisers`, `campaigns`, `zones`, `advertisements`
+- **State Variables**: `isLoadingNetworks`, `networkError`, `advertisersLoaded`
+- **Action Variables**: `setNetworks`, `setSelectedAdvertiser`, `toggleZoneSelection`
+
+### ID Management Integration
+
+Database models use the three-tier ID system with proper `EntitySelectionKey` support:
+
+```typescript
+// Entity selection using utility functions
+const entityId = getEntityId(entity);                    // Returns number | string | undefined
+const isSynced = isEntitySynced(entity);                 // Returns boolean
+const entityType = getEntityType(entity);               // Returns 'synced' | 'local' | 'both' | 'none'
+
+// Store actions with ID resolution
+const useEntityStore = create<EntityState & EntityActions>()(
+  immer((set, get) => ({
+    // Standard setters that preserve ID integrity
+    setNetworks: (networks) => set((state) => {
+      const validNetworks = networks.filter(n => n.broadstreet_id && n.name);
+      state.networks = validNetworks;
+    }),
+
+    // Entity operations with ID resolution
+    addEntity: (entityType, entity) => set((state) => {
+      const entityId = getEntityId(entity);
+      if (!entityId) return;
+      // Add entity logic with proper ID handling
+    }),
+  }))
+);
+```
+
+### Data Serialization Patterns
+
+Server-side data fetchers ensure proper serialization for client-side store initialization:
+
+```typescript
+export async function fetchNetworks(): Promise<NetworkEntity[]> {
+  await connectDB();
+  const networks = await Network.find({}).sort({ name: 1 }).lean();
+  return networks.map(network => ({
+    ...network,
+    _id: network._id.toString(),           // Serialize ObjectId
+    mongo_id: network._id.toString(),      // Virtual field
+    createdAt: network.createdAt.toISOString(),  // Serialize dates
+    updatedAt: network.updatedAt.toISOString(),
+    synced_at: network.synced_at?.toISOString(),
+  }));
+}
+```
+
+---
+
+*This document serves as the single source of truth for database models and their Zustand store integration patterns. All model changes should be reflected here immediately to maintain accuracy.*
 

@@ -214,6 +214,9 @@ export interface FilterActions {
   // URL parameter integration
   setFiltersFromParams: (params: any) => void;
   getFiltersAsParams: () => Record<string, string>;
+
+  // Default network initialization
+  setDefaultNetworkIfNone: (networks: NetworkEntity[]) => void;
 }
 
 // =============================================================================
@@ -285,28 +288,11 @@ export interface AppActions {
 }
 
 // =============================================================================
-// COMBINED STORE TYPES
+// COMBINED STORE TYPES - REMOVED UNUSED TYPES
 // =============================================================================
 
-/**
- * Combined entity store type for use with Zustand create()
- */
-export type EntityStore = EntityState & EntityActions;
-
-/**
- * Combined filter store type for use with Zustand create()
- */
-export type FilterStore = FilterState & FilterActions;
-
-/**
- * Combined sync store type for use with Zustand create()
- */
-export type SyncStore = SyncState & SyncActions;
-
-/**
- * Combined app store type for use with Zustand create()
- */
-export type AppStore = AppState & AppActions;
+// Note: Combined store types removed as they were unused.
+// All stores now use `State & Actions` pattern directly for better type clarity.
 
 // =============================================================================
 // UTILITY TYPES FOR COMMON PATTERNS

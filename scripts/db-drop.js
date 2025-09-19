@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 const mongoose = require('mongoose');
 const { loadEnv } = require('./load-env');
 

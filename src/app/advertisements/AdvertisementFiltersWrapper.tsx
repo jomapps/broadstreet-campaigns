@@ -127,15 +127,15 @@ export default function AdvertisementFiltersWrapper({ advertisements }: Advertis
         </div>
       </div>
       
-      <AdvertisementSelectionControls 
+      <AdvertisementSelectionControls
         advertisements={filteredAdvertisements}
-        selectedAdvertisements={selectedAdvertisements}
+        selectedAdvertisements={selectedAdvertisements.map(String)}
         showOnlySelectedAds={showOnlySelectedAds}
       />
-      
-      <AdvertisementsList 
-        advertisements={advertisements} 
-        selectedAdvertisements={selectedAdvertisements}
+
+      <AdvertisementsList
+        advertisements={advertisements}
+        selectedAdvertisements={selectedAdvertisements.map(String)}
         showOnlySelectedAds={showOnlySelectedAds}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}

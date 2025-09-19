@@ -10,7 +10,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useEntityStore, useFilterStore, useFilterActions } from '@/stores';
+import { useEntityStore, useFilterStore } from '@/stores';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { performanceMonitor } from '@/lib/utils/performance-monitor';
 import DashboardContent from './DashboardContent';
@@ -51,7 +51,7 @@ export default function DashboardClient({
     setThemes
   } = useEntityStore();
 
-  const { setFiltersFromParams, setDefaultNetworkIfNone } = useFilterActions();
+  const { setFiltersFromParams, setDefaultNetworkIfNone } = useFilterStore();
   
   // Initialize store with server data on mount
   useEffect(() => {

@@ -1,20 +1,20 @@
 /**
  * APP STORE - APPLICATION-WIDE STATE MANAGEMENT
- * 
+ *
  * This store manages application-wide state like sidebar, notifications, and UI state.
  * All variable names follow docs/variable-origins.md registry.
- * 
+ *
  * CRITICAL RULES:
  * 1. All variable names from docs/variable-origins.md registry
  * 2. Notification management with proper typing
  * 3. UI state persistence for better UX
- * 4. No TypeScript types - using plain JavaScript with JSDoc
+ * 4. Uses TypeScript for proper type safety
  */
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
-import { AppState, AppActions, AppStore, Notification } from './types';
+import { AppState, AppActions, Notification } from './types';
 
 // Initial state with proper typing and comprehensive coverage
 // Variable names follow docs/variable-origins.md registry
@@ -28,7 +28,7 @@ const initialState = {
  * App Store - Manages application-wide state
  * Uses Zustand with Immer for immutable updates and persistence
  */
-export const useAppStore = create(
+export const useAppStore = create<AppState & AppActions>()(
   persist(
     immer((set, get) => ({
       ...initialState,
@@ -38,7 +38,6 @@ export const useAppStore = create(
 
       /**
        * Set sidebar collapsed state
-       * @param {boolean} collapsed - Whether sidebar should be collapsed
        */
       setSidebarCollapsed: (collapsed) => set((state) => {
         state.sidebarCollapsed = collapsed;
@@ -53,7 +52,6 @@ export const useAppStore = create(
 
       /**
        * Set current page identifier
-       * @param {string} page - Page identifier/route
        */
       setCurrentPage: (page) => set((state) => {
         state.currentPage = page;
@@ -64,7 +62,6 @@ export const useAppStore = create(
 
       /**
        * Add notification to the notifications array
-       * @param {Omit<Notification, 'id' | 'timestamp' | 'read'>} notification - Notification data
        */
       addNotification: (notification) => set((state) => {
         const newNotification = {
@@ -84,7 +81,6 @@ export const useAppStore = create(
 
       /**
        * Mark notification as read
-       * @param {string} id - Notification ID to mark as read
        */
       markNotificationRead: (id) => set((state) => {
         const notification = state.notifications.find(n => n.id === id);
@@ -104,7 +100,6 @@ export const useAppStore = create(
 
       /**
        * Remove notification by ID
-       * @param {string} id - Notification ID to remove
        */
       removeNotification: (id) => set((state) => {
         state.notifications = state.notifications.filter(n => n.id !== id);
@@ -137,8 +132,6 @@ export const useAppStore = create(
 
       /**
        * Get notifications by type
-       * @param {string} type - Notification type to filter by
-       * @returns {Notification[]} Array of notifications of specified type
        */
       getNotificationsByType: (type) => {
         const state = get();
@@ -167,8 +160,6 @@ export const useAppStore = create(
 
       /**
        * Add success notification
-       * @param {string} title - Notification title
-       * @param {string} message - Notification message
        */
       addSuccessNotification: (title, message) => {
         get().addNotification({
@@ -180,8 +171,6 @@ export const useAppStore = create(
 
       /**
        * Add error notification
-       * @param {string} title - Notification title
-       * @param {string} message - Notification message
        */
       addErrorNotification: (title, message) => {
         get().addNotification({
@@ -193,8 +182,6 @@ export const useAppStore = create(
 
       /**
        * Add warning notification
-       * @param {string} title - Notification title
-       * @param {string} message - Notification message
        */
       addWarningNotification: (title, message) => {
         get().addNotification({
@@ -206,8 +193,6 @@ export const useAppStore = create(
 
       /**
        * Add info notification
-       * @param {string} title - Notification title
-       * @param {string} message - Notification message
        */
       addInfoNotification: (title, message) => {
         get().addNotification({
