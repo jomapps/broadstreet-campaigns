@@ -119,21 +119,49 @@ function CampaignsList() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
 
-  // Filter campaigns based on search term
+  // Filter campaigns based on advertiser selection and search term, then group by running/paused
   const filteredCampaigns = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return campaigns;
+    let filtered = campaigns;
+
+    // Apply advertiser filter
+    if (selectedAdvertiser) {
+      // If advertiser is selected, show only campaigns for that advertiser
+      const advertiserId = getEntityId(selectedAdvertiser);
+      filtered = filtered.filter(campaign => {
+        return String(campaign.advertiser_id) === String(advertiserId);
+      });
     }
-    
-    return campaigns.filter(campaign => {
-      const term = searchTerm.toLowerCase();
-      const nameMatch = campaign.name.toLowerCase().includes(term);
-      const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
-      const idStr = String(getEntityId(campaign) ?? '');
-      const idMatch = idStr.toLowerCase().includes(term);
-      return nameMatch || notesMatch || idMatch;
+    // If no advertiser is selected, show all campaigns for all advertisers
+
+    // Apply search filter if search term exists
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(campaign => {
+        const term = searchTerm.toLowerCase();
+        const nameMatch = campaign.name.toLowerCase().includes(term);
+        const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
+        const idStr = String(getEntityId(campaign) ?? '');
+        const idMatch = idStr.toLowerCase().includes(term);
+        return nameMatch || notesMatch || idMatch;
+      });
+    }
+
+    // Sort campaigns: running campaigns first, then paused campaigns
+    // Create a copy of the array before sorting to avoid mutating the original
+    filtered = [...filtered].sort((a, b) => {
+      // Determine if campaigns are running based on active field
+      const aIsRunning = a.active;
+      const bIsRunning = b.active;
+
+      // Running campaigns come first
+      if (aIsRunning && !bIsRunning) return -1;
+      if (!aIsRunning && bIsRunning) return 1;
+
+      // Within same status, sort by name
+      return a.name.localeCompare(b.name);
     });
-  }, [campaigns, searchTerm]);
+
+    return filtered;
+  }, [campaigns, selectedAdvertiser, searchTerm]);
 
   if (isLoading.campaigns) {
     return (
@@ -187,27 +215,12 @@ function CampaignsList() {
     );
   }
 
-  // Check if advertiser is selected
-  if (!entities.advertiser) {
-    return (
-      <div className="text-center py-12">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-md mx-auto">
-          <h3 className="card-title text-blue-800 mb-2">Advertiser Required</h3>
-          <p className="card-text text-blue-700 mb-4">
-            Please select an advertiser from the sidebar filters to view campaigns.
-          </p>
-          <p className="card-text text-blue-600">
-            Campaigns belong to specific advertisers, so you need to choose which advertiser's campaigns you want to see.
-          </p>
-        </div>
-      </div>
-    );
-  }
+
 
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="card-text text-gray-500">No campaigns found for the selected advertiser. Try syncing data first.</p>
+        <p className="card-text text-gray-500">No campaigns found. Try syncing data first.</p>
       </div>
     );
   }

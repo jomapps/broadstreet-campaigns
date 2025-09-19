@@ -130,7 +130,9 @@ export const useAllFilters = () => {
     // Display options
     showOnlySelected: filterStore.showOnlySelected,
     showOnlySelectedAds: filterStore.showOnlySelectedAds,
-    
+
+
+
     // Metadata
     lastFilterUpdate: filterStore.lastFilterUpdate,
     filterSource: filterStore.filterSource,
@@ -262,7 +264,9 @@ export const useFilterActions = () => {
     // Display options
     setShowOnlySelected: filterStore.setShowOnlySelected,
     setShowOnlySelectedAds: filterStore.setShowOnlySelectedAds,
-    
+
+
+
     // Clear actions
     clearAllFilters: filterStore.clearAllFilters,
     clearSelections: filterStore.clearSelections,

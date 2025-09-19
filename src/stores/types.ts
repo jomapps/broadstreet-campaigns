@@ -175,6 +175,8 @@ export interface FilterState {
   showOnlySelected: boolean;
   showOnlySelectedAds: boolean;
 
+
+
   // Filter metadata for debugging and analytics
   lastFilterUpdate: Date;
   filterSource: 'user' | 'url' | 'theme' | 'bulk';
@@ -206,6 +208,8 @@ export interface FilterActions {
   // Display options - using exact names from variable registry
   setShowOnlySelected: (show: boolean) => void;
   setShowOnlySelectedAds: (show: boolean) => void;
+
+
 
   // Clear actions - using exact names from variable registry
   clearAllFilters: () => void;

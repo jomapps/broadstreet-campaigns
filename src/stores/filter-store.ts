@@ -44,6 +44,8 @@ const initialState = {
   showOnlySelected: false,
   showOnlySelectedAds: false,
 
+
+
   // Filter metadata for debugging and analytics
   lastFilterUpdate: new Date(),
   filterSource: 'user',
@@ -244,6 +246,8 @@ export const useFilterStore = create<FilterState & FilterActions>()(
         state.lastFilterUpdate = new Date();
         state.filterSource = 'user';
       }),
+
+
 
       // Clear actions - using exact names from variable registry
 

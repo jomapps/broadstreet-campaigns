@@ -19,6 +19,7 @@ export default function FiltersCard() {
     showOnlySelected,
     selectedAdvertisements,
     showOnlySelectedAds,
+
   } = useAllFilters();
 
   // Get filter actions from Zustand stores
@@ -30,6 +31,7 @@ export default function FiltersCard() {
     setShowOnlySelected,
     setSelectedAdvertisements,
     setShowOnlySelectedAds,
+
     clearAllFilters,
     clearSelections,
   } = useFilterActions();
@@ -155,18 +157,63 @@ export default function FiltersCard() {
             </div>
           ) : isLoading.advertisers ? (
             <div className="h-8 bg-sidebar-accent/30 rounded-md animate-pulse"></div>
-          ) : selectedAdvertiser ? (
-            <div className="h-8 bg-sidebar-accent/30 rounded-md flex items-center px-3">
-              <span className="text-xs truncate" title={selectedAdvertiser.name}>
-                {selectedAdvertiser.name}
-              </span>
-            </div>
           ) : (
-            <div className="h-8 bg-sidebar-accent/20 rounded-md flex items-center justify-center">
-              <span className="text-xs text-sidebar-foreground/50">
-                {advertisers.length === 0 ? 'No advertisers' : 'Select on advertisers page'}
-              </span>
-            </div>
+            <Select
+              value={getEntityId(selectedAdvertiser)?.toString() || ''}
+              onValueChange={(value) => {
+                const advertiser = advertisers.find(a => getEntityId(a)?.toString() === value);
+                setSelectedAdvertiser(advertiser || null);
+                // Clear dependent filters when advertiser changes
+                const oldId = getEntityId(selectedAdvertiser);
+                const newId = getEntityId(advertiser);
+                if (newId !== oldId) {
+                  setSelectedCampaign(null);
+                }
+              }}
+            >
+              <SelectTrigger className="h-8 text-xs bg-sidebar-accent/30 border-sidebar-border hover:bg-sidebar-accent/50 focus:ring-sidebar-accent">
+                <SelectValue placeholder="Select advertiser">
+                  {selectedAdvertiser && (
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs truncate max-w-[140px]" title={selectedAdvertiser.name}>
+                        {selectedAdvertiser.name}
+                      </span>
+                      {selectedAdvertiser.created_locally && !selectedAdvertiser.synced_with_api && (
+                        <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0 h-4">
+                          Local
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-60">
+                {advertisers.length === 0 ? (
+                  <div className="p-2 text-xs text-sidebar-foreground/50 text-center">
+                    No advertisers found
+                  </div>
+                ) : (
+                  advertisers.map((advertiser) => (
+                    <SelectItem
+                      key={getEntityId(advertiser)}
+                      value={getEntityId(advertiser)?.toString() || ''}
+                      className="text-xs"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="truncate max-w-[200px]" title={advertiser.name}>
+                          {advertiser.name}
+                        </span>
+                        {advertiser.created_locally && !advertiser.synced_with_api && (
+                          <Badge variant="secondary" className="ml-2 text-[10px] px-1 py-0 h-4">
+                            Local
+                          </Badge>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
@@ -205,6 +252,8 @@ export default function FiltersCard() {
             </div>
           )}
         </div>
+
+
 
         {/* Zone Selection Indicator */}
         {hasZoneSelection && (

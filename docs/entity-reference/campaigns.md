@@ -310,3 +310,16 @@ Following `docs/variable-origins.md` standards:
 - `localCampaigns` - Collection of locally created campaign entities
 - `isLoadingCampaigns` - Loading state for campaign data fetching operations
 - `campaignError` - Error state for campaign-related operations
+
+## Business Logic Confirmation ***
+network id i srequired as in all cases we need to know the network id.
+
+### No advertiser in filter
+please show all campaigns for all advertisers.
+
+### Advertiser in filter
+please show all campaigns for the selected advertiser.
+all campaigns have a active filed in the database. it set to true or false
+we translate that to a tag : paused or running
+Split the display in two groups: paused and running.
+Please make sure that the running campaigns are shown first.
