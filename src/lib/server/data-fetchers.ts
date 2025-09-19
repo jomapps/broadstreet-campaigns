@@ -460,7 +460,7 @@ export async function fetchThemes(params = {}) {
 
     const themes = await Theme.find(query)
       .sort({ name: 1 })
-      .lean();
+      .lean({ virtuals: true });
 
     return serializeEntities(themes);
   } catch (error) {
@@ -479,7 +479,7 @@ export async function fetchThemeById(themeId) {
   try {
     await connectDB();
 
-    const theme = await Theme.findById(themeId).lean();
+    const theme = await Theme.findById(themeId).lean({ virtuals: true });
 
     if (!theme) {
       return null;

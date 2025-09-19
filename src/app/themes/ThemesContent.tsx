@@ -199,7 +199,7 @@ function ThemesList() {
               entityType="theme"
               subtitle={theme.description}
               displayData={[
-                { label: 'Zones', value: theme.zone_count, type: 'number' as const },
+                { label: 'Zones', value: theme.zone_count ?? 0, type: 'number' as const },
                 { label: 'Created', value: new Date(theme.createdAt), type: 'date' as const },
                 { label: 'Updated', value: new Date(theme.updatedAt), type: 'date' as const },
               ]}
