@@ -161,14 +161,6 @@ export default function DashboardContent({ entityCounts }: DashboardContentProps
 
   return (
     <div className="space-y-8">
-      {/* Header Section */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="card-text text-muted-foreground">
-          Overview of your Broadstreet advertising system
-        </p>
-      </div>
-
       {/* Stats Grid */}
       <div className="space-y-6">
         <div className="space-y-2">

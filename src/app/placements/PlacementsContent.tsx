@@ -124,32 +124,8 @@ function PlacementsData() {
 export default function PlacementsContent() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Placements</h1>
-          <p className="card-text text-gray-600 mt-1">
-            Active ad placements across campaigns, advertisements, and zones
-          </p>
-        </div>
+      <div className="flex justify-end">
         <PlacementsActions />
-      </div>
-
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4" data-testid="placements-overview">
-        <h2 className="card-title text-gray-900 mb-3">Placement Overview</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 card-text">
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-            <span>Advertisement + Zone + Campaign</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span>Active Campaigns Only</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-            <span>Network Filtered</span>
-          </div>
-        </div>
       </div>
 
       <div data-testid="placements-data">

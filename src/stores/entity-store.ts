@@ -40,6 +40,9 @@ const initialState = {
   zones: [],
   advertisements: [],
 
+  // Mixed entities - can contain both local and synced
+  placements: [],
+
   // Local entities - empty arrays with proper typing
   localZones: [],
   localAdvertisers: [],
@@ -146,6 +149,22 @@ export const useEntityStore = create(
       state.advertisements = validAdvertisements;
       state.isLoading.advertisements = false;
       state.errors.advertisements = null;
+    }),
+
+    /**
+     * Set placements collection - mixed local and synced
+     * @param {PlacementEntity[]} placements - Array of placement entities
+     */
+    setPlacements: (placements) => set((state) => {
+      // Placements can be local or synced - validate required fields
+      const validPlacements = placements.filter(p =>
+        p.network_id && p.advertiser_id && p.advertisement_id &&
+        ((p.campaign_id && !p.campaign_mongo_id) || (!p.campaign_id && p.campaign_mongo_id)) &&
+        ((p.zone_id && !p.zone_mongo_id) || (!p.zone_id && p.zone_mongo_id))
+      );
+      state.placements = validPlacements;
+      state.isLoading.placements = false;
+      state.errors.placements = null;
     }),
 
     // Local entity setters with proper validation

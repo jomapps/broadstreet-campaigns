@@ -46,6 +46,9 @@ export interface EntityState {
   zones: ZoneEntity[];                          // May have broadstreet_id (synced) or only mongo_id (local)
   advertisements: AdvertisementEntity[];        // Always have broadstreet_id
 
+  // Mixed entities (can contain both local and synced)
+  placements: PlacementEntity[];                // Mixed local and synced placements
+
   // Local entities (created locally before sync) - using Local*Entity interfaces
   localZones: LocalZoneEntity[];
   localAdvertisers: LocalAdvertiserEntity[];
@@ -90,6 +93,7 @@ export interface EntityActions {
   setCampaigns: (campaigns: CampaignEntity[]) => void;
   setZones: (zones: ZoneEntity[]) => void;
   setAdvertisements: (advertisements: AdvertisementEntity[]) => void;
+  setPlacements: (placements: PlacementEntity[]) => void;
 
   // Local entity setters - using proper Local*Entity types
   setLocalEntities: (entities: {
@@ -318,12 +322,13 @@ export type AnyEntity =
 /**
  * Entity collection keys for type-safe entity operations
  */
-export type EntityCollectionKey = 
+export type EntityCollectionKey =
   | 'networks'
   | 'advertisers'
   | 'campaigns'
   | 'zones'
   | 'advertisements'
+  | 'placements'
   | 'localZones'
   | 'localAdvertisers'
   | 'localCampaigns'

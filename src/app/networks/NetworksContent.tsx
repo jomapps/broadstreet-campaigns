@@ -126,22 +126,6 @@ function NetworksList() {
 export default function NetworksContent() {
   return (
     <div className="space-y-8">
-      {/* Header Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Networks</h1>
-            <p className="card-text text-muted-foreground">
-              Different websites where campaigns are run
-            </p>
-          </div>
-          
-          <Suspense fallback={<div className="bg-muted animate-pulse h-10 w-32 rounded-lg"></div>}>
-            <CreationButton />
-          </Suspense>
-        </div>
-      </div>
-
       {/* Networks Grid */}
       <div className="space-y-6">
         <div className="space-y-2">

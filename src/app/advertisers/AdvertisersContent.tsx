@@ -244,19 +244,6 @@ function AdvertisersList() {
 export default function AdvertisersContent() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Advertisers</h1>
-          <p className="card-text text-gray-600 mt-1">
-            Companies running advertising campaigns
-          </p>
-        </div>
-        
-        <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
-          <CreationButton />
-        </Suspense>
-      </div>
-
       <AdvertisersList />
     </div>
   );
