@@ -16,10 +16,19 @@ type RequestBody = {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('MONGODB_URI:', process.env.MONGODB_URI);
     await connectDB();
+    console.log('MongoDB connection established');
 
     const body = (await request.json()) as RequestBody;
     const { campaign_broadstreet_id, campaign_mongo_id, advertisement_ids, zone_ids, restrictions } = body || ({} as RequestBody);
+
+    console.log('=== CREATE PLACEMENTS API DEBUG ===');
+    console.log('Request body:', body);
+    console.log('campaign_broadstreet_id:', campaign_broadstreet_id);
+    console.log('campaign_mongo_id:', campaign_mongo_id);
+    console.log('advertisement_ids:', advertisement_ids);
+    console.log('zone_ids:', zone_ids);
 
     // Validate required fields
     if (
@@ -45,11 +54,95 @@ export async function POST(request: NextRequest) {
     }
 
     // Find or create a local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
+    console.log('Looking for campaign with mongo_id:', campaign_mongo_id);
+    console.log('Looking for campaign with broadstreet_id:', campaign_broadstreet_id);
+
     let campaign = campaign_mongo_id
       ? await LocalCampaign.findById(campaign_mongo_id).lean()
       : await LocalCampaign.findOne({ original_broadstreet_id: campaign_broadstreet_id }).lean();
 
-    // If not found and we have a numeric campaign_id, upsert a mirror from Campaign
+    console.log('Initial campaign lookup result:', campaign ? 'FOUND' : 'NOT FOUND');
+    if (campaign) {
+      console.log('Found campaign in LocalCampaign:', campaign);
+    } else {
+      console.log('Campaign not found in LocalCampaign collection');
+      // Let's also check what campaigns exist
+      const allLocalCampaigns = await LocalCampaign.find({}).lean();
+      console.log('All LocalCampaigns in database:', allLocalCampaigns.length);
+      allLocalCampaigns.forEach((c, i) => {
+        console.log(`  ${i + 1}. ID: ${c._id}, Name: ${c.name}`);
+      });
+
+      // Let's also check what collections exist in the database
+      const mongoose = require('mongoose');
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      console.log('Available collections:', collections.map(c => c.name));
+
+      // Let's try to query the raw collection directly
+      const rawLocalCampaigns = await mongoose.connection.db.collection('localcampaigns').find({}).toArray();
+      console.log('Raw localcampaigns collection count:', rawLocalCampaigns.length);
+      rawLocalCampaigns.forEach((c, i) => {
+        console.log(`  Raw ${i + 1}. ID: ${c._id}, Name: ${c.name}`);
+      });
+    }
+
+    // If not found in LocalCampaign and we have a mongo_id, try to find in regular Campaign collection
+    if (!campaign && campaign_mongo_id) {
+      console.log('Trying to find campaign in regular Campaign collection...');
+      const sourceCampaign = await Campaign.findById(campaign_mongo_id).lean();
+      console.log('Source campaign found:', sourceCampaign ? 'YES' : 'NO');
+      if (sourceCampaign) {
+        console.log('Source campaign details:', sourceCampaign);
+        // Mirror the campaign to LocalCampaign for placement storage
+        const advertiser = (sourceCampaign as any).advertiser_id
+          ? (await Advertiser.findOne({ broadstreet_id: (sourceCampaign as any).advertiser_id }).lean()) as any
+          : null;
+        let resolvedNetworkId = (sourceCampaign as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
+
+        if (typeof resolvedNetworkId !== 'number') {
+          // Fallback: derive network_id from the first selected zone
+          const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
+          if (firstZoneIdRaw != null) {
+            const resolvedZoneId = await resolveZoneBroadstreetId(
+              typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
+                ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
+                : { mongo_id: firstZoneIdRaw as string }
+            );
+            if (typeof resolvedZoneId !== 'number') {
+              return NextResponse.json(
+                { message: 'Unable to resolve network_id for campaign mirroring' },
+                { status: 422 }
+              );
+            }
+            const zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
+            resolvedNetworkId = (zoneDoc as any)?.network_id;
+          }
+        }
+
+        if (typeof resolvedNetworkId !== 'number') {
+          return NextResponse.json(
+            { message: 'Unable to resolve network_id for campaign mirroring' },
+            { status: 422 }
+          );
+        }
+
+        // Create LocalCampaign mirror
+        const localCampaignData = {
+          ...sourceCampaign,
+          network_id: resolvedNetworkId,
+          original_broadstreet_id: (sourceCampaign as any).broadstreet_id,
+          created_locally: false,
+          synced_with_api: true,
+          placements: [],
+        };
+        delete (localCampaignData as any)._id;
+        delete (localCampaignData as any).broadstreet_id;
+
+        campaign = await LocalCampaign.create(localCampaignData);
+      }
+    }
+
+    // If still not found and we have a numeric campaign_id, upsert a mirror from Campaign
     if (!campaign && typeof campaign_broadstreet_id === 'number') {
       const source = await Campaign.findOne({ broadstreet_id: campaign_broadstreet_id }).lean();
       if (!source) {

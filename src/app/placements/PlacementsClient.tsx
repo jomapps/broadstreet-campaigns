@@ -10,7 +10,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useEntityStore, useFilterStore } from '@/stores';
+import { useEntityStore, useFilterStore, useAllFilters } from '@/stores';
 import PlacementsContent from './PlacementsContent';
 
 /**
@@ -39,6 +39,7 @@ export default function PlacementsClient({
   // Get store actions using exact names from docs/variable-origins.md registry
   const { setPlacements, setNetworks, setAdvertisers, setCampaigns, setLoading } = useEntityStore();
   const { setFiltersFromParams } = useFilterStore();
+  const { selectedNetwork, selectedAdvertiser, selectedCampaign } = useAllFilters();
   const [placementsLoaded, setPlacementsLoaded] = useState(false);
 
   // Initialize store with server data on mount
@@ -63,6 +64,11 @@ export default function PlacementsClient({
     setFiltersFromParams
   ]);
 
+  // Reset placements loaded flag when filters change
+  useEffect(() => {
+    setPlacementsLoaded(false);
+  }, [selectedNetwork, selectedAdvertiser, selectedCampaign]);
+
   // Load enriched placements data client-side
   useEffect(() => {
     async function loadPlacements() {
@@ -71,16 +77,18 @@ export default function PlacementsClient({
       setLoading('placements', true);
 
       try {
-        // Build query parameters from searchParams
+        // Build query parameters from current filter state
         const queryParams = new URLSearchParams();
-        if (searchParams?.network) queryParams.set('network_id', searchParams.network);
-        if (searchParams?.advertiser) queryParams.set('advertiser_id', searchParams.advertiser);
-        if (searchParams?.campaign) queryParams.set('campaign_id', searchParams.campaign);
-        if (searchParams?.status) queryParams.set('status', searchParams.status);
-        if (searchParams?.zoneId) queryParams.set('zone_id', searchParams.zoneId);
-        if (searchParams?.startDate) queryParams.set('start_date', searchParams.startDate);
-        if (searchParams?.endDate) queryParams.set('end_date', searchParams.endDate);
+        if (selectedNetwork?.broadstreet_id) queryParams.set('network_id', selectedNetwork.broadstreet_id.toString());
+        if (selectedAdvertiser?.broadstreet_id) queryParams.set('advertiser_id', selectedAdvertiser.broadstreet_id.toString());
+        if (selectedCampaign?.broadstreet_id) queryParams.set('campaign_id', selectedCampaign.broadstreet_id.toString());
 
+        // Also support campaign_mongo_id for local campaigns
+        if (selectedCampaign?.mongo_id && !selectedCampaign?.broadstreet_id) {
+          queryParams.set('campaign_mongo_id', selectedCampaign.mongo_id);
+        }
+
+        console.log('Loading placements with query:', queryParams.toString());
         const response = await fetch(`/api/placements?${queryParams.toString()}`);
         const data = await response.json();
 
@@ -101,7 +109,7 @@ export default function PlacementsClient({
     }
 
     loadPlacements();
-  }, [searchParams, placementsLoaded, setPlacements, setLoading]);
+  }, [placementsLoaded, setPlacements, setLoading, selectedNetwork, selectedAdvertiser, selectedCampaign]);
 
   // Render the placements content component
   // The content will read from Zustand stores instead of props

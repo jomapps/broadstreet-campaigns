@@ -8,47 +8,11 @@
 
 'use client';
 
-import { useState } from 'react';
 import { useEntityStore, useAllFilters } from '@/stores';
-import { Button } from '@/components/ui/button';
-import CreatePlacementsModal from '@/components/placements/CreatePlacementsModal';
 import PlacementsList from './PlacementsList';
 import LoadingSkeleton from './LoadingSkeleton';
 
-/**
- * PlacementsActions - Placement action buttons component
- * Variable names follow docs/variable-origins.md registry
- */
-function PlacementsActions() {
-  const { selectedNetwork, selectedCampaign, selectedZones, selectedAdvertisements } = useAllFilters();
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const canCreatePlacements = Boolean(
-    selectedNetwork &&
-    selectedCampaign &&
-    selectedAdvertisements.length > 0 &&
-    selectedZones.length > 0
-  );
-
-  return (
-    <>
-      <div className="flex items-center gap-2">
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          disabled={!canCreatePlacements}
-          aria-disabled={!canCreatePlacements}
-        >
-          Create Placements
-        </Button>
-      </div>
-
-      <CreatePlacementsModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-      />
-    </>
-  );
-}
 
 /**
  * PlacementsData - Main placements data display component
@@ -105,10 +69,6 @@ function PlacementsData() {
 export default function PlacementsContent() {
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <PlacementsActions />
-      </div>
-
       <div data-testid="placements-data">
         <PlacementsData />
       </div>

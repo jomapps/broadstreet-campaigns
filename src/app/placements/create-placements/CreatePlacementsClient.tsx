@@ -144,11 +144,18 @@ export default function CreatePlacementsClient({
         payload.campaign_mongo_id = campaignId;
       }
 
+      console.log('Creating placements with payload:', payload);
+      console.log('Selected campaign:', selectedCampaign);
+      console.log('Campaign ID:', campaignId, 'Type:', typeof campaignId);
+
       const response = await fetch('/api/create/placements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      console.log('API Response status:', response.status);
+      console.log('API Response ok:', response.ok);
 
       const data = await response.json();
       if (!response.ok) {

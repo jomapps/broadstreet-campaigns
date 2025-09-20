@@ -270,6 +270,48 @@ await broadstreetAPI.deletePlacement({
 - Check that local campaigns have `network_id` set correctly
 - Verify zone lookup maps are populated during API processing
 
+### **CRITICAL: Placement Validation Bug**
+
+**Problem**: Placements page shows "No Placements Found" despite successful API calls returning placement data.
+
+**Symptoms:**
+- API calls return successful responses (e.g., `{success: true, count: 9, placements: Array(9)}`)
+- Console shows `setPlacements called successfully`
+- Zustand store shows `placements from store: []` (empty array)
+- Page displays "No Placements Found" message
+
+**Root Cause**: The `isPlacementValid` function in `src/stores/entity-store.ts` filters out ALL placements because the API response structure doesn't match the expected validation schema.
+
+**Debugging Pattern:**
+```typescript
+setPlacements: (placements) => set((state) => {
+  const validPlacements = placements.filter(isPlacementValid);
+  console.log('setPlacements - total placements:', placements.length);
+  console.log('setPlacements - valid placements after filter:', validPlacements.length);
+  // If validPlacements.length === 0, validation is too strict
+});
+```
+
+**Expected vs Actual Structure:**
+```typescript
+// Validation expects:
+{ network_id: 9396, advertiser_id: 217326, advertisement_id: 1255400, campaign_id: 846562, zone_id: 175008 }
+
+// API actually returns:
+{ advertisement_id: 1255400, zone_id: 175008, restrictions: [], source: "synced_embedded",
+  advertisement: {...}, campaign: null, zone: null, advertiser: null, network: null }
+```
+
+**Temporary Fix:**
+```typescript
+setPlacements: (placements) => set((state) => {
+  // TEMPORARY: Disable validation to allow placements to display
+  state.placements = placements; // Store all placements without validation
+  state.isLoading.placements = false;
+  state.errors.placements = null;
+}),
+```
+
 ### **CRITICAL: EntitySelectionKey Type Mismatch Issues**
 
 **Problem**: Components showing "no zones/ads selected" despite sidebar showing selections.
