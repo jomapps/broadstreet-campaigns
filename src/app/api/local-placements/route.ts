@@ -10,13 +10,13 @@ import Advertiser from '@/lib/models/advertiser';
 import Network from '@/lib/models/network';
 
 type CreatePlacementRequest = {
-  network_id: number;
-  advertiser_id: number;
-  advertisement_id: number;
-  campaign_id?: number;
-  campaign_mongo_id?: string;
-  zone_id?: number;
-  zone_mongo_id?: string;
+  networkId: number;
+  advertiserId: number;
+  advertisementId: number;
+  campaignId?: number;
+  campaignMongoId?: string;
+  zoneId?: number;
+  zoneMongoId?: string;
   restrictions?: string[];
 };
 
@@ -39,100 +39,100 @@ export async function POST(request: NextRequest) {
     const body: CreatePlacementRequest = await request.json();
     
     // Validate required fields
-    if (!body.network_id || !body.advertiser_id || !body.advertisement_id) {
+    if (!body.networkId || !body.advertiserId || !body.advertisementId) {
       return NextResponse.json(
-        { error: 'network_id, advertiser_id, and advertisement_id are required' },
+        { error: 'networkId, advertiserId, and advertisementId are required' },
         { status: 400 }
       );
     }
-    
+
     // Validate XOR constraints
-    const hasCampaignId = !!body.campaign_id;
-    const hasCampaignMongoId = !!body.campaign_mongo_id;
-    const hasZoneId = !!body.zone_id;
-    const hasZoneMongoId = !!body.zone_mongo_id;
-    
+    const hasCampaignId = !!body.campaignId;
+    const hasCampaignMongoId = !!body.campaignMongoId;
+    const hasZoneId = !!body.zoneId;
+    const hasZoneMongoId = !!body.zoneMongoId;
+
     if (hasCampaignId === hasCampaignMongoId) {
       return NextResponse.json(
-        { error: 'Exactly one of campaign_id or campaign_mongo_id must be provided' },
+        { error: 'Exactly one of campaignId or campaignMongoId must be provided' },
         { status: 400 }
       );
     }
-    
+
     if (hasZoneId === hasZoneMongoId) {
       return NextResponse.json(
-        { error: 'Exactly one of zone_id or zone_mongo_id must be provided' },
+        { error: 'Exactly one of zoneId or zoneMongoId must be provided' },
         { status: 400 }
       );
     }
-    
+
     // Validate entity dependencies exist
     const [advertisement, advertiser, network] = await Promise.all([
-      Advertisement.findOne({ broadstreet_id: body.advertisement_id }),
-      Advertiser.findOne({ broadstreet_id: body.advertiser_id }),
-      Network.findOne({ broadstreet_id: body.network_id })
+      Advertisement.findOne({ broadstreet_id: body.advertisementId }),
+      Advertiser.findOne({ broadstreet_id: body.advertiserId }),
+      Network.findOne({ broadstreet_id: body.networkId })
     ]);
-    
+
     if (!advertisement) {
       return NextResponse.json(
-        { error: `Advertisement with ID ${body.advertisement_id} not found` },
+        { error: `Advertisement with ID ${body.advertisementId} not found` },
         { status: 400 }
       );
     }
-    
+
     if (!advertiser) {
       return NextResponse.json(
-        { error: `Advertiser with ID ${body.advertiser_id} not found` },
+        { error: `Advertiser with ID ${body.advertiserId} not found` },
         { status: 400 }
       );
     }
-    
+
     if (!network) {
       return NextResponse.json(
-        { error: `Network with ID ${body.network_id} not found` },
+        { error: `Network with ID ${body.networkId} not found` },
         { status: 400 }
       );
     }
-    
+
     // Validate campaign exists
     let campaign = null;
-    if (body.campaign_id) {
-      campaign = await Campaign.findOne({ broadstreet_id: body.campaign_id });
-    } else if (body.campaign_mongo_id) {
-      campaign = await LocalCampaign.findById(body.campaign_mongo_id);
+    if (body.campaignId) {
+      campaign = await Campaign.findOne({ broadstreet_id: body.campaignId });
+    } else if (body.campaignMongoId) {
+      campaign = await LocalCampaign.findById(body.campaignMongoId);
     }
-    
+
     if (!campaign) {
       return NextResponse.json(
         { error: 'Campaign not found' },
         { status: 400 }
       );
     }
-    
+
     // Validate zone exists
     let zone = null;
-    if (body.zone_id) {
-      zone = await Zone.findOne({ broadstreet_id: body.zone_id });
-    } else if (body.zone_mongo_id) {
-      zone = await LocalZone.findById(body.zone_mongo_id);
+    if (body.zoneId) {
+      zone = await Zone.findOne({ broadstreet_id: body.zoneId });
+    } else if (body.zoneMongoId) {
+      zone = await LocalZone.findById(body.zoneMongoId);
     }
-    
+
     if (!zone) {
       return NextResponse.json(
         { error: 'Zone not found' },
         { status: 400 }
       );
     }
-    
-    // Create the placement
+
+    // Create the placement - map camelCase to database field names
     const placementData = {
-      network_id: body.network_id,
-      advertiser_id: body.advertiser_id,
-      advertisement_id: body.advertisement_id,
-      ...(body.campaign_id && { campaign_id: body.campaign_id }),
-      ...(body.campaign_mongo_id && { campaign_mongo_id: body.campaign_mongo_id }),
-      ...(body.zone_id && { zone_id: body.zone_id }),
-      ...(body.zone_mongo_id && { zone_mongo_id: body.zone_mongo_id }),
+      network_id: body.networkId,
+      advertiser_id: body.advertiserId,
+      advertisement_id: body.advertisementId,
+      ...(body.campaignId && { campaign_id: body.campaignId }),
+      ...(body.campaignMongoId && { campaign_mongo_id: body.campaignMongoId }),
+      ...(body.zoneId && { zone_id: body.zoneId }),
+      ...(body.zoneMongoId && { zone_mongo_id: body.zoneMongoId }),
       ...(body.restrictions && body.restrictions.length > 0 && { restrictions: body.restrictions }),
     };
     

@@ -1,16 +1,16 @@
 /**
  * SERVER DATA FETCHERS - SERVER-SIDE DATA FETCHING UTILITIES
- * 
+ *
  * This file provides server-side data fetching utilities for Next.js pages.
  * Follows the PayloadCMS Local API pattern with proper error handling.
  * All variable names follow docs/variable-origins.md registry.
- * 
+ *
  * CRITICAL RULES:
  * 1. All variable names from docs/variable-origins.md registry
  * 2. All functions are server-side only (no client usage)
  * 3. Proper error handling and logging
  * 4. Entity serialization for client transfer
- * 5. No TypeScript types - using plain JavaScript with JSDoc
+ * 5. TypeScript types for type safety
  */
 
 import connectDB from '@/lib/mongodb';
@@ -27,14 +27,38 @@ import LocalAdvertisement from '@/lib/models/local-advertisement';
 import Placement from '@/lib/models/placement';
 import Theme from '@/lib/models/theme';
 
+// Types for query parameters
+interface BaseQueryParams {
+  search?: string;
+  limit?: string;
+  networkId?: string;
+}
+
+interface PlacementQueryParams extends BaseQueryParams {
+  advertiserId?: string;
+  campaignId?: string;
+  zoneId?: string;
+}
+
+/**
+ * Escape regex special characters to treat search string as literal
+ * @param str - String to escape
+ * @returns Escaped string safe for regex
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Deep serialize entity for client transfer
  * Recursively converts MongoDB ObjectIds to strings and dates to ISO strings
  * Handles nested objects and arrays to prevent Next.js serialization warnings
- * @param {any} entity - Entity to serialize
- * @returns {any} Serialized entity safe for client transfer
+ * Prevents circular references with visited tracking
+ * @param entity - Entity to serialize
+ * @param visited - WeakSet to track visited objects (prevents circular references)
+ * @returns Serialized entity safe for client transfer
  */
-function serializeEntity(entity: any): any {
+function serializeEntity(entity: any, visited: WeakSet<object> = new WeakSet()): any {
   if (!entity) return null;
 
   // Handle primitive types
@@ -50,18 +74,29 @@ function serializeEntity(entity: any): any {
     return entity.toString();
   }
 
-  // Handle arrays
-  if (Array.isArray(entity)) {
-    return entity.map(serializeEntity);
+  // Check for circular references
+  if (visited.has(entity)) {
+    return '[Circular]';
   }
+  visited.add(entity);
 
-  // Handle plain objects
-  const serialized: any = {};
-  for (const [key, value] of Object.entries(entity)) {
-    serialized[key] = serializeEntity(value);
+  try {
+    // Handle arrays
+    if (Array.isArray(entity)) {
+      return entity.map(item => serializeEntity(item, visited));
+    }
+
+    // Handle plain objects
+    const serialized: any = {};
+    for (const [key, value] of Object.entries(entity)) {
+      serialized[key] = serializeEntity(value, visited);
+    }
+
+    return serialized;
+  } finally {
+    // Remove from visited set when done processing this level
+    visited.delete(entity);
   }
-
-  return serialized;
 }
 
 /**
@@ -81,10 +116,10 @@ function serializeEntities(entities: any[]): any[] {
 /**
  * Fetch networks from database
  * Variable names follow docs/variable-origins.md registry
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of network entities
+ * @param params - Optional query parameters
+ * @returns Array of network entities
  */
-export async function fetchNetworks(params: any = {}) {
+export async function fetchNetworks(params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
     
@@ -93,9 +128,10 @@ export async function fetchNetworks(params: any = {}) {
     
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       query.$or = [
-        { name: { $regex: params.search, $options: 'i' } },
-        { path: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { path: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
     
@@ -122,11 +158,11 @@ export async function fetchNetworks(params: any = {}) {
 /**
  * Fetch advertisers from database (both synced and local advertisers)
  * Variable names follow docs/variable-origins.md registry
- * @param {number} networkId - Optional network ID filter
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of advertiser entities (combined synced + local)
+ * @param networkId - Optional network ID filter
+ * @param params - Optional query parameters
+ * @returns Array of advertiser entities (combined synced + local)
  */
-export async function fetchAdvertisers(networkId: any, params: any = {}) {
+export async function fetchAdvertisers(networkId: string | number | undefined, params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
 
@@ -142,9 +178,10 @@ export async function fetchAdvertisers(networkId: any, params: any = {}) {
 
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       const searchFilter = [
-        { name: { $regex: params.search, $options: 'i' } },
-        { web_home_url: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { web_home_url: { $regex: escapedSearch, $options: 'i' } },
       ];
       query.$or = searchFilter;
       localQuery.$or = searchFilter;
@@ -215,11 +252,11 @@ export async function fetchAdvertisers(networkId: any, params: any = {}) {
 /**
  * Fetch zones from database (both API and local zones)
  * Variable names follow docs/variable-origins.md registry
- * @param {number} networkId - Optional network ID filter
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of zone entities with source information
+ * @param networkId - Optional network ID filter
+ * @param params - Optional query parameters
+ * @returns Array of zone entities with source information
  */
-export async function fetchZones(networkId: any, params: any = {}) {
+export async function fetchZones(networkId: string | number | undefined, params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
 
@@ -233,9 +270,10 @@ export async function fetchZones(networkId: any, params: any = {}) {
 
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       query.$or = [
-        { name: { $regex: params.search, $options: 'i' } },
-        { alias: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { alias: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
@@ -277,11 +315,11 @@ export async function fetchZones(networkId: any, params: any = {}) {
 /**
  * Fetch campaigns from database
  * Variable names follow docs/variable-origins.md registry
- * @param {number} advertiserId - Optional advertiser ID filter
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of campaign entities
+ * @param advertiserId - Optional advertiser ID filter
+ * @param params - Optional query parameters
+ * @returns Array of campaign entities
  */
-export async function fetchCampaigns(advertiserId: any, params: any = {}) {
+export async function fetchCampaigns(advertiserId: string | number | undefined, params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
 
@@ -300,8 +338,9 @@ export async function fetchCampaigns(advertiserId: any, params: any = {}) {
 
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       query.$or = [
-        { name: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
@@ -360,11 +399,11 @@ export async function fetchCampaigns(advertiserId: any, params: any = {}) {
 /**
  * Fetch advertisements from database
  * Variable names follow docs/variable-origins.md registry
- * @param {number} advertiserId - Optional advertiser ID filter
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of advertisement entities
+ * @param advertiserId - Optional advertiser ID filter
+ * @param params - Optional query parameters
+ * @returns Array of advertisement entities
  */
-export async function fetchAdvertisements(advertiserId: any, params: any = {}) {
+export async function fetchAdvertisements(advertiserId: string | number | undefined, params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
 
@@ -383,9 +422,10 @@ export async function fetchAdvertisements(advertiserId: any, params: any = {}) {
     
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       query.$or = [
-        { name: { $regex: params.search, $options: 'i' } },
-        { type: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { type: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
     
@@ -412,9 +452,16 @@ export async function fetchAdvertisements(advertiserId: any, params: any = {}) {
 /**
  * Fetch all local entities from database
  * Variable names follow docs/variable-origins.md registry
- * @returns {Promise<Object>} Object containing all local entity collections
+ * @returns Object containing all local entity collections
  */
-export async function fetchLocalEntities() {
+export async function fetchLocalEntities(): Promise<{
+  localZones: any[];
+  localAdvertisers: any[];
+  localCampaigns: any[];
+  localNetworks: any[];
+  localAdvertisements: any[];
+  localPlacements: any[];
+}> {
   try {
     await connectDB();
     
@@ -484,13 +531,18 @@ export async function fetchLocalEntities() {
 /**
  * Fetch placements from database with optional filtering
  * Variable names follow docs/variable-origins.md registry
- * @param {number} networkId - Optional network ID filter
- * @param {number} advertiserId - Optional advertiser ID filter
- * @param {number} campaignId - Optional campaign ID filter
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of placement entities
+ * @param networkId - Optional network ID filter
+ * @param advertiserId - Optional advertiser ID filter
+ * @param campaignId - Optional campaign ID filter
+ * @param params - Optional query parameters
+ * @returns Array of placement entities
  */
-export async function fetchPlacements(networkId: any, advertiserId: any, campaignId: any, params: any = {}) {
+export async function fetchPlacements(
+  networkId: string | number | undefined,
+  advertiserId: string | number | undefined,
+  campaignId: string | number | undefined,
+  params: PlacementQueryParams = {}
+): Promise<any[]> {
   try {
     await connectDB();
 
@@ -507,20 +559,36 @@ export async function fetchPlacements(networkId: any, advertiserId: any, campaig
       query.advertiser_id = advertiserId;
     }
 
+    // Build filters array to combine with $and
+    const filters = [];
+
     // Add campaign filter if provided
     if (campaignId) {
-      query.$or = [
-        { campaign_id: campaignId },
-        { campaign_mongo_id: campaignId },
-      ];
+      filters.push({
+        $or: [
+          { campaign_id: campaignId },
+          { campaign_mongo_id: campaignId },
+        ]
+      });
     }
-    
+
     // Add zone filter if provided
     if (params.zoneId) {
-      query.$or = [
-        { zone_id: params.zoneId },
-        { zone_mongo_id: params.zoneId },
-      ];
+      filters.push({
+        $or: [
+          { zone_id: params.zoneId },
+          { zone_mongo_id: params.zoneId },
+        ]
+      });
+    }
+
+    // Combine filters with $and if multiple filters exist
+    if (filters.length > 0) {
+      if (filters.length === 1) {
+        Object.assign(query, filters[0]);
+      } else {
+        query.$and = filters;
+      }
     }
     
     // Add date range filter if provided
@@ -558,10 +626,10 @@ export async function fetchPlacements(networkId: any, advertiserId: any, campaig
 /**
  * Fetch themes from database
  * Variable names follow docs/variable-origins.md registry
- * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of theme entities
+ * @param params - Optional query parameters
+ * @returns Array of theme entities
  */
-export async function fetchThemes(params: any = {}) {
+export async function fetchThemes(params: BaseQueryParams = {}): Promise<any[]> {
   try {
     await connectDB();
 
@@ -570,9 +638,10 @@ export async function fetchThemes(params: any = {}) {
 
     // Add search filter if provided
     if (params.search) {
+      const escapedSearch = escapeRegex(params.search);
       query.$or = [
-        { name: { $regex: params.search, $options: 'i' } },
-        { description: { $regex: params.search, $options: 'i' } },
+        { name: { $regex: escapedSearch, $options: 'i' } },
+        { description: { $regex: escapedSearch, $options: 'i' } },
       ];
     }
 
@@ -590,10 +659,10 @@ export async function fetchThemes(params: any = {}) {
 /**
  * Fetch single theme by ID with zones
  * Variable names follow docs/variable-origins.md registry
- * @param {string} themeId - Theme ID to fetch
- * @returns {Promise<any|null>} Theme entity with zones or null if not found
+ * @param themeId - Theme ID to fetch
+ * @returns Theme entity with zones or null if not found
  */
-export async function fetchThemeById(themeId: any) {
+export async function fetchThemeById(themeId: string): Promise<any | null> {
   try {
     await connectDB();
 
@@ -621,10 +690,23 @@ export async function fetchThemeById(themeId: any) {
 /**
  * Fetch audit data with search, filtering, and pagination
  * Variable names follow docs/variable-origins.md registry
- * @param {Object} params - Query parameters
- * @returns {Promise<Object>} Audit data with entities, summary, and pagination
+ * @param params - Query parameters
+ * @returns Audit data with entities, summary, and pagination
  */
-export async function fetchAuditData(params: any = {}) {
+export async function fetchAuditData(params: {
+  search?: string;
+  limit?: string;
+  page?: string;
+} = {}): Promise<{
+  entities: any[];
+  summary: {
+    totalEntities: number;
+    totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+}> {
   try {
     await connectDB();
 
@@ -641,7 +723,7 @@ export async function fetchAuditData(params: any = {}) {
     // Build query for audit entities (synced entities from all collections)
     const searchQuery = search ? {
       $or: [
-        { name: { $regex: search, $options: 'i' } }
+        { name: { $regex: escapeRegex(search), $options: 'i' } }
       ]
     } : {};
 
@@ -738,10 +820,17 @@ export async function fetchAuditData(params: any = {}) {
 /**
  * Get entity counts for dashboard summary
  * Variable names follow docs/variable-origins.md registry
- * @param {number} networkId - Optional network ID filter
- * @returns {Promise<Object>} Object containing entity counts
+ * @param networkId - Optional network ID filter
+ * @returns Object containing entity counts
  */
-export async function getEntityCounts(networkId: any) {
+export async function getEntityCounts(networkId: string | number | undefined): Promise<{
+  networks: number;
+  advertisers: number;
+  zones: number;
+  campaigns: number;
+  advertisements: number;
+  placements: number;
+}> {
   try {
     await connectDB();
 

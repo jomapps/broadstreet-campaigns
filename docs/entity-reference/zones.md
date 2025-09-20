@@ -296,36 +296,33 @@ Following `docs/variable-origins.md` standards:
 - `isLoadingZones` - Loading state for zone data fetching operations
 - `zoneError` - Error state for zone-related operations
 
-## Business Logic for display and selection
+## Business Logic for Display and Selection
 Zones are selected in three ways. Except for themes, selection of zones is an additive process. Filtering does not deselect zones.
-- by theme
-- by filter
-- by clicking on a zone card
+- By theme
+- By filter
+- By clicking on a zone card
 
-Deselection also happens in 3 ways. 
-- when a theme is selected, all other zones are deselected. 
-- using the deselect all visible button
-- using the deselect by clicking on a zone card
+Deselection also happens in 3 ways:
+- When a theme is selected, all other zones are deselected
+- Using the "Deselect all visible" button
+- By clicking on a zone card to toggle selection
 
-### Selction by Theme
-The theme selection is the only exclusive zone selection. All the currnt zones are deselected and the zones in the theme are selected. 
-**IMPORTANT**Themes never have local zones in thme.
+### Selection by Theme
+The theme selection is the only exclusive zone selection. All the current zones are deselected and the zones in the theme are selected.
+**IMPORTANT:** Themes never have local zones in them.
 
-### Selection by filters
-bu default, the zones page shows ALL zones. It is not filtered by the sidebar filters. Ofcourse network is always set.
-Currently we have a filter. the filter will filter out zones beased on substring match in ANY part of the zone data (pls confirm this)
-**NEW FEATURE** We will add a negative filter. it superceedes the search filter and filters out zones whoes data contains a substring that match the negative filter. (pls implement)
+### Selection by Filters
+By default, the zones page shows ALL zones. It is not filtered by the sidebar filters. Of course network is always set.
+Currently we have a filter that will filter out zones based on substring match in ANY part of the zone data.
+**NEW FEATURE:** We will add a negative filter. It supersedes the search filter and filters out zones whose data contains a substring that matches the negative filter.
 
-once the zones are displayed, we can simple click on select all visible. The existing zones in selected list will be preserved and only the visible zones will be added to the selected list.
+Once the zones are displayed, we can simply click on "Select all visible". The existing zones in selected list will be preserved and only the visible zones will be added to the selected list.
 
-### Selection by clicking on a zone card
+### Selection by Clicking on a Zone Card
 When we click on a zone card, we toggle the selection of the zone. If the zone is already selected, we deselect it. If the zone is not selected, we select it. The rest of the zones are preserved.
 
-### Deselection by clicking on a zone card
-When we click on a zone card, we toggle the selection of the zone. If the zone is already selected, we deselect it. If the zone is not selected, we select it. The rest of the zones are preserved.
-
-### Deselection by using the deselect all visible button
-When we click on the deselect all visible button, we deselect all the visible zones. The rest of the zones are preserved.
-Again we will use the search and negative search to filter the zones. we can also use the show selected zones checkbox present in the ui to quickly filter to selected zones.
+### Deselection by Using the "Deselect All Visible" Button
+When we click on the "Deselect all visible" button, we deselect all the visible zones. The rest of the zones are preserved.
+Again we will use the search and negative search to filter the zones. We can also use the "Show selected zones" checkbox present in the UI to quickly filter to selected zones.
 
 

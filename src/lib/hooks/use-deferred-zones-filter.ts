@@ -152,9 +152,9 @@ export function useDeferredZonesFilter(params: FilterParams): UseDeferredZonesFi
     entities: params.entities
   }), [
     params.zones?.length,
-    JSON.stringify(params.selectedZones?.sort()),
+    params.selectedZones ? JSON.stringify([...params.selectedZones].sort()) : undefined,
     params.showOnlySelected,
-    JSON.stringify(params.selectedSizes?.sort()),
+    params.selectedSizes ? JSON.stringify([...params.selectedSizes].sort()) : undefined,
     params.searchTerm,
     params.negativeSearchTerm,
     params.networkMap?.size,

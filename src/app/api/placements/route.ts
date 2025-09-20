@@ -323,8 +323,9 @@ export async function GET(request: NextRequest) {
 
         // FIX: If local campaign has network_id undefined but we're filtering by network_id,
         // and the campaign was found by network_id query, then it should match
+        // Create a copy to avoid mutating the original object
         if (p._localCampaign && p._localCampaign.network_id === undefined && networkId) {
-          p._localCampaign.network_id = parseInt(networkId);
+          p._localCampaign = { ...p._localCampaign, network_id: parseInt(networkId) };
         }
 
         // For local collection placements, use the direct network_id
