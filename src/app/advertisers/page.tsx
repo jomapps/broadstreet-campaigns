@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { fetchAdvertisers, fetchNetworks } from '@/lib/server/data-fetchers';
+import CreationButton from '@/components/creation/CreationButton';
 import AdvertisersClient from './AdvertisersClient';
 import LoadingSkeleton from './LoadingSkeleton';
 
@@ -40,6 +41,10 @@ export default async function AdvertisersPage({ searchParams }: AdvertisersPageP
             Manage advertisers across your networks
           </p>
         </div>
+
+        <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
+          <CreationButton />
+        </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>

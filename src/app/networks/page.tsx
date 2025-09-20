@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { fetchNetworks } from '@/lib/server/data-fetchers';
+import CreationButton from '@/components/creation/CreationButton';
 import NetworksClient from './NetworksClient';
 import LoadingSkeleton from './LoadingSkeleton';
 
@@ -31,6 +32,10 @@ export default async function NetworksPage({ searchParams }: NetworksPageProps) 
             Manage your advertising networks
           </p>
         </div>
+
+        <Suspense fallback={<div className="bg-gray-200 animate-pulse h-10 w-32 rounded-lg"></div>}>
+          <CreationButton />
+        </Suspense>
       </div>
 
       <Suspense fallback={<LoadingSkeleton />}>
