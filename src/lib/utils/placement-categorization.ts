@@ -47,23 +47,22 @@ export function categorizePlacementsBySize(
       const combination: PlacementCombination = {
         zone: {
           id: zone.id || (zone as any).broadstreet_id || (zone as any).mongo_id || (zone as any)._id,
-          name: zone.name,
           ...zone
         },
         advertisement: {
           id: advertisement.id || (advertisement as any).broadstreet_id || (advertisement as any).mongo_id || (advertisement as any)._id,
-          name: advertisement.name,
           ...advertisement
         }
       };
 
       // Match size types between zone and advertisement
-      if (zoneParsed.size_type && adParsed.size_type && 
-          zoneParsed.size_type === adParsed.size_type) {
+      if (zoneParsed.size_type && adParsed.size_type &&
+          zoneParsed.size_type === adParsed.size_type &&
+          (zoneParsed.size_type === 'SQ' || zoneParsed.size_type === 'LS' || zoneParsed.size_type === 'PT')) {
         combination.sizeType = zoneParsed.size_type;
         categories[zoneParsed.size_type].push(combination);
       } else {
-        // Add to IGNORED if no matching size types
+        // Add to IGNORED if no matching size types or if size type is CS
         categories.IGNORED.push(combination);
       }
     });

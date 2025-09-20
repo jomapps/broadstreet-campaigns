@@ -23,10 +23,10 @@ export default async function CreatePlacementsPage({ searchParams }: CreatePlace
   // 2. Fetch necessary data server-side for entity resolution
   const [networks, advertisers, campaigns, zones, advertisements] = await Promise.all([
     fetchNetworks(),
-    fetchAdvertisers(),
-    fetchCampaigns(),
-    fetchZones(),
-    fetchAdvertisements(),
+    fetchAdvertisers(null),
+    fetchCampaigns(null),
+    fetchZones(null),
+    fetchAdvertisements(null),
   ]);
   
   // 3. Pass data to client component

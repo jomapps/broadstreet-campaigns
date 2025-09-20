@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     console.log('Looking for campaign with mongo_id:', campaign_mongo_id);
     console.log('Looking for campaign with broadstreet_id:', campaign_broadstreet_id);
 
-    let campaign = campaign_mongo_id
+    let campaign: any = campaign_mongo_id
       ? await LocalCampaign.findById(campaign_mongo_id).lean()
       : await LocalCampaign.findOne({ original_broadstreet_id: campaign_broadstreet_id }).lean();
 
@@ -76,12 +76,12 @@ export async function POST(request: NextRequest) {
       // Let's also check what collections exist in the database
       const mongoose = require('mongoose');
       const collections = await mongoose.connection.db.listCollections().toArray();
-      console.log('Available collections:', collections.map(c => c.name));
+      console.log('Available collections:', collections.map((c: any) => c.name));
 
       // Let's try to query the raw collection directly
       const rawLocalCampaigns = await mongoose.connection.db.collection('localcampaigns').find({}).toArray();
       console.log('Raw localcampaigns collection count:', rawLocalCampaigns.length);
-      rawLocalCampaigns.forEach((c, i) => {
+      rawLocalCampaigns.forEach((c: any, i: number) => {
         console.log(`  Raw ${i + 1}. ID: ${c._id}, Name: ${c.name}`);
       });
     }
