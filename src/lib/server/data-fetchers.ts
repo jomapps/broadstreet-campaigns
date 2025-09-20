@@ -101,12 +101,13 @@ function serializeEntity(entity: any, visited: WeakSet<object> = new WeakSet()):
 
 /**
  * Serialize array of entities for client transfer
- * @param {any[]} entities - Array of entities to serialize
- * @returns {any[]} Array of serialized entities
+ * @param entities - Array of entities to serialize
+ * @returns Array of serialized entities
  */
 function serializeEntities(entities: any[]): any[] {
   if (!Array.isArray(entities)) return [];
-  return entities.map(serializeEntity);
+  const visited = new WeakSet();
+  return entities.map(entity => serializeEntity(entity, visited));
 }
 
 // =============================================================================
@@ -678,7 +679,7 @@ export async function fetchThemeById(themeId: string): Promise<any | null> {
     }).sort({ name: 1 }).lean();
 
     return {
-      ...serializeEntity(theme),
+      ...serializeEntity(theme, new WeakSet()),
       zones: serializeEntities(zones)
     };
   } catch (error) {
