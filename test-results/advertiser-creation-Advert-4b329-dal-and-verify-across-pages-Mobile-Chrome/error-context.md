@@ -22,42 +22,49 @@
             - generic [ref=e25]:
               - generic [ref=e27]: Campaign
               - generic [ref=e29]: Select advertiser first
-        - generic [ref=e33]:
-          - img [ref=e34]
-          - text: Theme Filter
-        - generic [ref=e42]:
-          - generic [ref=e43]:
-            - generic [ref=e44]: Utilities
-            - generic [ref=e45]: Tools and actions for managing your campaigns
-          - generic [ref=e47]:
-            - paragraph [ref=e48]: "Requires: Campaign, Zones, Advertisement"
-            - paragraph [ref=e49]: Select a campaign
+        - generic [ref=e31]:
+          - generic [ref=e33]:
+            - generic [ref=e34]:
+              - generic [ref=e35]:
+                - img [ref=e36]
+                - text: Theme Filter
+              - generic [ref=e42]: Select a theme to filter zones
+            - button "Refresh themes" [ref=e44]:
+              - img
+          - generic [ref=e46]:
+            - generic [ref=e47]: Select Theme
+            - combobox [ref=e48]:
+              - generic: Select
+              - img [ref=e49]
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: Utilities
+            - generic [ref=e54]: Tools and actions for managing your campaigns
+          - generic [ref=e56]:
+            - paragraph [ref=e57]: "Requires: Campaign, Zones, Advertisement"
+            - paragraph [ref=e58]: Select a campaign
             - button "Create Placements" [disabled]
-    - generic [ref=e50]:
-      - banner [ref=e51]:
-        - generic [ref=e52]:
-          - generic [ref=e54]:
-            - generic [ref=e56]: BS
-            - heading "Dashboard" [level=1] [ref=e57]
-          - generic [ref=e62]: API Connected
-      - main [ref=e63]:
-        - generic [ref=e65]:
-          - generic [ref=e67]:
-            - heading "Advertisers" [level=1] [ref=e68]
-            - paragraph [ref=e69]: Manage advertisers across your networks
-          - generic [ref=e70]:
-            - generic [ref=e71]:
-              - generic [ref=e72]:
-                - heading "Advertisers" [level=1] [ref=e73]
-                - paragraph [ref=e74]: Companies running advertising campaigns
-              - button "Create new advertiser" [ref=e75]:
-                - generic [ref=e76]: Create advertiser
-                - img
-            - generic [ref=e78]:
-              - heading "Network Required" [level=3] [ref=e79]
-              - paragraph [ref=e80]: Please select a network from the sidebar filters to view advertisers.
-              - paragraph [ref=e81]: Advertisers are specific to each network, so you need to choose which network's advertisers you want to see.
-  - button "Open Next.js Dev Tools" [ref=e87] [cursor=pointer]:
-    - img [ref=e88] [cursor=pointer]
-  - alert [ref=e91]
+    - generic [ref=e59]:
+      - banner [ref=e60]:
+        - generic [ref=e61]:
+          - generic [ref=e63]:
+            - generic [ref=e65]: BS
+            - heading "Dashboard" [level=1] [ref=e66]
+          - generic [ref=e71]: API Connected
+      - main [ref=e72]:
+        - generic [ref=e74]:
+          - generic [ref=e76]:
+            - heading "Advertisers" [level=1] [ref=e77]
+            - paragraph [ref=e78]: Manage advertisers across your networks
+          - generic [ref=e81]:
+            - heading "Network Required" [level=3] [ref=e82]
+            - paragraph [ref=e83]: Please select a network from the sidebar filters to view advertisers.
+            - paragraph [ref=e84]: Advertisers are specific to each network, so you need to choose which network's advertisers you want to see.
+  - generic [ref=e85]:
+    - img [ref=e87]
+    - button "Open Tanstack query devtools" [ref=e135] [cursor=pointer]:
+      - img [ref=e136] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e189] [cursor=pointer]:
+    - img [ref=e190] [cursor=pointer]
+  - alert [ref=e193]
 ```

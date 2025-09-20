@@ -12,6 +12,15 @@ if (!MONGODB_URI && typeof window === 'undefined') {
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
+
+// Extend globalThis to include mongoose cache
+declare global {
+  var mongoose: {
+    conn: mongoose.Mongoose | null;
+    promise: Promise<mongoose.Mongoose> | null;
+  } | undefined;
+}
+
 let cached = globalThis.mongoose;
 
 if (!cached) {
@@ -33,7 +42,7 @@ async function connectDB() {
     };
 
     cached!.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      return mongooseInstance.connection;
+      return mongooseInstance;
     });
   }
 
