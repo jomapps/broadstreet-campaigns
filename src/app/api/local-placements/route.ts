@@ -134,8 +134,13 @@ export async function POST(request: NextRequest) {
       ...(body.zoneId && { zone_id: body.zoneId }),
       ...(body.zoneMongoId && { zone_mongo_id: body.zoneMongoId }),
       ...(body.restrictions && body.restrictions.length > 0 && { restrictions: body.restrictions }),
+      // Explicitly set local tracking flags
+      created_locally: true,
+      synced_with_api: false,
+      created_at: new Date(),
+      sync_errors: [],
     };
-    
+
     const placement = new Placement(placementData);
     await placement.save();
     

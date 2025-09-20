@@ -112,9 +112,11 @@ interface EntitySectionProps {
   onDelete: (entityId: string, type: string) => void;
   selectedIds: Set<string>;
   onToggleSelection: (entityId: string) => void;
+  onDeleteSection?: () => void;
+  isDeletingSection?: boolean;
 }
 
-function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, selectedIds, onToggleSelection }: EntitySectionProps) {
+function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, selectedIds, onToggleSelection, onDeleteSection, isDeletingSection }: EntitySectionProps) {
   if (entities.length === 0) {
     return null;
   }
@@ -126,6 +128,18 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
         <Badge variant="outline" className="text-sm">
           {entities.length} {entities.length === 1 ? 'item' : 'items'}
         </Badge>
+        {onDeleteSection && (
+          <Button
+            onClick={onDeleteSection}
+            disabled={isDeletingSection}
+            variant="destructive"
+            size="sm"
+            className="h-6 px-2 text-xs"
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            {isDeletingSection ? 'Deleting...' : `Delete All ${title}`}
+          </Button>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {entities.map((entity) => (
@@ -304,6 +318,7 @@ export default function LocalOnlyDashboard() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [isDeletingSection, setIsDeletingSection] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   
   // Enhanced sync progress management
@@ -380,6 +395,56 @@ export default function LocalOnlyDashboard() {
       alert(`Failed to delete ${entityType}. Please try again.`);
     } finally {
       setIsDeleting(null);
+    }
+  };
+
+  const handleDeleteSection = async (sectionType: string) => {
+    const sectionNames: Record<string, string> = {
+      'zones': 'zones',
+      'advertisers': 'advertisers',
+      'campaigns': 'campaigns',
+      'networks': 'networks',
+      'advertisements': 'advertisements',
+      'placements': 'placements'
+    };
+
+    const sectionName = sectionNames[sectionType] || sectionType;
+    const entityCount = data[sectionType as keyof typeof data]?.length || 0;
+
+    if (!confirm(`Are you sure you want to delete ALL ${entityCount} local ${sectionName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeletingSection(sectionType);
+    try {
+      const response = await fetch(`/api/delete/local-${sectionName}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete ${sectionName}`);
+      }
+
+      const result = await response.json();
+
+      // Handle special case for placements which includes both standalone and embedded
+      if (sectionType === 'placements') {
+        const totalDeleted = (result.deleted || 0) + (result.embeddedCleared || 0);
+        const message = result.embeddedCleared > 0
+          ? `Successfully deleted ${result.deleted} standalone placements and cleared embedded placements from ${result.embeddedCleared} campaigns.`
+          : `Successfully deleted ${result.deleted} local placements.`;
+        alert(message);
+      } else {
+        alert(`Successfully deleted ${result.deleted} local ${sectionName}.`);
+      }
+
+      // Refresh the page to show updated data
+      router.refresh();
+    } catch (error) {
+      console.error(`Delete ${sectionName} error:`, error);
+      alert(`Delete ${sectionName} failed. Please try again.`);
+    } finally {
+      setIsDeletingSection(null);
     }
   };
 
@@ -666,6 +731,8 @@ export default function LocalOnlyDashboard() {
         onDelete={handleDelete}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
+        onDeleteSection={() => handleDeleteSection('zones')}
+        isDeletingSection={isDeletingSection === 'zones'}
       />
 
       <EntitySection
@@ -676,6 +743,8 @@ export default function LocalOnlyDashboard() {
         onDelete={handleDelete}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
+        onDeleteSection={() => handleDeleteSection('advertisers')}
+        isDeletingSection={isDeletingSection === 'advertisers'}
       />
 
       <EntitySection
@@ -686,6 +755,8 @@ export default function LocalOnlyDashboard() {
         onDelete={handleDelete}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
+        onDeleteSection={() => handleDeleteSection('campaigns')}
+        isDeletingSection={isDeletingSection === 'campaigns'}
       />
 
       <EntitySection
@@ -696,6 +767,8 @@ export default function LocalOnlyDashboard() {
         onDelete={handleDelete}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
+        onDeleteSection={() => handleDeleteSection('networks')}
+        isDeletingSection={isDeletingSection === 'networks'}
       />
 
       <EntitySection
@@ -706,6 +779,8 @@ export default function LocalOnlyDashboard() {
         onDelete={handleDelete}
         selectedIds={selectedIds}
         onToggleSelection={toggleSelection}
+        onDeleteSection={() => handleDeleteSection('advertisements')}
+        isDeletingSection={isDeletingSection === 'advertisements'}
       />
 
       {/* Placements under Campaigns (embedded) */}
@@ -713,6 +788,19 @@ export default function LocalOnlyDashboard() {
         <div className="space-y-4">
           <div className="flex items-center space-x-3">
             <h2 className="text-xl font-semibold text-gray-900">Placements (Local Embedded)</h2>
+            <Badge variant="outline" className="text-sm">
+              {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0)} {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0) === 1 ? 'item' : 'items'}
+            </Badge>
+            <Button
+              onClick={() => handleDeleteSection('placements')}
+              disabled={isDeletingSection === 'placements'}
+              variant="destructive"
+              size="sm"
+              className="h-6 px-2 text-xs"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              {isDeletingSection === 'placements' ? 'Deleting...' : 'Delete All Placements'}
+            </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.campaigns.flatMap((c: any) => (c.placements || []).map((p: any, idx: number) => (
@@ -748,9 +836,22 @@ export default function LocalOnlyDashboard() {
         <div className="space-y-4">
           <div className="flex items-center space-x-3">
             <h2 className="text-xl font-semibold text-gray-900">Local Placements</h2>
+            <Badge variant="outline" className="text-sm">
+              {data.placements.length} {data.placements.length === 1 ? 'item' : 'items'}
+            </Badge>
             <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
               Collection
             </Badge>
+            <Button
+              onClick={() => handleDeleteSection('placements')}
+              disabled={isDeletingSection === 'placements'}
+              variant="destructive"
+              size="sm"
+              className="h-6 px-2 text-xs"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              {isDeletingSection === 'placements' ? 'Deleting...' : 'Delete All Placements'}
+            </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.placements.map((placement) => (

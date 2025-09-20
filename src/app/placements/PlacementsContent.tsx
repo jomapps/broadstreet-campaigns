@@ -1,6 +1,6 @@
 /**
  * PLACEMENTS CONTENT - MAIN PLACEMENTS UI
- * 
+ *
  * Main placements content component that displays placements grid and handles interactions.
  * Reads data from Zustand stores and provides placement management functionality.
  * All variable names follow docs/variable-origins.md registry.
@@ -8,7 +8,8 @@
 
 'use client';
 
-import { useEntityStore, useAllFilters } from '@/stores';
+import { useEntityStore } from '@/stores';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 import PlacementsList from './PlacementsList';
 import LoadingSkeleton from './LoadingSkeleton';
 
@@ -21,16 +22,9 @@ import LoadingSkeleton from './LoadingSkeleton';
 function PlacementsData() {
   // Get data from Zustand stores using exact names from docs/variable-origins.md registry
   const { placements, isLoading } = useEntityStore();
-  const { selectedNetwork, selectedAdvertiser, selectedCampaign, selectedZones, selectedAdvertisements } = useAllFilters();
 
-  // Create entities object for compatibility with existing code
-  const entities = {
-    network: selectedNetwork,
-    advertiser: selectedAdvertiser,
-    campaign: selectedCampaign,
-    zones: selectedZones,
-    advertisements: selectedAdvertisements
-  };
+  // Get properly formatted entities with ids structure using the centralized hook
+  const entities = useSelectedEntities();
 
   if (isLoading.placements) {
     return (
@@ -59,7 +53,7 @@ function PlacementsData() {
     );
   }
 
-  return <PlacementsList placements={placements as any} entities={entities as any} />;
+  return <PlacementsList placements={placements as any} entities={entities} />;
 }
 
 /**
