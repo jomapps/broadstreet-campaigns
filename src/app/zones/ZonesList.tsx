@@ -9,6 +9,7 @@ import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { useZoneThemes } from '@/hooks/useZoneThemes';
 import { ZoneLean } from '@/lib/types/lean-entities';
 import { EntityIdBadge } from '@/components/ui/entity-id-badge';
+import { getEntityId } from '@/lib/utils/entity-helpers';
 
 // Map zone to universal card props
 function mapZoneToUniversalProps(
@@ -146,17 +147,20 @@ export default function ZonesList({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayZones.map((zone) => (
-            <UniversalEntityCard
-              key={zone._id}
-              {...mapZoneToUniversalProps(zone, {
-                networkName: networkMap.get(zone.network_id),
-                isSelected: selectedZones.includes(String(zone.broadstreet_id || zone._id)),
-                onToggleSelection: toggleZoneSelection,
-                themes: zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : [],
-              })}
-            />
-          ))}
+          {displayZones.map((zone) => {
+            const entityId = getEntityId(zone);
+            return (
+              <UniversalEntityCard
+                key={String(entityId || zone._id)}
+                {...mapZoneToUniversalProps(zone, {
+                  networkName: networkMap.get(zone.network_id),
+                  isSelected: selectedZones.includes(String(zone.broadstreet_id || zone._id)),
+                  onToggleSelection: toggleZoneSelection,
+                  themes: zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : [],
+                })}
+              />
+            );
+          })}
         </div>
       )}
     </div>

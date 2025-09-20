@@ -225,13 +225,13 @@ export default function AdvertisementCreationForm({ onClose, setIsLoading }: Adv
     <form onSubmit={handleSubmit} className="flex flex-col h-full">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800 flex items-center gap-2">
+        <div className="text-sm text-blue-800 flex items-center gap-2">
           <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
-        </p>
+        </div>
         {entities.advertiser && (
-          <p className="text-sm text-blue-800 flex items-center gap-2">
+          <div className="text-sm text-blue-800 flex items-center gap-2">
             <strong>Advertiser:</strong> {entities.advertiser.name} <EntityIdBadge {...(entities.advertiser?.ids || {})} />
-          </p>
+          </div>
         )}
       </div>
 

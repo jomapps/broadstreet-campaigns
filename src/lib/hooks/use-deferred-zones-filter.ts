@@ -75,57 +75,47 @@ const applyZoneFilters = (params: FilterParams): any[] => {
     );
   }
   
-  // 2. Apply size filters
-  if (selectedSizes.length > 0) {
+  // 2. Apply size filter (match original simple logic)
+  if (selectedSizes && selectedSizes.length > 0) {
     filtered = filtered.filter(zone => {
-      // Handle CS (Conflict Size) filter
-      if (selectedSizes.includes('CS')) {
-        if (hasMultipleSizeTypes(zone.name)) {
-          return true;
-        }
-      }
-      
-      // Handle regular size type filters
-      const regularSizes = selectedSizes.filter((size): size is 'SQ' | 'PT' | 'LS' => size !== 'CS');
-      if (regularSizes.length > 0 && zone.size_type && regularSizes.includes(zone.size_type as 'SQ' | 'PT' | 'LS')) {
-        return true;
-      }
-      
-      // If CS is selected but no regular sizes, only show conflict zones
-      if (selectedSizes.includes('CS') && regularSizes.length === 0) {
-        return hasMultipleSizeTypes(zone.name);
-      }
-      
-      return false;
+      // Only include zones that have a valid size_type that matches the selected sizes
+      return zone.size_type && selectedSizes.includes(zone.size_type);
     });
   }
 
-  // 3. Apply search filter
+  // 3. Apply positive search filter first
   if (searchTerm.trim()) {
-    const search = searchTerm.toLowerCase();
-    filtered = filtered.filter(zone =>
-      zone.name.toLowerCase().includes(search) ||
-      (zone.alias && zone.alias.toLowerCase().includes(search))
-    );
+    const searchLower = searchTerm.toLowerCase();
+    filtered = filtered.filter(zone => {
+      const networkName = networkMap?.get(zone.network_id) || '';
+      return (
+        zone.name?.toLowerCase().includes(searchLower) ||
+        zone.alias?.toLowerCase().includes(searchLower) ||
+        zone.category?.toLowerCase().includes(searchLower) ||
+        zone.block?.toLowerCase().includes(searchLower) ||
+        zone.size_type?.toLowerCase().includes(searchLower) ||
+        zone.broadstreet_id?.toString().includes(searchLower) ||
+        zone._id?.toString().includes(searchLower) ||
+        networkName.toLowerCase().includes(searchLower)
+      );
+    });
   }
 
-  // 4. Apply negative search filter (supersedes positive search)
+  // 4. Apply negative search filter (excludes zones containing the term)
   if (negativeSearchTerm.trim()) {
-    const negativeSearch = negativeSearchTerm.toLowerCase();
+    const negativeSearchLower = negativeSearchTerm.toLowerCase();
     filtered = filtered.filter(zone => {
-      // Check all zone data fields for negative match
-      const zoneData = [
-        zone.name,
-        zone.alias,
-        zone.category,
-        zone.block,
-        zone.size_type,
-        zone.broadstreet_id?.toString(),
-        zone._id,
-        networkMap.get(zone.network_id)
-      ].filter(Boolean).join(' ').toLowerCase();
-
-      return !zoneData.includes(negativeSearch);
+      const networkName = networkMap?.get(zone.network_id) || '';
+      return !(
+        zone.name?.toLowerCase().includes(negativeSearchLower) ||
+        zone.alias?.toLowerCase().includes(negativeSearchLower) ||
+        zone.category?.toLowerCase().includes(negativeSearchLower) ||
+        zone.block?.toLowerCase().includes(negativeSearchLower) ||
+        zone.size_type?.toLowerCase().includes(negativeSearchLower) ||
+        zone.broadstreet_id?.toString().includes(negativeSearchLower) ||
+        zone._id?.toString().includes(negativeSearchLower) ||
+        networkName.toLowerCase().includes(negativeSearchLower)
+      );
     });
   }
 

@@ -11,9 +11,11 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntityStore, useAllFilters, useFilterActions } from '@/stores';
+import { useDeferredCampaignsFilter } from '@/lib/hooks/use-deferred-campaigns-filter';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
+import { FilterLoadingOverlay } from '@/components/ui/filter-loading-overlay';
 
 // Type for campaign data from Zustand store
 type CampaignLean = {
@@ -119,49 +121,12 @@ function CampaignsList() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
 
-  // Filter campaigns based on advertiser selection and search term, then group by running/paused
-  const filteredCampaigns = useMemo(() => {
-    let filtered = campaigns;
-
-    // Apply advertiser filter
-    if (selectedAdvertiser) {
-      // If advertiser is selected, show only campaigns for that advertiser
-      const advertiserId = getEntityId(selectedAdvertiser);
-      filtered = filtered.filter(campaign => {
-        return String(campaign.advertiser_id) === String(advertiserId);
-      });
-    }
-    // If no advertiser is selected, show all campaigns for all advertisers
-
-    // Apply search filter if search term exists
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(campaign => {
-        const term = searchTerm.toLowerCase();
-        const nameMatch = campaign.name.toLowerCase().includes(term);
-        const notesMatch = (campaign.notes && campaign.notes.toLowerCase().includes(term)) || false;
-        const idStr = String(getEntityId(campaign) ?? '');
-        const idMatch = idStr.toLowerCase().includes(term);
-        return nameMatch || notesMatch || idMatch;
-      });
-    }
-
-    // Sort campaigns: running campaigns first, then paused campaigns
-    // Create a copy of the array before sorting to avoid mutating the original
-    filtered = [...filtered].sort((a, b) => {
-      // Determine if campaigns are running based on active field
-      const aIsRunning = a.active;
-      const bIsRunning = b.active;
-
-      // Running campaigns come first
-      if (aIsRunning && !bIsRunning) return -1;
-      if (!aIsRunning && bIsRunning) return 1;
-
-      // Within same status, sort by name
-      return a.name.localeCompare(b.name);
-    });
-
-    return filtered;
-  }, [campaigns, selectedAdvertiser, searchTerm]);
+  // Use deferred filtering for better performance with loading states
+  const { filteredCampaigns, isFiltering, filterCount } = useDeferredCampaignsFilter({
+    campaigns,
+    selectedAdvertiser,
+    searchTerm
+  });
 
   if (isLoading.campaigns) {
     return (
@@ -336,22 +301,32 @@ function CampaignsList() {
           <p className="card-text text-gray-500">No campaigns match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCampaigns.map((campaign) => {
-            const isSelected = String(getEntityId(selectedCampaign)) === String(getEntityId(campaign));
-            return (
-              <UniversalEntityCard
-                key={String(getEntityId(campaign))}
-                {...mapCampaignToUniversalProps(campaign as any, {
-                  isSelected,
-                  onSelect: handleCampaignSelect,
-                  onDelete: handleDelete,
-                  onCopyZonesToTheme: handleCopyZonesToTheme,
-                  parents: { network: entities.network, advertiser: entities.advertiser },
-                })}
-              />
-            );
-          })}
+        <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredCampaigns.map((campaign) => {
+              const isSelected = String(getEntityId(selectedCampaign)) === String(getEntityId(campaign));
+              return (
+                <UniversalEntityCard
+                  key={String(getEntityId(campaign))}
+                  {...mapCampaignToUniversalProps(campaign as any, {
+                    isSelected,
+                    onSelect: handleCampaignSelect,
+                    onDelete: handleDelete,
+                    onCopyZonesToTheme: handleCopyZonesToTheme,
+                    parents: { network: entities.network, advertiser: entities.advertiser },
+                  })}
+                />
+              );
+            })}
+          </div>
+
+          {/* Loading overlay during filtering operations */}
+          <FilterLoadingOverlay
+            isVisible={isFiltering}
+            filterCount={filterCount}
+            totalCount={campaigns?.length}
+            entityType="campaigns"
+          />
         </div>
       )}
     </div>

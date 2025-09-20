@@ -331,14 +331,14 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
     <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="campaign-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800 flex items-center gap-2">
+        <div className="text-sm text-blue-800 flex items-center gap-2">
           <strong>Network:</strong> {(entities.network as any)?.name}
           <EntityIdBadge broadstreet_id={(entities.network as any)?.broadstreet_id} mongo_id={(entities.network as any)?.mongo_id} />
-        </p>
+        </div>
         {entities.advertiser && (
-          <p className="text-sm text-blue-800 flex items-center gap-2">
+          <div className="text-sm text-blue-800 flex items-center gap-2">
             <strong>Advertiser:</strong> {(entities.advertiser as any).name} <EntityIdBadge broadstreet_id={(entities.advertiser as any)?.broadstreet_id} mongo_id={(entities.advertiser as any)?.mongo_id} />
-          </p>
+          </div>
         )}
       </div>
 

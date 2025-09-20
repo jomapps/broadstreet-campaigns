@@ -11,9 +11,11 @@
 import { useState, useMemo } from 'react';
 import { useEntityStore, useAllFilters } from '@/stores';
 import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
+import { useDeferredAdvertisementsFilter } from '@/lib/hooks/use-deferred-advertisements-filter';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import AdvertisementSelectionControls from './AdvertisementSelectionControls';
 import AdvertisementsList from './AdvertisementsList';
+import { FilterLoadingOverlay } from '@/components/ui/filter-loading-overlay';
 
 /**
  * AdvertisementTypeFilters - Type filtering component
@@ -112,48 +114,16 @@ function AdvertisementsFilters() {
     return types.sort();
   }, [advertisements, entities.advertiser?.name]);
 
-  // Apply all filters to get the currently visible advertisements
-  const filteredAdvertisements = useMemo(() => {
-    if (!advertisements || !Array.isArray(advertisements)) {
-      return [];
-    }
-    
-    let filtered = advertisements;
-    
-    // 1. Filter by selected advertiser (highest priority)
-    const advertiserName = entities.advertiser?.name;
-    if (advertiserName) {
-      filtered = filtered.filter(ad => ad.advertiser === advertiserName);
-    }
-    
-    // 2. Apply "Only Selected" filter
-    if (showOnlySelectedAds && selectedAdvertisements.length > 0) {
-      filtered = filtered.filter(ad => selectedAdvertisements.includes(ad._id));
-    }
-    
-    // 3. Apply type filters
-    if (selectedTypes.length > 0) {
-      filtered = filtered.filter(ad => selectedTypes.includes(ad.type));
-    }
-    
-    // 4. Apply active status filter
-    if (showActiveOnly) {
-      filtered = filtered.filter(ad => ad.active_placement);
-    }
-    
-    // 5. Apply search filter (lowest priority)
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(ad =>
-        (ad.name?.toLowerCase?.().includes(term) ?? false) ||
-        (ad.advertiser?.toLowerCase?.().includes(term) ?? false) ||
-        (ad.type?.toLowerCase?.().includes(term) ?? false) ||
-        String(getEntityId(ad) ?? '').includes(searchTerm)
-      );
-    }
-    
-    return filtered;
-  }, [advertisements, searchTerm, selectedTypes, showActiveOnly, selectedAdvertisements, showOnlySelectedAds, entities.advertiser?.name]);
+  // Use deferred filtering for better performance with loading states
+  const { filteredAdvertisements, isFiltering, filterCount } = useDeferredAdvertisementsFilter({
+    advertisements,
+    selectedAdvertisements: selectedAdvertisements || [],
+    showOnlySelectedAds,
+    selectedTypes,
+    showActiveOnly,
+    searchTerm,
+    entities
+  });
 
   // Handle type filter toggle
   const handleTypeToggle = (type: string) => {
@@ -225,14 +195,24 @@ function AdvertisementsFilters() {
         showOnlySelectedAds={showOnlySelectedAds}
       />
 
-      <AdvertisementsList
-        advertisements={advertisements as any}
-        selectedAdvertisements={selectedAdvertisements.map(String)}
-        showOnlySelectedAds={showOnlySelectedAds}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        filteredAdvertisements={filteredAdvertisements as any}
-      />
+      <div className="relative">
+        <AdvertisementsList
+          advertisements={advertisements as any}
+          selectedAdvertisements={selectedAdvertisements.map(String)}
+          showOnlySelectedAds={showOnlySelectedAds}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          filteredAdvertisements={filteredAdvertisements as any}
+        />
+
+        {/* Loading overlay during filtering operations */}
+        <FilterLoadingOverlay
+          isVisible={isFiltering}
+          filterCount={filterCount}
+          totalCount={advertisements?.length}
+          entityType="advertisements"
+        />
+      </div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ interface FilterLoadingOverlayProps {
   isVisible: boolean;
   filterCount?: number;
   totalCount?: number;
+  entityType?: string;
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export function FilterLoadingOverlay({
   isVisible,
   filterCount,
   totalCount,
+  entityType = "zones",
   className = ""
 }: FilterLoadingOverlayProps) {
   if (!isVisible) return null;
@@ -50,12 +52,12 @@ export function FilterLoadingOverlay({
           
           <div className="flex-1">
             <div className="text-sm font-medium text-gray-900">
-              Filtering zones...
+              Filtering {entityType}...
             </div>
-            
+
             {typeof filterCount === 'number' && typeof totalCount === 'number' && (
               <div className="text-xs text-gray-500 mt-1">
-                {filterCount} of {totalCount} zones match
+                {filterCount} of {totalCount} {entityType} match
               </div>
             )}
           </div>

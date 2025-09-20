@@ -267,9 +267,9 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
     <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="zone-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800 flex items-center gap-2">
+        <div className="text-sm text-blue-800 flex items-center gap-2">
           <strong>Network:</strong> {entities.network?.name} <EntityIdBadge {...(entities.network?.ids || {})} />
-        </p>
+        </div>
       </div>
 
       {errors.network && (

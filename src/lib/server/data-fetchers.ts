@@ -120,11 +120,11 @@ export async function fetchNetworks(params: any = {}) {
 }
 
 /**
- * Fetch advertisers from database
+ * Fetch advertisers from database (both synced and local advertisers)
  * Variable names follow docs/variable-origins.md registry
  * @param {number} networkId - Optional network ID filter
  * @param {Object} params - Optional query parameters
- * @returns {Promise<any[]>} Array of advertiser entities
+ * @returns {Promise<any[]>} Array of advertiser entities (combined synced + local)
  */
 export async function fetchAdvertisers(networkId: any, params: any = {}) {
   try {
@@ -132,34 +132,99 @@ export async function fetchAdvertisers(networkId: any, params: any = {}) {
 
     // Build query based on parameters
     const query: any = {};
-    
+    const localQuery: any = {};
+
     // Add network filter if provided
     if (networkId) {
       query.network_id = networkId;
+      localQuery.network_id = networkId;
     }
-    
+
     // Add search filter if provided
     if (params.search) {
-      query.$or = [
+      const searchFilter = [
         { name: { $regex: params.search, $options: 'i' } },
         { web_home_url: { $regex: params.search, $options: 'i' } },
       ];
+      query.$or = searchFilter;
+      localQuery.$or = searchFilter;
     }
-    
-    // Add status filter if provided
+
+    // Handle status filter
+    let fetchSynced = true;
+    let fetchLocal = true;
+
     if (params.status) {
       if (params.status === 'synced') {
-        query.broadstreet_id = { $exists: true };
+        fetchLocal = false; // Only fetch synced advertisers
       } else if (params.status === 'local') {
-        query.broadstreet_id = { $exists: false };
+        fetchSynced = false; // Only fetch local advertisers
       }
     }
-    
-    const advertisers = await Advertiser.find(query)
-      .sort({ name: 1 })
-      .lean();
-    
-    return serializeEntities(advertisers);
+
+    // Fetch from both collections in parallel
+    const promises = [];
+
+    if (fetchSynced) {
+      promises.push(
+        Advertiser.find(query)
+          .sort({ name: 1 })
+          .lean()
+      );
+    } else {
+      promises.push(Promise.resolve([]));
+    }
+
+    if (fetchLocal) {
+      // Local advertisers are always unsynced
+      localQuery.synced_with_api = false;
+      promises.push(
+        LocalAdvertiser.find(localQuery)
+          .sort({ name: 1 })
+          .lean()
+      );
+    } else {
+      promises.push(Promise.resolve([]));
+    }
+
+    const [syncedAdvertisers, localAdvertisers] = await Promise.all(promises);
+
+    // Debug logging
+    console.log('fetchAdvertisers Debug:', {
+      networkId,
+      params,
+      syncedCount: syncedAdvertisers.length,
+      localCount: localAdvertisers.length,
+      localQuery,
+      fetchSynced,
+      fetchLocal
+    });
+
+    // Transform local advertisers to add mongo_id field for consistency
+    const transformedLocalAdvertisers = localAdvertisers.map((advertiser: any) => ({
+      ...advertiser,
+      mongo_id: advertiser._id.toString(),
+    }));
+
+    // Combine both collections
+    const allAdvertisers = [...syncedAdvertisers, ...transformedLocalAdvertisers];
+
+    // Sort combined results by name
+    allAdvertisers.sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log('fetchAdvertisers Result:', {
+      totalCount: allAdvertisers.length,
+      advertisers: allAdvertisers.map(a => ({
+        name: a.name,
+        broadstreet_id: a.broadstreet_id,
+        mongo_id: a.mongo_id || a._id?.toString(),
+        network_id: a.network_id,
+        created_locally: a.created_locally,
+        synced_with_api: a.synced_with_api
+      }))
+    });
+
+    return serializeEntities(allAdvertisers);
   } catch (error) {
     console.error('Error fetching advertisers:', error);
     throw new Error('Failed to fetch advertisers');
@@ -200,11 +265,44 @@ export async function fetchZones(networkId: any, params: any = {}) {
       LocalZone.find({ ...query, synced_with_api: false }).sort({ name: 1 }).lean()
     ]);
 
-    // Combine zones from both sources with source information
+    // Debug logging
+    console.log('fetchZones Debug:', {
+      networkId,
+      params,
+      apiZonesCount: apiZones.length,
+      localZonesCount: localZones.length,
+      query
+    });
+
+    // Transform local zones to add mongo_id field for consistency
+    const transformedLocalZones = localZones.map((zone: any) => ({
+      ...zone,
+      source: 'local',
+      broadstreet_id: undefined,
+      mongo_id: zone._id.toString(),
+    }));
+
+    // Combine zones from both sources
     const allZones = [
       ...apiZones.map(zone => ({ ...zone, source: 'api' })),
-      ...localZones.map(zone => ({ ...zone, source: 'local', broadstreet_id: undefined }))
+      ...transformedLocalZones
     ];
+
+    // Sort combined results by name
+    allZones.sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log('fetchZones Result:', {
+      totalCount: allZones.length,
+      zones: allZones.map(z => ({
+        name: z.name,
+        broadstreet_id: z.broadstreet_id,
+        mongo_id: z.mongo_id || z._id?.toString(),
+        network_id: z.network_id,
+        source: z.source,
+        created_locally: z.created_locally,
+        synced_with_api: z.synced_with_api
+      }))
+    });
 
     return serializeEntities(allZones);
   } catch (error) {

@@ -11,10 +11,12 @@
 import { Suspense, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntityStore, useFilterStore } from '@/stores';
+import { useDeferredAdvertisersFilter } from '@/lib/hooks/use-deferred-advertisers-filter';
 import { getEntityId } from '@/lib/utils/entity-helpers';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { SearchInput } from '@/components/ui/search-input';
 import CreationButton from '@/components/creation/CreationButton';
+import { FilterLoadingOverlay } from '@/components/ui/filter-loading-overlay';
 
 // Type for advertiser data from Zustand store
 type AdvertiserLean = {
@@ -86,22 +88,11 @@ function AdvertisersList() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const router = useRouter();
 
-  // Filter advertisers based on search term
-  const filteredAdvertisers = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return advertisers;
-    }
-    
-    return advertisers.filter(advertiser =>
-      advertiser.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (advertiser.web_home_url && advertiser.web_home_url.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (advertiser.notes && advertiser.notes.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (advertiser.admins && advertiser.admins.some(admin => 
-        admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        admin.email.toLowerCase().includes(searchTerm.toLowerCase())
-      ))
-    );
-  }, [advertisers, searchTerm]);
+  // Use deferred filtering for better performance with loading states
+  const { filteredAdvertisers, isFiltering, filterCount } = useDeferredAdvertisersFilter({
+    advertisers,
+    searchTerm
+  });
 
   if (isLoading.advertisers) {
     return (
@@ -216,21 +207,31 @@ function AdvertisersList() {
           <p className="text-gray-500">No advertisers match your search.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAdvertisers.map((advertiser) => {
-            const isSelected = String(getEntityId(selectedAdvertiser)) === String(getEntityId(advertiser));
-            return (
-              <UniversalEntityCard
-                key={String(getEntityId(advertiser))}
-                {...mapAdvertiserToUniversalProps(advertiser, {
-                  isSelected,
-                  onSelect: handleAdvertiserSelect,
-                  onDelete: handleDelete,
-                  parentNetwork: selectedNetwork,
-                })}
-              />
-            );
-          })}
+        <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAdvertisers.map((advertiser) => {
+              const isSelected = String(getEntityId(selectedAdvertiser)) === String(getEntityId(advertiser));
+              return (
+                <UniversalEntityCard
+                  key={String(getEntityId(advertiser))}
+                  {...mapAdvertiserToUniversalProps(advertiser, {
+                    isSelected,
+                    onSelect: handleAdvertiserSelect,
+                    onDelete: handleDelete,
+                    parentNetwork: selectedNetwork,
+                  })}
+                />
+              );
+            })}
+          </div>
+
+          {/* Loading overlay during filtering operations */}
+          <FilterLoadingOverlay
+            isVisible={isFiltering}
+            filterCount={filterCount}
+            totalCount={advertisers?.length}
+            entityType="advertisers"
+          />
         </div>
       )}
     </div>

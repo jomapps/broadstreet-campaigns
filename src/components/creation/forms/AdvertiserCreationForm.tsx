@@ -255,9 +255,9 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
     <form onSubmit={handleSubmit} className="flex flex-col h-full" data-testid="advertiser-creation-form">
       {/* Network Info */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-        <p className="text-sm text-blue-800 flex items-center gap-2">
+        <div className="text-sm text-blue-800 flex items-center gap-2">
           <strong>Network:</strong> {(selectedNetwork as any)?.name} <EntityIdBadge broadstreet_id={(selectedNetwork as any)?.broadstreet_id} mongo_id={(selectedNetwork as any)?.mongo_id} />
-        </p>
+        </div>
       </div>
 
       {errors.network && (
