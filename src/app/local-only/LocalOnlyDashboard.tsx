@@ -326,7 +326,12 @@ export default function LocalOnlyDashboard() {
   // Get selected network from filter store using new Zustand pattern
   const { selectedNetwork } = useAllFilters();
 
-  const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length + data.placements.length;
+  // Count embedded placements within campaigns
+  const embeddedPlacementsCount = data.campaigns.reduce((total, campaign) => {
+    return total + (Array.isArray((campaign as any).placements) ? (campaign as any).placements.length : 0);
+  }, 0);
+
+  const totalEntities = data.zones.length + data.advertisers.length + data.campaigns.length + data.networks.length + data.advertisements.length + data.placements.length + embeddedPlacementsCount;
 
   const toggleSelection = (entityId: string) => {
     setSelectedIds(prev => {
@@ -526,7 +531,12 @@ export default function LocalOnlyDashboard() {
   };
 
   const handleDeleteAll = async () => {
-    if (!confirm(`Are you sure you want to delete ALL ${totalEntities} local entities? This action cannot be undone and will permanently remove all local creations.`)) {
+    const standalonePlacementsCount = data.placements.length;
+    const confirmMessage = embeddedPlacementsCount > 0
+      ? `Are you sure you want to delete ALL ${totalEntities} local entities? This includes ${standalonePlacementsCount} standalone placements and ${embeddedPlacementsCount} embedded placements. This action cannot be undone and will permanently remove all local creations.`
+      : `Are you sure you want to delete ALL ${totalEntities} local entities? This action cannot be undone and will permanently remove all local creations.`;
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -607,6 +617,11 @@ export default function LocalOnlyDashboard() {
             <h2 className="text-lg font-semibold text-gray-900">Local Entities Summary</h2>
             <p className="text-gray-600 mt-1">
               {totalEntities} local entities ready to sync to Broadstreet
+              {embeddedPlacementsCount > 0 && (
+                <span className="text-sm text-gray-500 block">
+                  (includes {embeddedPlacementsCount} embedded placements)
+                </span>
+              )}
             </p>
           </div>
           <div className="flex space-x-3">

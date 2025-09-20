@@ -11,6 +11,13 @@ export async function DELETE(request: NextRequest) {
   try {
     await connectDB();
 
+    // First, clear embedded placements from synced campaigns (but keep the campaigns)
+    const embeddedPlacementsClearResult = await LocalCampaign.updateMany(
+      { synced_with_api: true, 'placements.0': { $exists: true } },
+      { $unset: { placements: 1 } }
+    );
+    console.log(`Cleared embedded placements from ${embeddedPlacementsClearResult.modifiedCount} synced campaigns`);
+
     // Delete all local entities from their respective collections
     const deleteResults = await Promise.allSettled([
       LocalAdvertiser.deleteMany({ synced_with_api: false }),
@@ -38,6 +45,9 @@ export async function DELETE(request: NextRequest) {
       }
     });
 
+    // Add the cleared embedded placements to the total count
+    totalDeleted += embeddedPlacementsClearResult.modifiedCount;
+
     if (errors.length > 0) {
       return NextResponse.json({
         message: `Partial success: ${totalDeleted} entities deleted, ${errors.length} errors`,
@@ -56,6 +66,7 @@ export async function DELETE(request: NextRequest) {
         advertisements: deleteResults[3].status === 'fulfilled' ? deleteResults[3].value.deletedCount || 0 : 0,
         networks: deleteResults[4].status === 'fulfilled' ? deleteResults[4].value.deletedCount || 0 : 0,
         placements: deleteResults[5].status === 'fulfilled' ? deleteResults[5].value.deletedCount || 0 : 0,
+        embeddedPlacements: embeddedPlacementsClearResult.modifiedCount,
       }
     });
 

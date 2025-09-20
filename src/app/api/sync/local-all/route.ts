@@ -86,6 +86,13 @@ export async function POST(request: NextRequest) {
         console.log('[local-all] Deleting all local-only entities...');
         await connectDB();
 
+        // First, clear embedded placements from synced campaigns (but keep the campaigns)
+        const embeddedPlacementsClearResult = await LocalCampaign.updateMany(
+          { synced_with_api: true, 'placements.0': { $exists: true } },
+          { $unset: { placements: 1 } }
+        );
+        console.log(`[local-all] Cleared embedded placements from ${embeddedPlacementsClearResult.modifiedCount} synced campaigns`);
+
         const deleteResults = await Promise.allSettled([
           LocalAdvertiser.deleteMany({ synced_with_api: false }),
           LocalCampaign.deleteMany({ synced_with_api: false }),
@@ -111,7 +118,10 @@ export async function POST(request: NextRequest) {
           }
         });
 
-        console.log(`[local-all] Cleanup completed: ${totalDeleted} entities deleted, ${deleteErrors.length} errors`);
+        // Add the cleared embedded placements to the total count
+        totalDeleted += embeddedPlacementsClearResult.modifiedCount;
+
+        console.log(`[local-all] Cleanup completed: ${totalDeleted} entities deleted (including ${embeddedPlacementsClearResult.modifiedCount} embedded placements), ${deleteErrors.length} errors`);
 
         // Step 2: Trigger dashboard sync to refresh all data from Broadstreet
         console.log('[local-all] Starting dashboard sync...');
