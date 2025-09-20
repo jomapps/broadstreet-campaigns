@@ -1,6 +1,6 @@
 // Comprehensive build check script for Tailwind v4 + Next.js 15
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 console.log('🔍 Checking for build issues (Tailwind v4 + Next.js 15)...\n');
 
@@ -19,7 +19,7 @@ const requiredFiles = [
 ];
 
 let allFilesExist = true;
-requiredFiles.forEach(file => {
+requiredFiles.forEach((file) => {
   if (fs.existsSync(file)) {
     console.log(`✅ ${file}`);
   } else {
@@ -34,7 +34,7 @@ const requiredDeps = ['react', 'react-dom', 'next', 'mongoose'];
 const requiredDevDeps = ['tailwindcss'];
 
 console.log('\n📦 Checking dependencies...');
-requiredDeps.forEach(dep => {
+requiredDeps.forEach((dep) => {
   if (packageJson.dependencies[dep]) {
     console.log(`✅ ${dep}: ${packageJson.dependencies[dep]}`);
   } else {
@@ -44,7 +44,7 @@ requiredDeps.forEach(dep => {
 });
 
 console.log('\n🎨 Checking Tailwind v4 setup...');
-requiredDevDeps.forEach(dep => {
+requiredDevDeps.forEach((dep) => {
   if (packageJson.devDependencies[dep]) {
     console.log(`✅ ${dep}: ${packageJson.devDependencies[dep]}`);
   } else {
@@ -105,7 +105,7 @@ const apiRoutes = [
   'src/app/api/fallback-ad/create/route.ts'
 ];
 
-apiRoutes.forEach(route => {
+apiRoutes.forEach((route) => {
   if (fs.existsSync(route)) {
     console.log(`✅ ${route}`);
   } else {
@@ -124,3 +124,4 @@ if (allFilesExist) {
 } else {
   console.log('❌ Some issues found. Please fix before building.');
 }
+

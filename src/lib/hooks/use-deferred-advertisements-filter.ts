@@ -16,7 +16,7 @@ import { getEntityId } from '@/lib/utils/entity-helpers';
  */
 interface FilterParams {
   advertisements: any[];
-  selectedAdvertisements: string[];
+  selectedAdvertisements: Array<string | number>;
   showOnlySelectedAds: boolean;
   selectedTypes: string[];
   showActiveOnly: boolean;
@@ -63,7 +63,8 @@ const applyAdvertisementFilters = (params: FilterParams): any[] => {
 
   // 2. Apply "Only Selected" filter
   if (showOnlySelectedAds && selectedAdvertisements.length > 0) {
-    filtered = filtered.filter(ad => selectedAdvertisements.includes(ad._id));
+    const selectedSet = new Set(selectedAdvertisements.map(x => String(x)));
+    filtered = filtered.filter(ad => selectedSet.has(String(getEntityId(ad))));
   }
 
   // 3. Apply type filters

@@ -1,7 +1,7 @@
 import connectDB from '../mongodb';
 import broadstreetAPI from '../broadstreet-api';
 import { parseZoneName } from './zone-parser';
-import { cleanupLegacyIndexes, resolveBroadstreetId } from './entity-helpers';
+import { cleanupLegacyIndexes } from './entity-helpers';
 import { mapApiIds } from '../types/mapApiIds';
 
 // Import models
@@ -654,15 +654,3 @@ export async function syncAll(): Promise<{ success: boolean; results: Record<str
   }
 }
 
-// -----------------------------------------------------------------------------
-// Entity-specific ID resolution helpers (using consolidated utility)
-// These are kept for backward compatibility with existing code
-// -----------------------------------------------------------------------------
-
-export async function resolveAdvertiserBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  return resolveBroadstreetId(ref, LocalAdvertiser);
-}
-
-export async function resolveZoneBroadstreetId(ref: { broadstreet_id?: number; mongo_id?: string }): Promise<number | null> {
-  return resolveBroadstreetId(ref, LocalZone);
-}

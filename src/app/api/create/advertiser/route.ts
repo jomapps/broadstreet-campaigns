@@ -7,12 +7,12 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, network_id, web_home_url, notes, admins } = body;
+    const { name, networkId, webHomeUrl, notes, admins } = body;
 
     // Validate required fields
-    if (!name || !network_id) {
+    if (!name || networkId === undefined || networkId === null) {
       return NextResponse.json(
-        { message: 'Name and network_id are required' },
+        { message: 'Name and networkId are required' },
         { status: 400 }
       );
     }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Check if advertiser with same name already exists in this network
     const existingAdvertiser = await LocalAdvertiser.findOne({
       name: name.trim(),
-      network_id: network_id
+      network_id: networkId
     });
 
     if (existingAdvertiser) {
@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     // Create new local advertiser
     const newAdvertiser = new LocalAdvertiser({
       name: name.trim(),
-      network_id,
-      web_home_url: web_home_url || undefined,
+      network_id: networkId,
+      web_home_url: webHomeUrl || undefined,
       notes: notes || undefined,
       admins: admins || [],
       created_locally: true,

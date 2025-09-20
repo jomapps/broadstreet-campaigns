@@ -101,8 +101,8 @@ export const useFilterStore = create<FilterState & FilterActions>()(
        * Set selected zones - enforces theme mutual exclusivity
        */
       setSelectedZones: (zones) => set((state) => {
-        state.selectedZones = zones;
-        
+        state.selectedZones = zones.map(String);
+
         // Clear theme if zones don't match theme's zones
         if (state.selectedTheme) {
           const themeZoneIds = state.selectedTheme.zone_ids.map(String);
@@ -112,7 +112,7 @@ export const useFilterStore = create<FilterState & FilterActions>()(
             state.selectedTheme = null;
           }
         }
-        
+
         state.lastFilterUpdate = new Date();
         state.filterSource = 'user';
       }),
@@ -147,13 +147,14 @@ export const useFilterStore = create<FilterState & FilterActions>()(
        * Toggle individual zone selection - maintains theme consistency
        */
       toggleZoneSelection: (zoneId) => set((state) => {
-        const index = state.selectedZones.indexOf(zoneId);
+        const key = String(zoneId);
+        const index = state.selectedZones.findIndex((z) => String(z) === key);
         if (index > -1) {
           // Remove zone
           state.selectedZones.splice(index, 1);
         } else {
-          // Add zone
-          state.selectedZones.push(zoneId);
+          // Add zone as string for consistency
+          state.selectedZones.push(key);
         }
         
         // Clear theme if zones no longer match theme's zones
@@ -193,7 +194,7 @@ export const useFilterStore = create<FilterState & FilterActions>()(
        * Select all zones from provided array
        */
       selectAllZones: (zoneIds) => set((state) => {
-        state.selectedZones = [...zoneIds];
+        state.selectedZones = zoneIds.map(String);
         state.selectedTheme = null; // Clear theme when bulk selecting
         state.lastFilterUpdate = new Date();
         state.filterSource = 'bulk';
@@ -293,11 +294,6 @@ export const useFilterStore = create<FilterState & FilterActions>()(
             state.selectedNetwork = defaultNetwork;
             state.lastFilterUpdate = new Date();
             state.filterSource = 'user';
-          } else {
-            // Fallback to first network if default not found
-            state.selectedNetwork = networks[0];
-            state.lastFilterUpdate = new Date();
-            state.filterSource = 'user';
           }
         }
       }),
@@ -325,17 +321,23 @@ export const useFilterStore = create<FilterState & FilterActions>()(
           state.filterSource = 'url';
         }
 
-        // Parse zones parameter
+        // Parse zones parameter (supports comma-separated list)
         if (params.zones) {
-          const zoneIds = Array.isArray(params.zones) ? params.zones : [params.zones];
-          state.selectedZones = zoneIds;
+          const raw = params.zones;
+          const zoneIds = Array.isArray(raw)
+            ? raw.flatMap((v: any) => String(v).split(',')).map((s: string) => s.trim()).filter(Boolean)
+            : String(raw).split(',').map((s) => s.trim()).filter(Boolean);
+          state.selectedZones = zoneIds.map(String);
           state.filterSource = 'url';
         }
 
-        // Parse advertisements parameter
+        // Parse advertisements parameter (supports comma-separated list)
         if (params.advertisements) {
-          const adIds = Array.isArray(params.advertisements) ? params.advertisements : [params.advertisements];
-          state.selectedAdvertisements = adIds;
+          const raw = params.advertisements;
+          const adIds = Array.isArray(raw)
+            ? raw.flatMap((v: any) => String(v).split(',')).map((s: string) => s.trim()).filter(Boolean)
+            : String(raw).split(',').map((s) => s.trim()).filter(Boolean);
+          state.selectedAdvertisements = adIds.map(String);
           state.filterSource = 'url';
         }
 

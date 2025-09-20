@@ -220,46 +220,36 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
 
       const payload: any = {
         name: formData.name.trim(),
-        // Campaign API requires numeric Broadstreet network_id
-        network_id: networkBroadstreetId,
-        // Include numeric advertiser_id when present; otherwise include explicit advertiser object with mongo_id
-        ...(typeof advertiserIdValue === 'number' ? { advertiser_id: advertiserIdValue } : {}),
-        // Also include explicit ID objects to avoid ambiguity downstream
-        network: {
-          broadstreet_id: (entities.network as any)?.broadstreet_id,
-          mongo_id: (entities.network as any)?.mongo_id,
-        },
-        advertiser: {
-          broadstreet_id: (entities.advertiser as any)?.broadstreet_id,
-          mongo_id: (entities.advertiser as any)?.mongo_id,
-        },
-        start_date: formData.start_date,
+        networkId: networkBroadstreetId,
+        ...(typeof advertiserIdValue === 'number'
+          ? { advertiserId: advertiserIdValue }
+          : { advertiser: { mongoId: (entities.advertiser as any)?.mongo_id } }),
+        startDate: formData.start_date,
         weight: parseFloat(formData.weight.toString()), // Ensure weight is a number
       };
 
       // Only add optional fields if they have values
       
       if (formData.end_date && formData.end_date.trim()) {
-        payload.end_date = formData.end_date.trim();
+        payload.endDate = formData.end_date.trim();
       }
-      
-      
+
       if (formData.max_impression_count && formData.max_impression_count.trim()) {
-        payload.max_impression_count = parseInt(formData.max_impression_count);
+        payload.maxImpressionCount = parseInt(formData.max_impression_count);
       }
-      
+
       if (formData.display_type && formData.display_type !== 'no_repeat') {
-        payload.display_type = formData.display_type;
+        payload.displayType = formData.display_type;
       }
-      
+
       if (formData.pacing_type && formData.pacing_type !== 'asap') {
-        payload.pacing_type = formData.pacing_type;
+        payload.pacingType = formData.pacing_type;
       }
-      
+
       if (formData.impression_max_type && formData.impression_max_type !== 'cap') {
-        payload.impression_max_type = formData.impression_max_type;
+        payload.impressionMaxType = formData.impression_max_type;
       }
-      
+
       if (formData.path && formData.path.trim()) {
         payload.path = formData.path.trim();
       }
@@ -302,7 +292,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
       try {
         if (entities.advertiser) {
           const advId = (entities.advertiser as any).broadstreet_id || (entities.advertiser as any).mongo_id;
-          const listRes = await fetch(`/api/campaigns?advertiser_id=${encodeURIComponent(String(advId ?? ''))}` , { cache: 'no-store' });
+          const listRes = await fetch(`/api/campaigns?advertiserId=${encodeURIComponent(String(advId ?? ''))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setCampaigns(listData.campaigns || []);

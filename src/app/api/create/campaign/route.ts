@@ -9,16 +9,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
-      network_id,
-      advertiser_id,
-      advertiser, // optional { broadstreet_id?: number; mongo_id?: string }
-      start_date,
-      end_date,
+      networkId,
+      advertiserId,
+      advertiser, // optional { broadstreetId?: number; mongoId?: string }
+      startDate,
+      endDate,
       weight,
-      max_impression_count,
-      display_type,
-      pacing_type,
-      impression_max_type,
+      maxImpressionCount,
+      displayType,
+      pacingType,
+      impressionMaxType,
       path,
       notes,
       active,
@@ -27,23 +27,23 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || network_id === undefined || network_id === null || 
-        (advertiser_id === undefined && !advertiser) || 
-        !start_date || weight === undefined || weight === null) {
+    if (!name || networkId === undefined || networkId === null ||
+        (advertiserId === undefined && !advertiser) ||
+        !startDate || weight === undefined || weight === null) {
       return NextResponse.json(
-        { message: 'Name, network_id, advertiser (id or object), start_date, and weight are required' },
+        { message: 'Name, networkId, advertiser (id or object), startDate, and weight are required' },
         { status: 400 }
       );
     }
 
     // Resolve normalized advertiser identifier for local storage and duplicate checks
     const normalizedAdvertiserId: number | string | undefined =
-      typeof advertiser_id === 'number'
-        ? advertiser_id
-        : (advertiser && typeof advertiser.broadstreet_id === 'number')
-          ? advertiser.broadstreet_id
-          : (advertiser && typeof advertiser.mongo_id === 'string')
-            ? advertiser.mongo_id
+      typeof advertiserId === 'number'
+        ? advertiserId
+        : (advertiser && typeof advertiser.broadstreetId === 'number')
+          ? advertiser.broadstreetId
+          : (advertiser && typeof advertiser.mongoId === 'string')
+            ? advertiser.mongoId
             : undefined;
 
     if (normalizedAdvertiserId === undefined) {
@@ -69,15 +69,15 @@ export async function POST(request: NextRequest) {
     // Create new local campaign
     const newCampaign = new LocalCampaign({
       name: name.trim(),
-      network_id,
+      network_id: networkId,
       advertiser_id: normalizedAdvertiserId,
-      start_date: start_date,
-      end_date: end_date || undefined,
+      start_date: startDate,
+      end_date: endDate || undefined,
       weight,
-      max_impression_count: max_impression_count || undefined,
-      display_type: display_type || 'no_repeat',
-      pacing_type: pacing_type || 'asap',
-      impression_max_type: impression_max_type || undefined,
+      max_impression_count: maxImpressionCount || undefined,
+      display_type: displayType || 'no_repeat',
+      pacing_type: pacingType || 'asap',
+      impression_max_type: impressionMaxType || undefined,
       path: path || undefined,
       notes: notes || undefined,
       active: active !== undefined ? !!active : true,

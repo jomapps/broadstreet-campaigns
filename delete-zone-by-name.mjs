@@ -62,9 +62,10 @@ async function deleteZoneByName(zoneName) {
 const zoneName = process.argv[2];
 
 if (!zoneName) {
-  console.log('Usage: node delete-zone-by-name.js "Zone Name"');
-  console.log('Example: node delete-zone-by-name.js "Leo API Test"');
+  console.log('Usage: node delete-zone-by-name.mjs "Zone Name"');
+  console.log('Example: node delete-zone-by-name.mjs "Leo API Test"');
   process.exit(1);
 }
 
 deleteZoneByName(zoneName);
+

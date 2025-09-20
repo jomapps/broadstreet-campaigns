@@ -45,13 +45,15 @@ export function useAdvertisersQuery() {
   const { selectedNetwork } = useFilterStore();
   const { setAdvertisers, setLoading } = useEntityStore();
   
-  const selectedNetworkId = (selectedNetwork as any)?.broadstreet_id;
+  const networkId = (selectedNetwork as any)?.broadstreet_id
+    ? String((selectedNetwork as any).broadstreet_id)
+    : undefined;
 
   return useQuery({
-    queryKey: queryKeys.advertisers(selectedNetworkId),
+    queryKey: queryKeys.advertisers(networkId),
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedNetworkId) params.append('networkId', selectedNetworkId);
+      if (networkId) params.append('networkId', networkId);
 
       const response = await fetch(`/api/advertisers?${params}`);
       if (!response.ok) throw new Error('Failed to fetch advertisers');
@@ -64,24 +66,7 @@ export function useAdvertisersQuery() {
  * Custom hook for fetching zones with React Query caching
  * Supports network filtering and integrates with Zustand store
  */
-export function useZonesQuery() {
-  const { selectedNetwork } = useFilterStore();
-  const { setZones, setLoading } = useEntityStore();
-  
-  const selectedNetworkId = (selectedNetwork as any)?.broadstreet_id;
 
-  return useQuery({
-    queryKey: queryKeys.zones(selectedNetworkId),
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (selectedNetworkId) params.append('networkId', selectedNetworkId);
-
-      const response = await fetch(`/api/zones?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch zones');
-      return response.json();
-    },
-  });
-}
 
 /**
  * Custom hook for creating entities with optimistic updates

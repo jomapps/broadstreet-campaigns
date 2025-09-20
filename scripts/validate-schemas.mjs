@@ -7,8 +7,9 @@
  * in docs/entity-reference/database-models.md and follow naming standards
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Expected schema patterns based on database-models.md
 const SCHEMA_REQUIREMENTS = {
@@ -92,7 +93,7 @@ const SCHEMA_REQUIREMENTS = {
 };
 
 function validateSchemas() {
-  console.log('🔍 Starting database schema validation...\n');
+  console.log('\ud83d\udd0d Starting database schema validation...\n');
   
   const modelsDir = './src/lib/models';
   const issues = [];
@@ -224,15 +225,15 @@ function extractFieldSection(schemaContent, fieldName) {
 }
 
 function generateReport(results) {
-  console.log('📋 DATABASE SCHEMA VALIDATION REPORT');
-  console.log('=' .repeat(50));
+  console.log('\ud83d\udccb DATABASE SCHEMA VALIDATION REPORT');
+  console.log('='.repeat(50));
   console.log(`Generated: ${new Date().toISOString()}`);
   console.log('');
   
   const { issues, warnings } = results;
   
   if (issues.length === 0 && warnings.length === 0) {
-    console.log('✅ All schemas are valid and consistent!');
+    console.log('\u2705 All schemas are valid and consistent!');
     console.log('   • All required fields present');
     console.log('   • No forbidden patterns found');
     console.log('   • Schema options correctly configured');
@@ -241,30 +242,30 @@ function generateReport(results) {
   }
   
   if (issues.length > 0) {
-    console.log('🚨 CRITICAL ISSUES (Must Fix):');
-    console.log('-' .repeat(30));
+    console.log('\ud83d\udea8 CRITICAL ISSUES (Must Fix):');
+    console.log('-'.repeat(30));
     issues.forEach(issue => {
-      console.log(`   ❌ ${issue}`);
+      console.log(`   \u274c ${issue}`);
     });
     console.log('');
   }
   
   if (warnings.length > 0) {
-    console.log('⚠️  WARNINGS (Should Review):');
-    console.log('-' .repeat(30));
+    console.log('\u26a0\ufe0f  WARNINGS (Should Review):');
+    console.log('-'.repeat(30));
     warnings.forEach(warning => {
-      console.log(`   ⚠️  ${warning}`);
+      console.log(`   \u26a0\ufe0f  ${warning}`);
     });
     console.log('');
   }
   
-  console.log('📊 SUMMARY:');
-  console.log(`   🚨 Critical Issues: ${issues.length}`);
-  console.log(`   ⚠️  Warnings: ${warnings.length}`);
-  console.log(`   📁 Models Validated: ${fs.readdirSync('./src/lib/models').filter(f => f.endsWith('.ts')).length}`);
+  console.log('\ud83d\udcca SUMMARY:');
+  console.log(`   \ud83d\udea8 Critical Issues: ${issues.length}`);
+  console.log(`   \u26a0\ufe0f  Warnings: ${warnings.length}`);
+  console.log(`   \ud83d\udcc1 Models Validated: ${fs.readdirSync('./src/lib/models').filter(f => f.endsWith('.ts')).length}`);
   
   if (issues.length > 0) {
-    console.log('\n🔧 RECOMMENDED ACTIONS:');
+    console.log('\n\ud83d\udd27 RECOMMENDED ACTIONS:');
     console.log('   1. Fix all critical issues immediately');
     console.log('   2. Review warnings for consistency');
     console.log('   3. Ensure all schemas match database-models.md');
@@ -272,19 +273,20 @@ function generateReport(results) {
     console.log('   5. Update documentation if needed');
   }
   
-  console.log('\n📖 REFERENCE:');
+  console.log('\n\ud83d\udcd6 REFERENCE:');
   console.log('   • Database Models: docs/entity-reference/database-models.md');
   console.log('   • ID Standards: docs/entity-reference/ids.md');
   console.log('   • Field Naming: docs/database-id-consistency.md');
 }
 
 // Main execution
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename) {
   const startTime = Date.now();
   const results = validateSchemas();
   const endTime = Date.now();
   
-  console.log(`⏱️  Validation completed in ${endTime - startTime}ms\n`);
+  console.log(`\u23f1\ufe0f  Validation completed in ${endTime - startTime}ms\n`);
   
   generateReport(results);
   
@@ -292,4 +294,5 @@ if (require.main === module) {
   process.exit(results.issues.length > 0 ? 1 : 0);
 }
 
-module.exports = { validateSchemas, validateModelFile, generateReport };
+export { validateSchemas, validateModelFile, generateReport };
+

@@ -79,13 +79,13 @@ export default function PlacementsClient({
       try {
         // Build query parameters from current filter state
         const queryParams = new URLSearchParams();
-        if (selectedNetwork?.broadstreet_id) queryParams.set('network_id', selectedNetwork.broadstreet_id.toString());
-        if (selectedAdvertiser?.broadstreet_id) queryParams.set('advertiser_id', selectedAdvertiser.broadstreet_id.toString());
-        if (selectedCampaign?.broadstreet_id) queryParams.set('campaign_id', selectedCampaign.broadstreet_id.toString());
+        if (selectedNetwork?.broadstreet_id) queryParams.set('networkId', selectedNetwork.broadstreet_id.toString());
+        if (selectedAdvertiser?.broadstreet_id) queryParams.set('advertiserId', selectedAdvertiser.broadstreet_id.toString());
+        if (selectedCampaign?.broadstreet_id) queryParams.set('campaignId', selectedCampaign.broadstreet_id.toString());
 
         // Also support campaign_mongo_id for local campaigns
         if (selectedCampaign?.mongo_id && !selectedCampaign?.broadstreet_id) {
-          queryParams.set('campaign_mongo_id', selectedCampaign.mongo_id);
+          queryParams.set('campaignMongoId', selectedCampaign.mongo_id);
         }
 
         console.log('Loading placements with query:', queryParams.toString());

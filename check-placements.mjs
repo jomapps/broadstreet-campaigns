@@ -1,5 +1,5 @@
-require('dotenv').config({ path: '.env.local' });
-const { MongoClient } = require('mongodb');
+import 'dotenv/config';
+import { MongoClient } from 'mongodb';
 
 async function checkPlacements() {
   const client = new MongoClient(process.env.MONGODB_URI);
@@ -61,7 +61,6 @@ async function checkPlacements() {
     } else {
       console.log('Campaign 846562 not found in synced campaigns');
     }
-
   } catch (error) {
     console.error('Error:', error);
   } finally {
@@ -70,3 +69,4 @@ async function checkPlacements() {
 }
 
 checkPlacements();
+

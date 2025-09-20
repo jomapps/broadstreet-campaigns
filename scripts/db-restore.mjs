@@ -1,14 +1,15 @@
- 
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const { loadEnv } = require('./load-env');
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'url';
+import { loadEnv } from './load-env.mjs';
 
 function getLatestBackupDir(backupsDir) {
   if (!fs.existsSync(backupsDir)) return null;
-  const entries = fs.readdirSync(backupsDir)
-    .map(name => ({ name, full: path.join(backupsDir, name) }))
-    .filter(e => fs.statSync(e.full).isDirectory())
+  const entries = fs
+    .readdirSync(backupsDir)
+    .map((name) => ({ name, full: path.join(backupsDir, name) }))
+    .filter((e) => fs.statSync(e.full).isDirectory())
     .sort((a, b) => b.name.localeCompare(a.name));
   return entries.length ? entries[0].full : null;
 }
@@ -21,6 +22,8 @@ async function main() {
     process.exit(1);
   }
 
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   const root = path.resolve(__dirname, '..');
   const backupsDir = path.join(root, 'backups');
   const named = process.argv[2];
@@ -57,5 +60,4 @@ async function main() {
 }
 
 main();
-
 

@@ -18,7 +18,7 @@ This document maintains a registry of all variable names used across multiple fu
 
 2. **Multi-Function Criteria** - Variables used across:
    - Multiple store actions
-   - Store state + component usage  
+   - Store state + component usage
    - Multiple components
    - Server-side functions + client-side usage
    - Any cross-boundary variable references
@@ -31,7 +31,7 @@ This document maintains a registry of all variable names used across multiple fu
 
 ### Selected Entities (Filter State)
 - `selectedNetwork` - Currently selected network entity in filter state
-- `selectedAdvertiser` - Currently selected advertiser entity in filter state  
+- `selectedAdvertiser` - Currently selected advertiser entity in filter state
 - `selectedCampaign` - Currently selected campaign entity in filter state
 - `selectedTheme` - Currently selected theme entity in filter state
 
@@ -150,6 +150,40 @@ This document maintains a registry of all variable names used across multiple fu
 - `campaignId` - Campaign ID parameter (number or string depending on context)
 - `zoneId` - Zone ID parameter (number or string depending on context)
 - `advertisementId` - Advertisement ID parameter (always number/broadstreet_id)
+
+
+---
+
+## API Query Parameters
+
+- Convention: Internal API query parameters use camelCase only (no snake_case fallbacks)
+- Standard keys:
+  - advertisers: `networkId`
+  - campaigns: `advertiserId`
+  - placements: `networkId`, `advertiserId`, `campaignId`, `campaignMongoId`, `advertisementId`, `zoneId`
+  - local-placements (GET): `networkId`, `advertiserId`, `campaignId`, `campaignMongoId`, `advertisementId`, `zoneId`
+- Request bodies: may follow domain/schema naming as required; do not support dual names. Use exactly one field name per concept.
+
+## API Request Bodies (Internal create/*)
+
+- Convention: camelCase only (no snake_case fallbacks)
+- Endpoints and keys:
+  - POST /api/create/campaign
+    - Required: `name`, `networkId` (number), `advertiserId` (number) OR `advertiser.mongoId` (string), `startDate`, `weight`
+    - Optional: `endDate`, `maxImpressionCount`, `displayType`, `pacingType`, `impressionMaxType`, `path`, `notes`, `active`, `archived`, `paused`
+  - POST /api/create/zone
+    - Required: `name`, `networkId` (number)
+    - Optional: `alias`, `advertisementCount`, `allowDuplicateAds`, `concurrentCampaigns`, `advertisementLabel`, `archived`, `displayType`, `rotationInterval`, `animationType`, `width`, `height`, `rssShuffle`, `style`, `selfServe`
+  - POST /api/create/advertiser
+    - Required: `name`, `networkId` (number)
+    - Optional: `webHomeUrl`, `notes`, `admins[]`
+  - POST /api/create/placements
+    - Required: (`campaignId` number OR `campaignMongoId` string), `advertisementIds[]` (numbers), `zoneIds[]` (numbers or MongoId strings), optional `restrictions[]`
+
+Notes
+- Request bodies map to snake_case database fields server-side; clients must use camelCase only.
+- No dual support or fallbacks are accepted.
+
 
 ### Filter Parameters
 - `filterValue` - Generic filter value parameter for sidebar filter resolution

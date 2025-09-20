@@ -14,31 +14,31 @@ export async function GET(request: NextRequest) {
     await connectDB();
     
     const { searchParams } = new URL(request.url);
-    const networkId = searchParams.get('network_id');
-    const advertiserId = searchParams.get('advertiser_id');
-    const campaignId = searchParams.get('campaign_id');
-    const campaignMongoIdParam = searchParams.get('campaign_mongo_id');
-    const advertisementIdFilter = searchParams.get('advertisement_id');
-    const zoneIdFilter = searchParams.get('zone_id');
+    const networkId = searchParams.get('networkId');
+    const advertiserId = searchParams.get('advertiserId');
+    const campaignId = searchParams.get('campaignId');
+    const campaignMongoId = searchParams.get('campaignMongoId');
+    const advertisementId = searchParams.get('advertisementId');
+    const zoneId = searchParams.get('zoneId');
     const limitParam = searchParams.get('limit');
     const hardLimit = Number.isFinite(Number(limitParam)) ? Math.max(1, Math.min(1000, parseInt(limitParam as string))) : 0;
 
     // Guardrails in production to avoid heavy unfiltered queries
-    const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoIdParam || advertisementIdFilter || zoneIdFilter);
+    const hasAnyFilter = Boolean(networkId || advertiserId || campaignId || campaignMongoId || advertisementId || zoneId);
     if (process.env.NODE_ENV === 'production' && !hasAnyFilter && !hardLimit) {
       return NextResponse.json({
         success: false,
-        message: 'At least one filter (network_id, advertiser_id, campaign_id, campaign_mongo_id, advertisement_id, or zone_id) is required.',
+        message: 'At least one filter (networkId, advertiserId, campaignId, campaignMongoId, advertisementId, or zoneId) is required.',
       }, { status: 400 });
     }
     
     // Validate ObjectId-like campaign_mongo_id early to avoid CastError
-    if (campaignMongoIdParam) {
+    if (campaignMongoId) {
       const { isValidObjectId } = await import('mongoose');
-      if (!isValidObjectId(campaignMongoIdParam)) {
+      if (!isValidObjectId(campaignMongoId)) {
         return NextResponse.json({
           success: false,
-          message: 'Invalid campaign_mongo_id. Must be a valid Mongo ObjectId.',
+          message: 'Invalid campaignMongoId. Must be a valid Mongo ObjectId.',
         }, { status: 400 });
       }
     }
@@ -50,13 +50,13 @@ export async function GET(request: NextRequest) {
     if (networkId) campaignQuery.network_id = parseInt(networkId);
 
     // Fetch synced campaigns unless a specific local campaign is requested
-    const campaigns = campaignMongoIdParam ? [] : await Campaign.find(campaignQuery).lean();
+    const campaigns = campaignMongoId ? [] : await Campaign.find(campaignQuery).lean();
 
     // Also fetch local campaigns that match filters and optionally map to a specific campaign broadstreet_id via original_broadstreet_id
     const localQuery: Record<string, unknown> = {};
     if (advertiserId) localQuery.advertiser_id = parseInt(advertiserId);
     if (campaignId) localQuery.original_broadstreet_id = parseInt(campaignId);
-    if (campaignMongoIdParam) (localQuery as any)._id = campaignMongoIdParam; // could use new Types.ObjectId(campaignMongoIdParam)
+    if (campaignMongoId) (localQuery as any)._id = campaignMongoId; // could use new Types.ObjectId(campaignMongoId)
     if (networkId) (localQuery as any).network_id = parseInt(networkId);
     const localCampaigns = await LocalCampaign.find(localQuery).lean();
 
@@ -65,9 +65,9 @@ export async function GET(request: NextRequest) {
     if (networkId) localPlacementQuery.network_id = parseInt(networkId);
     if (advertiserId) localPlacementQuery.advertiser_id = parseInt(advertiserId);
     if (campaignId) localPlacementQuery.campaign_id = parseInt(campaignId);
-    if (campaignMongoIdParam) localPlacementQuery.campaign_mongo_id = campaignMongoIdParam;
-    if (advertisementIdFilter) localPlacementQuery.advertisement_id = parseInt(advertisementIdFilter);
-    if (zoneIdFilter) localPlacementQuery.zone_id = parseInt(zoneIdFilter);
+    if (campaignMongoId) localPlacementQuery.campaign_mongo_id = campaignMongoId;
+    if (advertisementId) localPlacementQuery.advertisement_id = parseInt(advertisementId);
+    if (zoneId) localPlacementQuery.zone_id = parseInt(zoneId);
 
     const localPlacements = await Placement.find({
       ...localPlacementQuery,
@@ -257,14 +257,14 @@ export async function GET(request: NextRequest) {
     
     // Start filtered set
     let filtered = deduped;
-    if (advertisementIdFilter) {
-      const aid = parseInt(advertisementIdFilter);
+    if (advertisementId) {
+      const aid = parseInt(advertisementId);
       if (Number.isFinite(aid)) {
         filtered = filtered.filter(p => p.advertisement_id === aid);
       }
     }
-    if (zoneIdFilter) {
-      const zid = parseInt(zoneIdFilter);
+    if (zoneId) {
+      const zid = parseInt(zoneId);
       if (Number.isFinite(zid)) {
         filtered = filtered.filter(p => p.zone_id === zid);
       }
@@ -460,29 +460,29 @@ export async function DELETE(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { campaign_mongo_id, advertisement_id, zone_id, zone_mongo_id } = body;
+    const { campaignMongoId, advertisementId, zoneId, zoneMongoId } = body;
 
-    if (!campaign_mongo_id || !advertisement_id) {
+    if (!campaignMongoId || !advertisementId) {
       return NextResponse.json(
-        { error: 'campaign_mongo_id and advertisement_id are required' },
+        { error: 'campaignMongoId and advertisementId are required' },
         { status: 400 }
       );
     }
 
-    // Build the placement filter
-    const placementFilter: any = { advertisement_id };
+    // Build the placement filter (DB field names remain snake_case)
+    const placementFilter: any = { advertisement_id: advertisementId };
 
-    if (zone_id !== undefined) {
-      placementFilter.zone_id = zone_id;
+    if (zoneId !== undefined) {
+      placementFilter.zone_id = zoneId;
     }
 
-    if (zone_mongo_id) {
-      placementFilter.zone_mongo_id = zone_mongo_id;
+    if (zoneMongoId) {
+      placementFilter.zone_mongo_id = zoneMongoId;
     }
 
     // Remove the placement from the campaign
     const result = await LocalCampaign.updateOne(
-      { _id: campaign_mongo_id },
+      { _id: campaignMongoId },
       { $pull: { placements: placementFilter } }
     );
 

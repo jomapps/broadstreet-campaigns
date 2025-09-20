@@ -1,8 +1,8 @@
- 
-const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
-const { loadEnv } = require('./load-env');
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'url';
+import { loadEnv } from './load-env.mjs';
 
 function formatTimestamp(date = new Date()) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -23,6 +23,8 @@ async function main() {
     process.exit(1);
   }
 
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   const root = path.resolve(__dirname, '..');
   const backupsDir = path.join(root, 'backups');
   if (!fs.existsSync(backupsDir)) {
@@ -35,6 +37,7 @@ async function main() {
   const args = ['--uri', mongoUri, '--out', outDir];
   const proc = spawn('mongodump', args, { stdio: 'inherit' });
   proc.on('error', (err) => {
+    console.error('[db:backup] Failed to start mongodump:', err?.message || err);
     process.exit(1);
   });
   proc.on('close', (code) => {
@@ -43,5 +46,4 @@ async function main() {
 }
 
 main();
-
 

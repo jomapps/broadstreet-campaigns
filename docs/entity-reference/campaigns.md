@@ -118,7 +118,7 @@ const created = await broadstreetAPI.createCampaign({
 
 Create locally (in-app, recommended during testing)
 - Open the Campaigns page and click the “Create” button → choose Campaign to open the Add Campaign modal.
-- The modal requires both a network and an advertiser selected in the sidebar; it uses those selections to set `network_id` and `advertiser_id`.
+- The modal requires both a network and an advertiser selected in the sidebar; it uses those selections to set `networkId` and `advertiserId`.
 - On submit, it calls our local endpoint `POST /api/create/campaign` and stores the campaign as unsynced (`created_locally: true`, `synced_with_api: false`).
 
 Local endpoint example
@@ -127,12 +127,12 @@ curl -X POST http://localhost:3000/api/create/campaign \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Fall Promo",
-    "network_id": 85,
-    "advertiser_id": 12345,
-    "start_date": "2025-10-01",
+    "networkId": 85,
+    "advertiserId": 12345,
+    "startDate": "2025-10-01",
     "weight": 100,
-    "display_type": "no_repeat",
-    "pacing_type": "asap"
+    "displayType": "no_repeat",
+    "pacingType": "asap"
   }'
 ```
 
@@ -142,11 +142,11 @@ curl -X POST http://localhost:3000/api/create/campaign \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Fall Promo",
-    "network_id": 85,
-    "advertiser": { "mongo_id": "68c87564d49cd5ae18663ccf" },
-    "start_date": "2025-10-01",
+    "networkId": 85,
+    "advertiser": { "mongoId": "68c87564d49cd5ae18663ccf" },
+    "startDate": "2025-10-01",
     "weight": 100,
-    "pacing_type": "asap"
+    "pacingType": "asap"
   }'
 ```
 

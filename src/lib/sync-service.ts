@@ -12,7 +12,7 @@ import SyncLog from './models/sync-log';
 import Network from './models/network';
 import Advertisement from './models/advertisement';
 import Advertiser from './models/advertiser';
-import { resolveAdvertiserBroadstreetId } from './utils/sync-helpers';
+
 import { auditService } from './audit-service';
 import { progressService } from './progress-service';
 import { withRateLimit } from './rate-limiter';
@@ -181,6 +181,13 @@ class SyncService {
     return { code: 'NETWORK', message: error.message || 'Unknown network error' };
   }
 
+  // Resolve advertiser Broadstreet ID from number or local mongo_id (no legacy wrapper)
+  private async resolveAdvertiserBroadstreetId(ref: number | string): Promise<number | null> {
+    if (typeof ref === 'number') return ref;
+    const local = await LocalAdvertiser.findById(ref).lean();
+    return (local as any)?.original_broadstreet_id ?? null;
+  }
+
   /**
    * Perform a dry run validation of all local entities before sync
    */
@@ -247,12 +254,10 @@ class SyncService {
           continue;
         }
 
-        // Resolve advertiser Broadstreet ID using explicit field resolution
-        const advertiserBroadstreetId = await resolveAdvertiserBroadstreetId(
-          typeof campaign.advertiser_id === 'number'
-            ? { broadstreet_id: campaign.advertiser_id }
-            : { mongo_id: campaign.advertiser_id as any }
-        );
+        // Resolve advertiser Broadstreet ID (no legacy wrapper)
+        const advertiserBroadstreetId = typeof campaign.advertiser_id === 'number'
+          ? campaign.advertiser_id
+          : await this.resolveAdvertiserBroadstreetId(campaign.advertiser_id as any);
 
         if (!advertiserBroadstreetId) {
           result.dependencyChecks.missingAdvertisers.push(campaign.name);
@@ -486,12 +491,10 @@ class SyncService {
           return result;
         }
 
-        // Resolve advertiser Broadstreet ID using explicit resolver
-        const advertiserBroadstreetId = await resolveAdvertiserBroadstreetId(
-          typeof localCampaign.advertiser_id === 'number'
-            ? { broadstreet_id: localCampaign.advertiser_id }
-            : { mongo_id: localCampaign.advertiser_id as any }
-        );
+        // Resolve advertiser Broadstreet ID (no legacy wrapper)
+        const advertiserBroadstreetId = typeof localCampaign.advertiser_id === 'number'
+          ? localCampaign.advertiser_id
+          : await this.resolveAdvertiserBroadstreetId(localCampaign.advertiser_id as any);
 
         if (!advertiserBroadstreetId) {
           result.error = `Campaign depends on unknown/unsynced advertiser reference: ${localCampaign.advertiser_id}`;

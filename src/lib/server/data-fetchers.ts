@@ -189,16 +189,7 @@ export async function fetchAdvertisers(networkId: any, params: any = {}) {
 
     const [syncedAdvertisers, localAdvertisers] = await Promise.all(promises);
 
-    // Debug logging
-    console.log('fetchAdvertisers Debug:', {
-      networkId,
-      params,
-      syncedCount: syncedAdvertisers.length,
-      localCount: localAdvertisers.length,
-      localQuery,
-      fetchSynced,
-      fetchLocal
-    });
+
 
     // Transform local advertisers to add mongo_id field for consistency
     const transformedLocalAdvertisers = localAdvertisers.map((advertiser: any) => ({
@@ -212,17 +203,7 @@ export async function fetchAdvertisers(networkId: any, params: any = {}) {
     // Sort combined results by name
     allAdvertisers.sort((a, b) => a.name.localeCompare(b.name));
 
-    console.log('fetchAdvertisers Result:', {
-      totalCount: allAdvertisers.length,
-      advertisers: allAdvertisers.map(a => ({
-        name: a.name,
-        broadstreet_id: a.broadstreet_id,
-        mongo_id: a.mongo_id || a._id?.toString(),
-        network_id: a.network_id,
-        created_locally: a.created_locally,
-        synced_with_api: a.synced_with_api
-      }))
-    });
+
 
     return serializeEntities(allAdvertisers);
   } catch (error) {
@@ -265,14 +246,7 @@ export async function fetchZones(networkId: any, params: any = {}) {
       LocalZone.find({ ...query, synced_with_api: false }).sort({ name: 1 }).lean()
     ]);
 
-    // Debug logging
-    console.log('fetchZones Debug:', {
-      networkId,
-      params,
-      apiZonesCount: apiZones.length,
-      localZonesCount: localZones.length,
-      query
-    });
+
 
     // Transform local zones to add mongo_id field for consistency
     const transformedLocalZones = localZones.map((zone: any) => ({
@@ -291,18 +265,7 @@ export async function fetchZones(networkId: any, params: any = {}) {
     // Sort combined results by name
     allZones.sort((a, b) => a.name.localeCompare(b.name));
 
-    console.log('fetchZones Result:', {
-      totalCount: allZones.length,
-      zones: allZones.map(z => ({
-        name: z.name,
-        broadstreet_id: z.broadstreet_id,
-        mongo_id: z.mongo_id || z._id?.toString(),
-        network_id: z.network_id,
-        source: z.source,
-        created_locally: z.created_locally,
-        synced_with_api: z.synced_with_api
-      }))
-    });
+
 
     return serializeEntities(allZones);
   } catch (error) {

@@ -184,18 +184,14 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       }
       const payload: any = {
         name: formData.name.trim(),
-        network_id: networkBroadstreetId,
-        network: {
-          broadstreet_id: (selectedNetwork as any)?.broadstreet_id,
-          mongo_id: (selectedNetwork as any)?.mongo_id,
-        },
+        networkId: networkBroadstreetId,
       };
 
       // Only add optional fields if they have values
       if (formData.web_home_url && formData.web_home_url.trim()) {
-        payload.web_home_url = formData.web_home_url.trim();
+        payload.webHomeUrl = formData.web_home_url.trim();
       }
-      
+
       if (formData.notes && formData.notes.trim()) {
         payload.notes = formData.notes.trim();
       }
@@ -225,7 +221,7 @@ export default function AdvertiserCreationForm({ onClose, setIsLoading }: Advert
       // Immediately reload advertisers for the current network so the list updates without a full reload
       try {
         if ((selectedNetwork as any)?.broadstreet_id) {
-          const listRes = await fetch(`/api/advertisers?network_id=${encodeURIComponent(String((selectedNetwork as any).broadstreet_id))}` , { cache: 'no-store' });
+          const listRes = await fetch(`/api/advertisers?networkId=${encodeURIComponent(String((selectedNetwork as any).broadstreet_id))}` , { cache: 'no-store' });
           if (listRes.ok) {
             const listData = await listRes.json();
             setAdvertisers(listData.advertisers || []);

@@ -71,8 +71,10 @@ export default function NetworkCreationForm({ onClose, setIsLoading }: NetworkCr
 
     try {
       const payload = {
-        ...formData,
-        web_home_url: formData.web_home_url || undefined,
+        name: formData.name,
+        path: formData.path,
+        webHomeUrl: formData.web_home_url || undefined,
+        valetActive: formData.valet_active,
         notes: formData.notes || undefined,
       };
 

@@ -8,9 +8,9 @@ const ZONE_NAME = `Zones E2E Local Sync ${Date.now()}`;
 async function openZoneCreationModal(page: Page) {
   await page.goto(ZONES_PAGE_URL);
   await expect(page.locator('h1:has-text("Zones")')).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('[data-testid="zones-list"]').toBeVisible({ timeout: 15000 }));
+  await expect(page.locator('[data-testid="zones-list"]').first()).toBeVisible({ timeout: 15000 });
   await page.click('[data-testid="create-button"]');
-  await expect(page.locator('[data-testid="zone-creation-form"]').toBeVisible());
+  await expect(page.locator('[data-testid="zone-creation-form"]').first()).toBeVisible();
 }
 
 async function createZone(page: Page, name: string) {

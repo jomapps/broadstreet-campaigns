@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
     
     const { searchParams } = new URL(request.url);
-    const advertiserId = searchParams.get('advertiser_id');
+    const advertiserId = searchParams.get('advertiserId');
     
     if (!advertiserId) {
       return NextResponse.json({ campaigns: [] });

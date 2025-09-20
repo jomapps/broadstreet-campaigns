@@ -18,12 +18,10 @@ interface CreatePlacementsClientProps {
     zones: any[];
     advertisements: any[];
   };
-  searchParams: any;
 }
 
-export default function CreatePlacementsClient({ 
-  initialData, 
-  searchParams 
+export default function CreatePlacementsClient({
+  initialData
 }: CreatePlacementsClientProps) {
   const router = useRouter();
   const { setNetworks, setAdvertisers, setCampaigns, setZones, setAdvertisements } = useEntityStore();
@@ -133,15 +131,15 @@ export default function CreatePlacementsClient({
 
       // Prepare API payload - the API creates all combinations of ads × zones
       const payload: any = {
-        advertisement_ids: advertisementIds,
-        zone_ids: zoneIds,
+        advertisementIds,
+        zoneIds,
       };
 
       // Set campaign reference (XOR constraint)
       if (typeof campaignId === 'number') {
-        payload.campaign_broadstreet_id = campaignId;
+        payload.campaignId = campaignId;
       } else {
-        payload.campaign_mongo_id = campaignId;
+        payload.campaignMongoId = campaignId as string;
       }
 
       console.log('Creating placements with payload:', payload);

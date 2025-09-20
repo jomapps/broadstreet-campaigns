@@ -7,29 +7,30 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { 
-      name, 
-      network_id, 
+    const {
+      name,
+      networkId,
       alias,
-      advertisement_count,
-      allow_duplicate_ads,
-      concurrent_campaigns,
-      advertisement_label,
+      advertisementCount,
+      allowDuplicateAds,
+      concurrentCampaigns,
+      advertisementLabel,
       archived,
-      display_type,
-      rotation_interval,
-      animation_type,
+      displayType,
+      rotationInterval,
+      animationType,
       width,
       height,
-      rss_shuffle,
+      rssShuffle,
       style,
-      self_serve
+      selfServe
     } = body;
 
     // Validate required fields
-    if (!name || !network_id) {
+    const netIdNum = typeof networkId === 'string' ? parseInt(networkId, 10) : Number(networkId);
+    if (!name || !Number.isFinite(netIdNum)) {
       return NextResponse.json(
-        { message: 'Name and network_id are required' },
+        { message: 'Name and networkId are required' },
         { status: 400 }
       );
     }
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (alias) {
       const existingAlias = await LocalZone.findOne({
         alias: alias.trim(),
-        network_id: parseInt(network_id)
+        network_id: netIdNum
       });
 
       if (existingAlias) {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     // Create new local zone with only provided fields
     const zoneData: any = {
       name: name.trim(),
-      network_id: parseInt(network_id),
+      network_id: netIdNum,
       created_locally: true,
       synced_with_api: false,
       created_at: new Date(),
@@ -65,29 +66,29 @@ export async function POST(request: NextRequest) {
     if (alias !== undefined && alias?.trim()) {
       zoneData.alias = alias.trim();
     }
-    if (advertisement_count !== undefined) {
-      zoneData.advertisement_count = advertisement_count;
+    if (advertisementCount !== undefined) {
+      zoneData.advertisement_count = advertisementCount;
     }
-    if (allow_duplicate_ads !== undefined) {
-      zoneData.allow_duplicate_ads = allow_duplicate_ads;
+    if (allowDuplicateAds !== undefined) {
+      zoneData.allow_duplicate_ads = allowDuplicateAds;
     }
-    if (concurrent_campaigns !== undefined) {
-      zoneData.concurrent_campaigns = concurrent_campaigns;
+    if (concurrentCampaigns !== undefined) {
+      zoneData.concurrent_campaigns = concurrentCampaigns;
     }
-    if (advertisement_label !== undefined && advertisement_label?.trim()) {
-      zoneData.advertisement_label = advertisement_label.trim();
+    if (advertisementLabel !== undefined && advertisementLabel?.trim()) {
+      zoneData.advertisement_label = advertisementLabel.trim();
     }
     if (archived !== undefined) {
       zoneData.archived = archived;
     }
-    if (display_type !== undefined && (display_type === 'standard' || display_type === 'rotation')) {
-      zoneData.display_type = display_type;
+    if (displayType !== undefined && (displayType === 'standard' || displayType === 'rotation')) {
+      zoneData.display_type = displayType;
     }
-    if (rotation_interval !== undefined && display_type === 'rotation') {
-      zoneData.rotation_interval = rotation_interval;
+    if (rotationInterval !== undefined && displayType === 'rotation') {
+      zoneData.rotation_interval = rotationInterval;
     }
-    if (animation_type !== undefined && animation_type !== 'none') {
-      zoneData.animation_type = animation_type;
+    if (animationType !== undefined && animationType !== 'none') {
+      zoneData.animation_type = animationType;
     }
     if (width !== undefined) {
       zoneData.width = width;
@@ -95,14 +96,14 @@ export async function POST(request: NextRequest) {
     if (height !== undefined) {
       zoneData.height = height;
     }
-    if (rss_shuffle !== undefined) {
-      zoneData.rss_shuffle = rss_shuffle;
+    if (rssShuffle !== undefined) {
+      zoneData.rss_shuffle = rssShuffle;
     }
     if (style !== undefined && style?.trim()) {
       zoneData.style = style.trim();
     }
-    if (self_serve !== undefined) {
-      zoneData.self_serve = self_serve;
+    if (selfServe !== undefined) {
+      zoneData.self_serve = selfServe;
     }
 
     const newZone = new LocalZone(zoneData);

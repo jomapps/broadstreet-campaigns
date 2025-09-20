@@ -169,10 +169,10 @@ export default function PlacementsList({ placements: initialPlacements, entities
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          campaign_mongo_id: (placement as any).campaign_mongo_id,
-          advertisement_id: placement.advertisement_id,
-          zone_id: placement.zone_id,
-          zone_mongo_id: (placement as any).zone_mongo_id
+          campaignMongoId: (placement as any).campaign_mongo_id,
+          advertisementId: placement.advertisement_id,
+          zoneId: placement.zone_id,
+          zoneMongoId: (placement as any).zone_mongo_id
         })
       });
 

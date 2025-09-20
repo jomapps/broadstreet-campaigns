@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { name, web_home_url, path, valet_active, notes } = body;
+    const { name, webHomeUrl, path, valetActive, notes } = body;
 
     // Validate required fields
     if (!name || !path) {
@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
       broadstreet_id: newBroadstreetId,
       name: name.trim(),
       group_id: null,
-      web_home_url: web_home_url || undefined,
+      web_home_url: webHomeUrl || undefined,
       logo: undefined,
-      valet_active: valet_active || false,
+      valet_active: valetActive || false,
       path: path.trim(),
       advertiser_count: 0,
       zone_count: 0,

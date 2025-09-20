@@ -100,7 +100,7 @@ curl -X POST http://localhost:3000/api/create/zone \\
   -H "Content-Type: application/json" \\
   -d '{
     "name": "Homepage Leaderboard",
-    "network_id": 85,
+    "networkId": 85,
     "alias": "home-leaderboard"
   }'
 ```

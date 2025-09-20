@@ -1,8 +1,7 @@
 // Seed required test data by syncing from Broadstreet into the local DB when missing
 // Uses local API endpoints on http://localhost:3005
 
- 
-const axios = require('axios');
+import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3005';
 
@@ -20,7 +19,7 @@ async function waitForServer(timeoutMs = 20000) {
       await axios.get(`${BASE_URL}/api/networks`, { timeout: 2000 });
       return true;
     } catch {
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
     }
   }
   return false;
@@ -28,9 +27,9 @@ async function waitForServer(timeoutMs = 20000) {
 
 async function advertiserExists(networkId, advertiserId) {
   try {
-    const resp = await axios.get(`${BASE_URL}/api/advertisers?network_id=${networkId}`, { timeout: 15000 });
+    const resp = await axios.get(`${BASE_URL}/api/advertisers?networkId=${networkId}`, { timeout: 15000 });
     const list = Array.isArray(resp.data?.advertisers) ? resp.data.advertisers : [];
-    return list.some(a => a.id === advertiserId);
+    return list.some((a) => a.id === advertiserId);
   } catch (e) {
     console.warn('[seed] Failed to check advertisers:', e.response?.data || e.message);
     return false;
@@ -39,9 +38,9 @@ async function advertiserExists(networkId, advertiserId) {
 
 async function campaignExists(advertiserId, campaignId) {
   try {
-    const resp = await axios.get(`${BASE_URL}/api/campaigns?advertiser_id=${advertiserId}`, { timeout: 15000 });
+    const resp = await axios.get(`${BASE_URL}/api/campaigns?advertiserId=${advertiserId}`, { timeout: 15000 });
     const list = Array.isArray(resp.data?.campaigns) ? resp.data.campaigns : [];
-    return list.some(c => c.id === campaignId);
+    return list.some((c) => c.id === campaignId);
   } catch (e) {
     console.warn('[seed] Failed to check campaigns:', e.response?.data || e.message);
     return false;
@@ -130,9 +129,8 @@ async function main() {
   console.log('Zone IDs:', TEST_ZONE_IDS.join(', '));
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('Seed error:', err?.response?.data || err?.message || err);
   process.exit(1);
 });
-
 

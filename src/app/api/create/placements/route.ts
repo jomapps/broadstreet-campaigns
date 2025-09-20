@@ -3,121 +3,70 @@ import connectDB from '@/lib/mongodb';
 import LocalCampaign from '@/lib/models/local-campaign';
 import Campaign from '@/lib/models/campaign';
 import Advertiser from '@/lib/models/advertiser';
-import Zone from '@/lib/models/zone';
-import { resolveZoneBroadstreetId } from '@/lib/utils/sync-helpers';
+
+
 
 type RequestBody = {
-  campaign_broadstreet_id?: number;
-  campaign_mongo_id?: string;
-  advertisement_ids: Array<number | string>;
-  zone_ids: Array<number | string>;
+  campaignId?: number;
+  campaignMongoId?: string;
+  advertisementIds: Array<number | string>;
+  zoneIds: Array<number | string>;
   restrictions?: string[];
 };
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('MONGODB_URI:', process.env.MONGODB_URI);
     await connectDB();
-    console.log('MongoDB connection established');
 
     const body = (await request.json()) as RequestBody;
-    const { campaign_broadstreet_id, campaign_mongo_id, advertisement_ids, zone_ids, restrictions } = body || ({} as RequestBody);
+    const { campaignId, campaignMongoId, advertisementIds, zoneIds, restrictions } = body || ({} as RequestBody);
 
-    console.log('=== CREATE PLACEMENTS API DEBUG ===');
-    console.log('Request body:', body);
-    console.log('campaign_broadstreet_id:', campaign_broadstreet_id);
-    console.log('campaign_mongo_id:', campaign_mongo_id);
-    console.log('advertisement_ids:', advertisement_ids);
-    console.log('zone_ids:', zone_ids);
+
 
     // Validate required fields
     if (
-      (!campaign_mongo_id && typeof campaign_broadstreet_id !== 'number') ||
-      !Array.isArray(advertisement_ids) || advertisement_ids.length === 0 ||
-      !Array.isArray(zone_ids) || zone_ids.length === 0
+      (!campaignMongoId && typeof campaignId !== 'number') ||
+      !Array.isArray(advertisementIds) || advertisementIds.length === 0 ||
+      !Array.isArray(zoneIds) || zoneIds.length === 0
     ) {
       return NextResponse.json(
-        { message: 'campaign_mongo_id OR campaign_broadstreet_id, plus advertisement_ids[] and zone_ids[] are required' },
+        { message: 'campaignMongoId OR campaignId, plus advertisementIds[] and zoneIds[] are required' },
         { status: 400 }
       );
     }
 
     // Strictly normalize ads to numeric Broadstreet IDs; zones can be numeric or Mongo IDs, convert later
     const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
-    const normalizedAdIdsAll = Array.isArray(advertisement_ids) ? advertisement_ids.map(toNum) : [];
+    const normalizedAdIdsAll = Array.isArray(advertisementIds) ? advertisementIds.map(toNum) : [];
     const normalizedAdIds = normalizedAdIdsAll.filter((v) => Number.isFinite(v)) as number[];
     if (normalizedAdIds.length !== normalizedAdIdsAll.length) {
       return NextResponse.json(
-        { message: 'advertisement_ids must be numbers or numeric strings' },
+        { message: 'advertisementIds must be numbers or numeric strings' },
         { status: 400 }
       );
     }
 
     // Find or create a local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
-    console.log('Looking for campaign with mongo_id:', campaign_mongo_id);
-    console.log('Looking for campaign with broadstreet_id:', campaign_broadstreet_id);
+    console.log('Looking for campaign with mongo_id:', campaignMongoId);
+    console.log('Looking for campaign with broadstreet_id:', campaignId);
 
-    let campaign: any = campaign_mongo_id
-      ? await LocalCampaign.findById(campaign_mongo_id).lean()
-      : await LocalCampaign.findOne({ original_broadstreet_id: campaign_broadstreet_id }).lean();
+    let campaign: any = campaignMongoId
+      ? await LocalCampaign.findById(campaignMongoId).lean()
+      : await LocalCampaign.findOne({ original_broadstreet_id: campaignId }).lean();
 
-    console.log('Initial campaign lookup result:', campaign ? 'FOUND' : 'NOT FOUND');
-    if (campaign) {
-      console.log('Found campaign in LocalCampaign:', campaign);
-    } else {
-      console.log('Campaign not found in LocalCampaign collection');
-      // Let's also check what campaigns exist
-      const allLocalCampaigns = await LocalCampaign.find({}).lean();
-      console.log('All LocalCampaigns in database:', allLocalCampaigns.length);
-      allLocalCampaigns.forEach((c, i) => {
-        console.log(`  ${i + 1}. ID: ${c._id}, Name: ${c.name}`);
-      });
 
-      // Let's also check what collections exist in the database
-      const mongoose = require('mongoose');
-      const collections = await mongoose.connection.db.listCollections().toArray();
-      console.log('Available collections:', collections.map((c: any) => c.name));
-
-      // Let's try to query the raw collection directly
-      const rawLocalCampaigns = await mongoose.connection.db.collection('localcampaigns').find({}).toArray();
-      console.log('Raw localcampaigns collection count:', rawLocalCampaigns.length);
-      rawLocalCampaigns.forEach((c: any, i: number) => {
-        console.log(`  Raw ${i + 1}. ID: ${c._id}, Name: ${c.name}`);
-      });
-    }
 
     // If not found in LocalCampaign and we have a mongo_id, try to find in regular Campaign collection
-    if (!campaign && campaign_mongo_id) {
-      console.log('Trying to find campaign in regular Campaign collection...');
-      const sourceCampaign = await Campaign.findById(campaign_mongo_id).lean();
-      console.log('Source campaign found:', sourceCampaign ? 'YES' : 'NO');
+    if (!campaign && campaignMongoId) {
+      const sourceCampaign = await Campaign.findById(campaignMongoId).lean();
       if (sourceCampaign) {
-        console.log('Source campaign details:', sourceCampaign);
         // Mirror the campaign to LocalCampaign for placement storage
         const advertiser = (sourceCampaign as any).advertiser_id
           ? (await Advertiser.findOne({ broadstreet_id: (sourceCampaign as any).advertiser_id }).lean()) as any
           : null;
-        let resolvedNetworkId = (sourceCampaign as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
+        const resolvedNetworkId = (sourceCampaign as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
 
-        if (typeof resolvedNetworkId !== 'number') {
-          // Fallback: derive network_id from the first selected zone
-          const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
-          if (firstZoneIdRaw != null) {
-            const resolvedZoneId = await resolveZoneBroadstreetId(
-              typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
-                ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
-                : { mongo_id: firstZoneIdRaw as string }
-            );
-            if (typeof resolvedZoneId !== 'number') {
-              return NextResponse.json(
-                { message: 'Unable to resolve network_id for campaign mirroring' },
-                { status: 422 }
-              );
-            }
-            const zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
-            resolvedNetworkId = (zoneDoc as any)?.network_id;
-          }
-        }
+
 
         if (typeof resolvedNetworkId !== 'number') {
           return NextResponse.json(
@@ -143,8 +92,8 @@ export async function POST(request: NextRequest) {
     }
 
     // If still not found and we have a numeric campaign_id, upsert a mirror from Campaign
-    if (!campaign && typeof campaign_broadstreet_id === 'number') {
-      const source = await Campaign.findOne({ broadstreet_id: campaign_broadstreet_id }).lean();
+    if (!campaign && typeof campaignId === 'number') {
+      const source = await Campaign.findOne({ broadstreet_id: campaignId }).lean();
       if (!source) {
         return NextResponse.json(
           { message: 'Source campaign not found to mirror locally' },
@@ -155,34 +104,12 @@ export async function POST(request: NextRequest) {
       const advertiser = (source as any).advertiser_id
         ? (await Advertiser.findOne({ broadstreet_id: (source as any).advertiser_id }).lean()) as any
         : null;
-      let resolvedNetworkId = (source as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
+      const resolvedNetworkId = (source as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
       if (typeof resolvedNetworkId !== 'number') {
-        // Fallback: derive network_id from the first selected zone
-        const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
-        if (firstZoneIdRaw != null) {
-          let zoneDoc: any = null;
-          const resolvedZoneId = await resolveZoneBroadstreetId(
-            typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
-              ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
-              : { mongo_id: firstZoneIdRaw as string }
-          );
-          if (typeof resolvedZoneId !== 'number') {
-            return NextResponse.json(
-              { message: 'Unable to resolve numeric zone_id from provided zone_ids' },
-              { status: 422 }
-            );
-          }
-          zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
-          if (zoneDoc && typeof zoneDoc.network_id === 'number') {
-            resolvedNetworkId = zoneDoc.network_id;
-          }
-        }
-        if (typeof resolvedNetworkId !== 'number') {
-          return NextResponse.json(
-            { message: 'Unable to determine network_id for mirrored campaign' },
-            { status: 422 }
-          );
-        }
+        return NextResponse.json(
+          { message: 'Unable to determine network_id for mirrored campaign' },
+          { status: 422 }
+        );
       }
       if (typeof (source as any).advertiser_id !== 'number') {
         return NextResponse.json(
@@ -209,7 +136,7 @@ export async function POST(request: NextRequest) {
         placements: [],
         created_locally: false,
         synced_with_api: false,
-        original_broadstreet_id: campaign_broadstreet_id,
+        original_broadstreet_id: campaignId,
         sync_errors: [],
       });
       campaign = (await LocalCampaign.findById(mirror._id).lean()) as any;
@@ -217,40 +144,18 @@ export async function POST(request: NextRequest) {
 
     // Edge case handling: if campaign_mongo_id was provided but does not match a LocalCampaign,
     // it might actually be a Mongo _id from the synced Campaign collection; try mirroring by that _id.
-    if (!campaign && campaign_mongo_id) {
-      const sourceByMongo = await Campaign.findById(campaign_mongo_id).lean();
+    if (!campaign && campaignMongoId) {
+      const sourceByMongo = await Campaign.findById(campaignMongoId).lean();
       if (sourceByMongo) {
         const advertiser = (sourceByMongo as any).advertiser_id
           ? (await Advertiser.findOne({ broadstreet_id: (sourceByMongo as any).advertiser_id }).lean()) as any
           : null;
-        let resolvedNetworkId = (sourceByMongo as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
+        const resolvedNetworkId = (sourceByMongo as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
         if (typeof resolvedNetworkId !== 'number') {
-          // Fallback: derive network_id from the first selected zone
-          const firstZoneIdRaw = Array.isArray(zone_ids) ? zone_ids[0] : undefined;
-          if (firstZoneIdRaw != null) {
-            let zoneDoc: any = null;
-            const resolvedZoneId = await resolveZoneBroadstreetId(
-              typeof firstZoneIdRaw === 'number' || (typeof firstZoneIdRaw === 'string' && /^\d+$/.test(firstZoneIdRaw))
-                ? { broadstreet_id: typeof firstZoneIdRaw === 'number' ? firstZoneIdRaw : parseInt(firstZoneIdRaw, 10) }
-                : { mongo_id: firstZoneIdRaw as string }
-            );
-            if (typeof resolvedZoneId !== 'number') {
-              return NextResponse.json(
-                { message: 'Unable to resolve numeric zone_id from provided zone_ids' },
-                { status: 422 }
-              );
-            }
-            zoneDoc = await Zone.findOne({ broadstreet_id: resolvedZoneId }).lean();
-            if (zoneDoc && typeof zoneDoc.network_id === 'number') {
-              resolvedNetworkId = zoneDoc.network_id;
-            }
-          }
-          if (typeof resolvedNetworkId !== 'number') {
-            return NextResponse.json(
-              { message: 'Unable to determine network_id for mirrored campaign' },
-              { status: 422 }
-            );
-          }
+          return NextResponse.json(
+            { message: 'Unable to determine network_id for mirrored campaign' },
+            { status: 422 }
+          );
         }
         if (typeof (sourceByMongo as any).advertiser_id !== 'number') {
           return NextResponse.json(
@@ -286,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     if (!campaign) {
       return NextResponse.json(
-        { message: 'Local campaign not found for the provided campaign_id' },
+        { message: 'Local campaign not found for the provided campaign reference' },
         { status: 404 }
       );
     }
@@ -294,7 +199,7 @@ export async function POST(request: NextRequest) {
     // Resolve zones: allow numeric Broadstreet IDs or Mongo IDs; store appropriately
     const resolvedZoneIds: number[] = [];
     const resolvedZoneMongoIds: string[] = [];
-    for (const zid of zone_ids) {
+    for (const zid of zoneIds) {
       if (typeof zid === 'number' || (typeof zid === 'string' && /^\d+$/.test(zid))) {
         const asNum = typeof zid === 'number' ? zid : parseInt(zid, 10);
         resolvedZoneIds.push(asNum);

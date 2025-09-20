@@ -18,7 +18,7 @@ import { ZoneLean } from '@/lib/types/lean-entities';
  */
 interface FilterParams {
   zones: any[];
-  selectedZones: string[];
+  selectedZones: Array<string | number>;
   showOnlySelected: boolean;
   selectedSizes: ('SQ' | 'PT' | 'LS' | 'CS')[];
   searchTerm: string;
@@ -70,8 +70,9 @@ const applyZoneFilters = (params: FilterParams): any[] => {
 
   // 1. Apply "Only Selected" filter first (highest priority)
   if (showOnlySelected && selectedZones.length > 0) {
-    filtered = filtered.filter(zone => 
-      selectedZones.includes(getZoneSelectionKey(zone as any))
+    const selectedSet = new Set(selectedZones.map(z => String(z)));
+    filtered = filtered.filter(zone =>
+      selectedSet.has(getZoneSelectionKey(zone as any))
     );
   }
   

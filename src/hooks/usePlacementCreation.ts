@@ -71,23 +71,23 @@ export function usePlacementCreation(): UsePlacementCreationResult {
       }
 
       const payload: any = {
-        advertisement_ids: adIds,
+        advertisementIds: adIds,
         // Include both numeric Broadstreet zone IDs and local Mongo IDs
-        zone_ids: [...zoneIds, ...zoneMongoIds],
+        zoneIds: [...zoneIds, ...zoneMongoIds],
       };
 
-      // Validate that we have either campaign_mongo_id or campaign_broadstreet_id
+      // Validate that we have either campaignMongoId or campaignId
       let hasValidCampaignId = false;
       if (campaignMongoId) {
-        payload.campaign_mongo_id = campaignMongoId;
+        payload.campaignMongoId = campaignMongoId;
         hasValidCampaignId = true;
       } else if (typeof (entities.campaign as any)?.ids?.broadstreet_id === 'number') {
-        payload.campaign_broadstreet_id = (entities.campaign as any).ids.broadstreet_id as number;
+        payload.campaignId = (entities.campaign as any).ids.broadstreet_id as number;
         hasValidCampaignId = true;
       }
 
       if (!hasValidCampaignId) {
-        throw new Error('Campaign ID validation failed: neither campaign_mongo_id nor numeric campaign_id is available');
+        throw new Error('Campaign ID validation failed: neither campaignMongoId nor numeric campaignId is available');
       }
 
       const res = await fetch('/api/create/placements', {

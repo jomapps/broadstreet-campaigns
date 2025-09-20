@@ -21,13 +21,13 @@ type CreatePlacementRequest = {
 };
 
 type GetPlacementsQuery = {
-  network_id?: string;
-  advertiser_id?: string;
-  campaign_id?: string;
-  campaign_mongo_id?: string;
-  advertisement_id?: string;
-  zone_id?: string;
-  zone_mongo_id?: string;
+  networkId?: string;
+  advertiserId?: string;
+  campaignId?: string;
+  campaignMongoId?: string;
+  advertisementId?: string;
+  zoneId?: string;
+  zoneMongoId?: string;
   limit?: string;
 };
 
@@ -184,32 +184,32 @@ export async function GET(request: NextRequest) {
     // Build MongoDB filter
     const filter: any = { created_locally: true };
     
-    if (query.network_id) {
-      filter.network_id = parseInt(query.network_id);
+    if (query.networkId) {
+      filter.network_id = parseInt(query.networkId);
+    }
+
+    if (query.advertiserId) {
+      filter.advertiser_id = parseInt(query.advertiserId);
+    }
+
+    if (query.advertisementId) {
+      filter.advertisement_id = parseInt(query.advertisementId);
+    }
+
+    if (query.campaignId) {
+      filter.campaign_id = parseInt(query.campaignId);
+    }
+
+    if (query.campaignMongoId) {
+      filter.campaign_mongo_id = query.campaignMongoId;
     }
     
-    if (query.advertiser_id) {
-      filter.advertiser_id = parseInt(query.advertiser_id);
+    if (query.zoneId) {
+      filter.zone_id = parseInt(query.zoneId);
     }
-    
-    if (query.advertisement_id) {
-      filter.advertisement_id = parseInt(query.advertisement_id);
-    }
-    
-    if (query.campaign_id) {
-      filter.campaign_id = parseInt(query.campaign_id);
-    }
-    
-    if (query.campaign_mongo_id) {
-      filter.campaign_mongo_id = query.campaign_mongo_id;
-    }
-    
-    if (query.zone_id) {
-      filter.zone_id = parseInt(query.zone_id);
-    }
-    
-    if (query.zone_mongo_id) {
-      filter.zone_mongo_id = query.zone_mongo_id;
+
+    if (query.zoneMongoId) {
+      filter.zone_mongo_id = query.zoneMongoId;
     }
     
     const limit = query.limit ? parseInt(query.limit) : 100;

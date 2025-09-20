@@ -245,7 +245,7 @@ function CampaignsList() {
       }
 
       // Extract unique zone IDs from placements
-      const zoneIds = [...new Set(campaign.placements.map(p => p.zone_id))];
+      const zoneIds = [...new Set(campaign.placements.map((p: any) => p.zone_id))];
 
       if (zoneIds.length === 0) {
         throw new Error('Campaign has no zones to copy');

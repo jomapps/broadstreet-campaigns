@@ -150,17 +150,17 @@ Local endpoint request
 curl -X POST http://localhost:3000/api/create/placements \
   -H "Content-Type: application/json" \
   -d '{
-    "campaign_mongo_id": "68c87564d49cd5ae18663ccf",
-    "advertisement_ids": [12345, 12346],
-    "zone_ids": [24680, 24681],
+    "campaignMongoId": "68c87564d49cd5ae18663ccf",
+    "advertisementIds": [12345, 12346],
+    "zoneIds": [24680, 24681],
     "restrictions": ["desktop_only"]
   }'
 ```
 
 Local endpoint notes
-- Required: either `campaign_mongo_id` (local) or `campaign_broadstreet_id` (number), plus non-empty `advertisement_ids[]` and `zone_ids[]`.
-- All `advertisement_ids` and `zone_ids` are strictly normalized to numbers; non-numeric values will be rejected.
-- The server builds the Cartesian product of `advertisement_ids × zone_ids` and appends new placements to the local campaign.
+- Required: either `campaignMongoId` (local) or `campaignId` (number), plus non-empty `advertisementIds[]` and `zoneIds[]`.
+- All `advertisementIds` and `zoneIds` are strictly normalized to numbers; non-numeric values will be rejected.
+- The server builds the Cartesian product of `advertisementIds × zoneIds` and appends new placements to the local campaign.
 - Dedupe: if a placement already exists for the same ad+zone, it is not re-inserted. Existing placements are not modified.
 - Restrictions: when provided, they are stored on new placements only and are not used to update existing ones.
 
@@ -173,18 +173,18 @@ What you should see after creating locally
 
 Use the internal endpoint `GET /api/placements` to list placements from synced campaigns and local campaigns together.
 
-Supported query parameters
-- `network_id?: number` – Filter by network via zone network.
-- `advertiser_id?: number` – Filter by advertiser (applies to synced/local parents).
-- `campaign_id?: number` – Filter by Broadstreet campaign id.
-- `campaign_mongo_id?: string` – Filter by a specific local campaign.
-- `advertisement_id?: number` – Filter by ad.
-- `zone_id?: number` – Filter by zone.
+Supported query parameters (camelCase only)
+- `networkId?: number` – Filter by network via zone network.
+- `advertiserId?: number` – Filter by advertiser (applies to synced/local parents).
+- `campaignId?: number` – Filter by Broadstreet campaign id.
+- `campaignMongoId?: string` – Filter by a specific local campaign.
+- `advertisementId?: number` – Filter by ad.
+- `zoneId?: number` – Filter by zone.
 - `limit?: number` – Hard cap when no filters are provided (dev safety).
 
 Example
 ```bash
-curl "http://localhost:3000/api/placements?campaign_id=67890&limit=100"
+curl "http://localhost:3000/api/placements?campaignId=67890&limit=100"
 ```
 
 Response includes enrichment blocks for `advertisement`, `zone`, `campaign` (local or synced), `advertiser`, and `network` when available.

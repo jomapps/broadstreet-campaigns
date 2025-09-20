@@ -66,7 +66,7 @@ async function createEntity(page: Page, entityType: string, data: any) {
   for (const [key, value] of Object.entries(data)) {
     const field = page.locator(`[name="${key}"]`);
     if (await field.count() > 0) {
-      if (field.getAttribute('type') === 'checkbox') {
+      if ((await field.getAttribute('type')) === 'checkbox') {
         if (value) await field.check();
       } else {
         await field.fill(String(value));

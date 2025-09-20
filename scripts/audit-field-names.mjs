@@ -7,8 +7,9 @@
  * of the standardized naming conventions defined in docs/entity-reference/ids.md
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Field patterns to audit - based on docs/entity-reference/ids.md
 const FIELD_PATTERNS = {
@@ -111,7 +112,7 @@ function auditFile(filePath, results) {
     
     // Check for field pattern violations
     Object.entries(FIELD_PATTERNS).forEach(([category, patterns]) => {
-      patterns.forEach((pattern, index) => {
+      patterns.forEach((pattern) => {
         const matches = [...content.matchAll(pattern)];
         if (matches.length > 0) {
           if (!results[category]) results[category] = {};
@@ -133,21 +134,18 @@ function auditFile(filePath, results) {
 }
 
 function getLineNumbers(content, matches) {
-  const lines = content.split('\n');
   const lineNumbers = [];
-  
-  matches.forEach(match => {
+  matches.forEach((match) => {
     const beforeMatch = content.substring(0, match.index);
     const lineNumber = beforeMatch.split('\n').length;
     lineNumbers.push(lineNumber);
   });
-  
   return [...new Set(lineNumbers)].sort((a, b) => a - b);
 }
 
 function generateReport(results) {
   console.log('🔍 DATABASE FIELD NAME AUDIT REPORT');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
   console.log(`Generated: ${new Date().toISOString()}`);
   console.log('');
   
@@ -157,7 +155,7 @@ function generateReport(results) {
   // Report forbidden patterns first (critical)
   if (results.forbidden_ids) {
     console.log('🚨 CRITICAL: FORBIDDEN ID PATTERNS');
-    console.log('-' .repeat(40));
+    console.log('-'.repeat(40));
     Object.entries(results.forbidden_ids).forEach(([file, violations]) => {
       console.log(`\n  📁 ${file}:`);
       violations.forEach(v => {
@@ -174,7 +172,7 @@ function generateReport(results) {
     if (category === 'forbidden_ids') return; // Already reported
     
     console.log(`\n📊 ${category.toUpperCase().replace(/_/g, ' ')}:`);
-    console.log('-' .repeat(40));
+    console.log('-'.repeat(40));
     
     let categoryCount = 0;
     Object.entries(files).forEach(([file, violations]) => {
@@ -195,7 +193,7 @@ function generateReport(results) {
   });
   
   // Summary
-  console.log('\n' + '=' .repeat(60));
+  console.log('\n' + '='.repeat(60));
   console.log('📈 SUMMARY:');
   console.log(`   🚨 Critical Issues: ${criticalIssues}`);
   console.log(`   📊 Total Patterns Found: ${totalIssues}`);
@@ -216,7 +214,8 @@ function generateReport(results) {
 }
 
 // Main execution
-if (require.main === module) {
+const __filename = fileURLToPath(import.meta.url);
+if (process.argv[1] === __filename) {
   console.log('🔍 Starting database field name audit...\n');
   
   const startTime = Date.now();
@@ -235,4 +234,5 @@ if (require.main === module) {
   process.exit(criticalCount > 0 ? 1 : 0);
 }
 
-module.exports = { auditDirectory, auditFile, generateReport };
+export { auditDirectory, auditFile, generateReport };
+

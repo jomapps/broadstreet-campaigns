@@ -166,68 +166,64 @@ export default function ZoneCreationForm({ onClose, setIsLoading }: ZoneCreation
 
       const payload: any = {
         name: formData.name.trim(),
-        network_id: networkBroadstreetId,
-        network: {
-          broadstreet_id: entities.network?.ids.broadstreet_id,
-          mongo_id: entities.network?.ids.mongo_id,
-        },
+        networkId: networkBroadstreetId,
       };
 
       // Only add optional fields if they have values
       if (formData.advertisement_count && formData.advertisement_count.trim()) {
-        payload.advertisement_count = parseInt(formData.advertisement_count);
+        payload.advertisementCount = parseInt(formData.advertisement_count);
       }
-      
+
       if (formData.allow_duplicate_ads) {
-        payload.allow_duplicate_ads = formData.allow_duplicate_ads;
+        payload.allowDuplicateAds = formData.allow_duplicate_ads;
       }
-      
+
       if (formData.concurrent_campaigns && formData.concurrent_campaigns.trim()) {
-        payload.concurrent_campaigns = parseInt(formData.concurrent_campaigns);
+        payload.concurrentCampaigns = parseInt(formData.concurrent_campaigns);
       }
-      
+
       if (formData.advertisement_label && formData.advertisement_label.trim()) {
-        payload.advertisement_label = formData.advertisement_label.trim();
+        payload.advertisementLabel = formData.advertisement_label.trim();
       }
-      
+
       if (formData.archived) {
         payload.archived = formData.archived;
       }
-      
+
       if (formData.display_type && formData.display_type !== 'standard') {
-        payload.display_type = formData.display_type;
+        payload.displayType = formData.display_type;
       }
-      
+
       if (formData.display_type === 'rotation' && formData.rotation_interval && formData.rotation_interval.trim()) {
-        payload.rotation_interval = parseInt(formData.rotation_interval);
+        payload.rotationInterval = parseInt(formData.rotation_interval);
       }
-      
+
       if (formData.animation_type && formData.animation_type !== 'none') {
-        payload.animation_type = formData.animation_type;
+        payload.animationType = formData.animation_type;
       }
-      
+
       if (formData.width && formData.width.trim()) {
         payload.width = parseInt(formData.width);
       }
-      
+
       if (formData.height && formData.height.trim()) {
         payload.height = parseInt(formData.height);
       }
-      
+
       if (formData.alias && formData.alias.trim()) {
         payload.alias = formData.alias.trim();
       }
-      
+
       if (formData.rss_shuffle) {
-        payload.rss_shuffle = formData.rss_shuffle;
+        payload.rssShuffle = formData.rss_shuffle;
       }
-      
+
       if (formData.style && formData.style.trim()) {
         payload.style = formData.style.trim();
       }
-      
+
       if (formData.self_serve) {
-        payload.self_serve = formData.self_serve;
+        payload.selfServe = formData.self_serve;
       }
 
       const response = await fetch('/api/create/zone', {

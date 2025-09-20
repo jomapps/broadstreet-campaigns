@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
     
     const { searchParams } = new URL(request.url);
-    const networkId = searchParams.get('network_id');
+    const networkId = searchParams.get('networkId');
     
     if (!networkId) {
       return NextResponse.json({ advertisers: [] });
