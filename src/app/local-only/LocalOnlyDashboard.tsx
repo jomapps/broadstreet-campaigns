@@ -409,9 +409,27 @@ export default function LocalOnlyDashboard() {
     };
 
     const sectionName = sectionNames[sectionType] || sectionType;
-    const entityCount = data[sectionType as keyof typeof data]?.length || 0;
 
-    if (!confirm(`Are you sure you want to delete ALL ${entityCount} local ${sectionName}? This action cannot be undone.`)) {
+    // Calculate entity count - special handling for placements
+    let entityCount = 0;
+    let confirmMessage = '';
+
+    if (sectionType === 'placements') {
+      const standalonePlacements = data.placements?.length || 0;
+      const embeddedPlacements = data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0);
+      entityCount = standalonePlacements + embeddedPlacements;
+
+      if (embeddedPlacements > 0) {
+        confirmMessage = `Are you sure you want to delete ALL ${entityCount} local placements? This includes ${standalonePlacements} standalone placements and ${embeddedPlacements} embedded placements. This action cannot be undone.`;
+      } else {
+        confirmMessage = `Are you sure you want to delete ALL ${entityCount} local ${sectionName}? This action cannot be undone.`;
+      }
+    } else {
+      entityCount = data[sectionType as keyof typeof data]?.length || 0;
+      confirmMessage = `Are you sure you want to delete ALL ${entityCount} local ${sectionName}? This action cannot be undone.`;
+    }
+
+    if (!confirm(confirmMessage)) {
       return;
     }
 

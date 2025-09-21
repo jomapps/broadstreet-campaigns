@@ -13,9 +13,12 @@ export async function DELETE(request: NextRequest) {
       synced_with_api: false 
     });
 
-    // Also clear embedded placements from local campaigns
+    // Also clear embedded placements from local campaigns (only from local campaigns, not synced ones)
     const embeddedPlacementsClearResult = await LocalCampaign.updateMany(
-      { 'placements.0': { $exists: true } },
+      {
+        'placements.0': { $exists: true },
+        synced_with_api: false  // Only clear from local campaigns, not synced ones
+      },
       { $unset: { placements: 1 } }
     );
 

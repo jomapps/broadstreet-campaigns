@@ -17,6 +17,7 @@ import LocalZone from '../models/local-zone';
 import LocalNetwork from '../models/local-network';
 import LocalCampaign from '../models/local-campaign';
 import LocalAdvertisement from '../models/local-advertisement';
+import Theme from '../models/theme';
 
 export async function syncNetworks(): Promise<{ success: boolean; count: number; error?: string }> {
   const syncLog = new SyncLog({
@@ -573,6 +574,7 @@ export async function cleanupBroadstreetCollections(): Promise<{ success: boolea
 
     // Delete all Broadstreet-sourced collections (type #1 data) AND local-only collections (type #2 data)
     // Local collections might have references to old Broadstreet entities, so clean slate is needed
+    // NOTE: Themes are independent and will be validated AFTER sync completes
     const [
       networkDel, advertiserDel, zoneDel, campaignDel, advertisementDel, placementDel,
       localNetworkDel, localAdvertiserDel, localZoneDel, localCampaignDel, localAdvertisementDel
@@ -580,7 +582,7 @@ export async function cleanupBroadstreetCollections(): Promise<{ success: boolea
       // Broadstreet-sourced collections
       Network.deleteMany({}), // All networks come from Broadstreet
       Advertiser.deleteMany({}), // All advertisers come from Broadstreet
-      Zone.deleteMany({}), // All zones come from Broadstreet
+      Zone.deleteMany({}), // All zones come from Broadstreet - themes will be validated after sync
       Campaign.deleteMany({}), // All campaigns come from Broadstreet
       Advertisement.deleteMany({}), // All advertisements come from Broadstreet
       Placement.deleteMany({}), // All placements (both local and synced) - will be recreated during sync
