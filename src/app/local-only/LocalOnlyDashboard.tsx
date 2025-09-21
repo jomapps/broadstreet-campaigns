@@ -13,33 +13,24 @@ import { useRouter } from 'next/navigation';
 import { useAllFilters } from '@/stores';
 import { Button } from '@/components/ui/button';
 
-import { Badge } from '@/components/ui/badge';
+
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
-import { EntityIdBadge } from '@/components/ui/entity-id-badge';
-import { getEntityId } from '@/lib/utils/entity-helpers';
-import { cardStateClasses } from '@/lib/ui/cardStateClasses';
-import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
+
 import { useAllEntities } from '@/stores';
 import { useFilterResetAfterDeletion } from '@/lib/utils/filter-reset-helpers';
+import PaginatedEntitySection from '@/components/local-only/PaginatedEntitySection';
+import PaginatedPlacementSection from '@/components/local-only/PaginatedPlacementSection';
+import { DEFAULT_PAGINATION_CONFIGS } from '@/lib/hooks/use-paginated-entities';
 import {
   LocalZoneEntity,
   LocalAdvertiserEntity,
   LocalCampaignEntity,
   LocalNetworkEntity,
-  LocalAdvertisementEntity,
-  PlacementEntity
+  LocalAdvertisementEntity
 } from '@/lib/types/database-models';
 
-// Type for local entity data using proper database model interfaces
-type LocalOnlyData = {
-  zones: (LocalZoneEntity & { type: 'zone' })[];
-  advertisers: (LocalAdvertiserEntity & { type: 'advertiser' })[];
-  campaigns: (LocalCampaignEntity & { type: 'campaign' })[];
-  networks: (LocalNetworkEntity & { type: 'network' })[];
-  advertisements: (LocalAdvertisementEntity & { type: 'advertisement' })[];
-  placements: PlacementEntity[];
-};
+
 
 // Union type for all local entities with type discrimination
 type LocalEntityWithType =
@@ -105,265 +96,11 @@ function mapLocalEntityToCardProps(
   };
 }
 
-interface EntitySectionProps {
-  title: string;
-  entities: LocalEntityWithType[];
-  networkMap: Record<number, string>;
-  advertiserMap: Record<number, string>;
-  onDelete: (entityId: string, type: string) => void;
-  selectedIds: Set<string>;
-  onToggleSelection: (entityId: string) => void;
-  onDeleteSection?: () => void;
-  isDeletingSection?: boolean;
-}
 
-function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, selectedIds, onToggleSelection, onDeleteSection, isDeletingSection }: EntitySectionProps) {
-  if (entities.length === 0) {
-    return null;
-  }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center space-x-3">
-        <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-        <Badge variant="outline" className="text-sm">
-          {entities.length} {entities.length === 1 ? 'item' : 'items'}
-        </Badge>
-        {onDeleteSection && (
-          <Button
-            onClick={onDeleteSection}
-            disabled={isDeletingSection}
-            variant="destructive"
-            size="sm"
-            className="h-6 px-2 text-xs"
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            {isDeletingSection ? 'Deleting...' : `Delete All ${title}`}
-          </Button>
-        )}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {entities.map((entity) => (
-          <UniversalEntityCard
-            key={entity._id}
-            {...mapLocalEntityToCardProps(entity, {
-              networkName: entity.type === 'network'
-                ? entity.name // Networks don't have network_id, they ARE the network
-                : networkMap[
-                    typeof (entity as any).network_id === 'string'
-                      ? Number((entity as any).network_id)
-                      : (entity as any).network_id
-                  ],
-              advertiserName: entity.type === 'campaign'
-                ? advertiserMap[
-                    typeof (entity as any).advertiser_id === 'string'
-                      ? Number((entity as any).advertiser_id)
-                      : (entity as any).advertiser_id
-                  ]
-                : undefined,
-              onDelete,
-              isSelected: selectedIds.has(entity._id),
-              onToggleSelection,
-            })}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
-// Embedded Placement Card Component (for placements within campaigns)
-function EmbeddedPlacementCard({
-  placement,
-  campaign,
-  networkMap,
-  advertiserMap,
-  allLocalEntities
-}: {
-  placement: any; // Embedded placement from campaign
-  campaign: any; // Parent campaign
-  networkMap: Record<number, string>;
-  advertiserMap: Record<number, string>;
-  allLocalEntities: LocalOnlyData;
-}) {
-  // Find related entities from local data
-  const advertiser = advertiserMap[campaign.advertiser_id];
 
-  // Find advertisement entity
-  const advertisement = allLocalEntities.advertisements.find(ad =>
-    ad.broadstreet_id === placement.advertisement_id
-  );
 
-  // Find zone entity
-  const zone = placement.zone_id
-    ? allLocalEntities.zones.find(z => z.broadstreet_id === placement.zone_id)
-    : placement.zone_mongo_id
-      ? allLocalEntities.zones.find(z => z._id === placement.zone_mongo_id)
-      : null;
-
-  // Build breadcrumb hierarchy: Network > Advertiser > Campaign > Advertisement + Zone
-  const parentsBreadcrumb = [
-    // Network
-    {
-      name: networkMap[campaign.network_id] || `Network ${campaign.network_id}`,
-      broadstreet_id: campaign.network_id,
-      mongo_id: undefined,
-      entityType: 'network' as const,
-    },
-    // Advertiser
-    {
-      name: advertiser || `Advertiser ${campaign.advertiser_id}`,
-      broadstreet_id: campaign.advertiser_id,
-      mongo_id: undefined,
-      entityType: 'advertiser' as const,
-    },
-    // Campaign
-    {
-      name: campaign.name,
-      broadstreet_id: campaign.broadstreet_id,
-      mongo_id: campaign._id,
-      entityType: 'campaign' as const,
-    },
-    // Advertisement
-    advertisement && {
-      name: advertisement.name,
-      broadstreet_id: advertisement.broadstreet_id,
-      mongo_id: advertisement._id,
-      entityType: 'advertisement' as const,
-    },
-    // Zone
-    zone && {
-      name: zone.name,
-      broadstreet_id: zone.broadstreet_id,
-      mongo_id: zone._id,
-      entityType: 'zone' as const,
-    },
-  ].filter(Boolean) as any[];
-
-  // Display data for the card content
-  const displayData = [
-    { label: 'Campaign', value: campaign.name, type: 'string' as const },
-    { label: 'Advertisement', value: advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
-    { label: 'Zone', value: zone?.name ?? (placement.zone_id ? `Zone ${placement.zone_id}` : placement.zone_mongo_id ? `Zone ${placement.zone_mongo_id}` : 'N/A'), type: 'string' as const },
-  ] as any[];
-
-  if (placement.restrictions && placement.restrictions.length > 0) {
-    displayData.push({ label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const });
-  }
-
-  return (
-    <UniversalEntityCard
-      title={advertisement?.name || `Advertisement ${placement.advertisement_id}`}
-      entityType="placement"
-      isLocal={true}
-      parentsBreadcrumb={parentsBreadcrumb}
-      displayData={displayData}
-      topTags={[{ label: 'embedded', variant: 'secondary' as const }]}
-    />
-  );
-}
-
-// Local Placement Card Component
-function LocalPlacementCard({
-  placement,
-  networkMap,
-  advertiserMap,
-  allLocalEntities,
-  onDelete
-}: {
-  placement: LocalOnlyData['placements'][0];
-  networkMap: Record<number, string>;
-  advertiserMap: Record<number, string>;
-  allLocalEntities: LocalOnlyData;
-  onDelete: (entityId: string) => void;
-}) {
-  // Find related entities from local data
-  const network = Object.values(networkMap).find((_, index) =>
-    Object.keys(networkMap)[index] === String(placement.network_id)
-  );
-  const advertiser = advertiserMap[placement.advertiser_id];
-
-  // Find campaign entity
-  const campaign = placement.campaign_id
-    ? allLocalEntities.campaigns.find(c => c.broadstreet_id === placement.campaign_id)
-    : placement.campaign_mongo_id
-      ? allLocalEntities.campaigns.find(c => c._id === placement.campaign_mongo_id)
-      : null;
-
-  // Find advertisement entity
-  const advertisement = allLocalEntities.advertisements.find(ad =>
-    ad.broadstreet_id === placement.advertisement_id
-  );
-
-  // Find zone entity
-  const zone = placement.zone_id
-    ? allLocalEntities.zones.find(z => z.broadstreet_id === placement.zone_id)
-    : placement.zone_mongo_id
-      ? allLocalEntities.zones.find(z => z._id === placement.zone_mongo_id)
-      : null;
-
-  // Build breadcrumb hierarchy: Network > Advertiser > Campaign > Advertisement + Zone
-  const parentsBreadcrumb = [
-    // Network
-    {
-      name: networkMap[placement.network_id] || `Network ${placement.network_id}`,
-      broadstreet_id: placement.network_id,
-      mongo_id: undefined,
-      entityType: 'network' as const,
-    },
-    // Advertiser
-    {
-      name: advertiser || `Advertiser ${placement.advertiser_id}`,
-      broadstreet_id: placement.advertiser_id,
-      mongo_id: undefined,
-      entityType: 'advertiser' as const,
-    },
-    // Campaign (if found)
-    campaign && {
-      name: campaign.name,
-      broadstreet_id: campaign.broadstreet_id,
-      mongo_id: campaign._id,
-      entityType: 'campaign' as const,
-    },
-    // Advertisement
-    advertisement && {
-      name: advertisement.name,
-      broadstreet_id: advertisement.broadstreet_id,
-      mongo_id: advertisement._id,
-      entityType: 'advertisement' as const,
-    },
-    // Zone
-    zone && {
-      name: zone.name,
-      broadstreet_id: zone.broadstreet_id,
-      mongo_id: zone._id,
-      entityType: 'zone' as const,
-    },
-  ].filter(Boolean) as any[];
-
-  // Display data for the card content
-  const displayData = [
-    { label: 'Campaign', value: campaign?.name ?? (placement.campaign_id ? `Campaign ${placement.campaign_id}` : 'N/A'), type: 'string' as const },
-    { label: 'Advertisement', value: advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
-    { label: 'Zone', value: zone?.name ?? (placement.zone_id ? `Zone ${placement.zone_id}` : 'N/A'), type: 'string' as const },
-  ] as any[];
-
-  if (placement.restrictions && placement.restrictions.length > 0) {
-    displayData.push({ label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const });
-  }
-
-  return (
-    <UniversalEntityCard
-      title={advertisement?.name || `Advertisement ${placement.advertisement_id}`}
-      entityType="placement"
-      isLocal={true}
-      mongo_id={placement._id}
-      parentsBreadcrumb={parentsBreadcrumb}
-      displayData={displayData}
-      onDelete={() => onDelete(placement._id)}
-    />
-  );
-}
 
 export default function LocalOnlyDashboard() {
   const router = useRouter();
@@ -408,7 +145,7 @@ export default function LocalOnlyDashboard() {
     advertisements: localAdvertisements.map(advertisement => ({ ...advertisement, type: 'advertisement' as const })),
     placements: localPlacements
   };
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const [isDeletingAll, setIsDeletingAll] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [isDeletingSection, setIsDeletingSection] = useState<string | null>(null);
@@ -461,7 +198,6 @@ export default function LocalOnlyDashboard() {
       return;
     }
 
-    setIsDeleting(entityId);
     try {
       let response;
 
@@ -489,8 +225,6 @@ export default function LocalOnlyDashboard() {
     } catch (error) {
       console.error(`Error deleting ${entityType}:`, error);
       alert(`Failed to delete ${entityType}. Please try again.`);
-    } finally {
-      setIsDeleting(null);
     }
   };
 
@@ -842,8 +576,8 @@ export default function LocalOnlyDashboard() {
         </div>
       </div>
 
-      {/* Entity Sections */}
-      <EntitySection
+      {/* Entity Sections with Pagination */}
+      <PaginatedEntitySection
         title="Zones"
         entities={data.zones as any}
         networkMap={networkMap}
@@ -853,9 +587,11 @@ export default function LocalOnlyDashboard() {
         onToggleSelection={toggleSelection}
         onDeleteSection={() => handleDeleteSection('zones')}
         isDeletingSection={isDeletingSection === 'zones'}
+        paginationConfig={DEFAULT_PAGINATION_CONFIGS.zones}
+        mapEntityToCardProps={mapLocalEntityToCardProps}
       />
 
-      <EntitySection
+      <PaginatedEntitySection
         title="Advertisers"
         entities={data.advertisers as any}
         networkMap={networkMap}
@@ -865,9 +601,11 @@ export default function LocalOnlyDashboard() {
         onToggleSelection={toggleSelection}
         onDeleteSection={() => handleDeleteSection('advertisers')}
         isDeletingSection={isDeletingSection === 'advertisers'}
+        paginationConfig={DEFAULT_PAGINATION_CONFIGS.advertisers}
+        mapEntityToCardProps={mapLocalEntityToCardProps}
       />
 
-      <EntitySection
+      <PaginatedEntitySection
         title="Campaigns"
         entities={data.campaigns as any}
         networkMap={networkMap}
@@ -877,9 +615,11 @@ export default function LocalOnlyDashboard() {
         onToggleSelection={toggleSelection}
         onDeleteSection={() => handleDeleteSection('campaigns')}
         isDeletingSection={isDeletingSection === 'campaigns'}
+        paginationConfig={DEFAULT_PAGINATION_CONFIGS.campaigns}
+        mapEntityToCardProps={mapLocalEntityToCardProps}
       />
 
-      <EntitySection
+      <PaginatedEntitySection
         title="Networks"
         entities={data.networks as any}
         networkMap={networkMap}
@@ -889,9 +629,11 @@ export default function LocalOnlyDashboard() {
         onToggleSelection={toggleSelection}
         onDeleteSection={() => handleDeleteSection('networks')}
         isDeletingSection={isDeletingSection === 'networks'}
+        paginationConfig={DEFAULT_PAGINATION_CONFIGS.networks}
+        mapEntityToCardProps={mapLocalEntityToCardProps}
       />
 
-      <EntitySection
+      <PaginatedEntitySection
         title="Advertisements"
         entities={data.advertisements as any}
         networkMap={networkMap}
@@ -901,80 +643,44 @@ export default function LocalOnlyDashboard() {
         onToggleSelection={toggleSelection}
         onDeleteSection={() => handleDeleteSection('advertisements')}
         isDeletingSection={isDeletingSection === 'advertisements'}
+        paginationConfig={DEFAULT_PAGINATION_CONFIGS.advertisements}
+        mapEntityToCardProps={mapLocalEntityToCardProps}
       />
 
-      {/* Placements under Campaigns (embedded) */}
+      {/* Embedded Placements (in Campaigns) */}
       {data.campaigns.some((c: any) => Array.isArray(c.placements) && c.placements.length > 0) && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-semibold text-gray-900">Embedded Placements</h2>
-            <Badge variant="outline" className="text-sm">
-              {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0)} {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0) === 1 ? 'item' : 'items'}
-            </Badge>
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-              In Campaigns
-            </Badge>
-            <Button
-              onClick={() => handleDeleteSection('placements')}
-              disabled={isDeletingSection === 'placements'}
-              variant="destructive"
-              size="sm"
-              className="h-6 px-2 text-xs"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              {isDeletingSection === 'placements' ? 'Deleting...' : 'Delete All Placements'}
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.campaigns.flatMap((c: any) => (c.placements || []).map((p: any, idx: number) => (
-              <EmbeddedPlacementCard
-                key={`${c._id}-${p.advertisement_id}-${p.zone_id || p.zone_mongo_id || idx}`}
-                placement={p}
-                campaign={c}
-                networkMap={networkMap}
-                advertiserMap={advertiserMap}
-                allLocalEntities={data}
-              />
-            )))}
-          </div>
-        </div>
+        <PaginatedPlacementSection
+          title="Embedded Placements"
+          placements={[]}
+          campaigns={data.campaigns}
+          networkMap={networkMap}
+          advertiserMap={advertiserMap}
+          allLocalEntities={data}
+          onDeleteSection={() => handleDeleteSection('placements')}
+          isDeletingSection={isDeletingSection === 'placements'}
+          paginationConfig={DEFAULT_PAGINATION_CONFIGS.placements}
+          isEmbedded={true}
+          badgeVariant="outline"
+          badgeColor="bg-blue-50 text-blue-700 border-blue-200"
+        />
       )}
 
       {/* Local Placements from Collection */}
       {data.placements && data.placements.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-semibold text-gray-900">Local Placements</h2>
-            <Badge variant="outline" className="text-sm">
-              {data.placements.length} {data.placements.length === 1 ? 'item' : 'items'}
-            </Badge>
-            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-              Collection
-            </Badge>
-            <Button
-              onClick={() => handleDeleteSection('placements')}
-              disabled={isDeletingSection === 'placements'}
-              variant="destructive"
-              size="sm"
-              className="h-6 px-2 text-xs"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              {isDeletingSection === 'placements' ? 'Deleting...' : 'Delete All Placements'}
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.placements.map((placement) => (
-              <LocalPlacementCard
-                key={placement._id}
-                placement={placement as any}
-                networkMap={networkMap}
-                advertiserMap={advertiserMap}
-                allLocalEntities={data}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </div>
+        <PaginatedPlacementSection
+          title="Local Placements"
+          placements={data.placements}
+          networkMap={networkMap}
+          advertiserMap={advertiserMap}
+          allLocalEntities={data}
+          onDelete={handleDelete}
+          onDeleteSection={() => handleDeleteSection('placements')}
+          isDeletingSection={isDeletingSection === 'placements'}
+          paginationConfig={DEFAULT_PAGINATION_CONFIGS.placements}
+          isEmbedded={false}
+          badgeVariant="outline"
+          badgeColor="bg-yellow-50 text-yellow-700 border-yellow-200"
+        />
       )}
 
       {/* Progress Modal */}
