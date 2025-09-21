@@ -15,6 +15,7 @@ import { SearchInput } from '@/components/ui/search-input';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import ThemeCreateModal from '@/components/themes/ThemeCreateModal';
 import { useCreateTheme } from './useCreateTheme';
+import { useFilterResetAfterDeletion } from '@/lib/utils/filter-reset-helpers';
 
 /**
  * ThemesList - Main themes display component
@@ -23,6 +24,9 @@ import { useCreateTheme } from './useCreateTheme';
 function ThemesList() {
   // Get data from Zustand stores using exact names from docs/variable-origins.md registry
   const { themes, isLoading } = useEntityStore();
+
+  // Get filter reset helpers
+  const { resetFiltersAfterDeletion } = useFilterResetAfterDeletion();
   const [searchTerm, setSearchTerm] = useState('');
   const router = useRouter();
 
@@ -116,6 +120,9 @@ function ThemesList() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to delete theme');
       }
+
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterDeletion('theme', themeId);
 
       // Refresh the page to remove the deleted theme
       router.refresh();

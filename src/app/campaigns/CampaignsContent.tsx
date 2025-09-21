@@ -16,6 +16,7 @@ import { getEntityId } from '@/lib/utils/entity-helpers';
 import { SearchInput } from '@/components/ui/search-input';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { FilterLoadingOverlay } from '@/components/ui/filter-loading-overlay';
+import { useFilterResetAfterDeletion } from '@/lib/utils/filter-reset-helpers';
 
 // Type for campaign data from Zustand store
 type CampaignLean = {
@@ -111,6 +112,9 @@ function CampaignsList() {
   const { campaigns, isLoading } = useEntityStore();
   const { selectedCampaign, selectedNetwork, selectedAdvertiser } = useAllFilters();
   const { setSelectedCampaign } = useFilterActions();
+
+  // Get filter reset helpers
+  const { resetFiltersAfterDeletion } = useFilterResetAfterDeletion();
 
   // Create entities object for compatibility with existing code
   const entities = {
@@ -224,6 +228,9 @@ function CampaignsList() {
       if (String(getEntityId(selectedCampaign)) === String(campId)) {
         setSelectedCampaign(null);
       }
+
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterDeletion('campaign', String(campId));
 
       // Soft refresh for any server components
       router.refresh();

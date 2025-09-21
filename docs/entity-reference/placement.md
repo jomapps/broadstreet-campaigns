@@ -556,6 +556,8 @@ The dual placement storage architecture has been successfully implemented and is
 - ✅ **API Endpoints**: Complete CRUD operations via `/api/local-placements`
 - ✅ **Frontend Integration**: Local-only page displays and manages local placements
 - ✅ **Filtering Logic**: Proper filtering of synced vs unsynced placements
+- ✅ **Campaign Mirroring**: Automatic LocalCampaign mirror creation for synced campaigns
+- ✅ **Enhanced Error Handling**: Detailed debugging and validation in placement creation API
 
 #### **API Endpoints Implemented:**
 - ✅ `POST /api/local-placements` - Create local placement
@@ -563,6 +565,7 @@ The dual placement storage architecture has been successfully implemented and is
 - ✅ `GET /api/local-placements/[id]` - Get individual placement
 - ✅ `DELETE /api/local-placements/[id]` - Delete local placement
 - ✅ `POST /api/sync/placements` - Sync placements to Broadstreet
+- ✅ `POST /api/create/placements` - Bulk placement creation with campaign mirroring
 
 #### **Database Schema:**
 - ✅ **Flexible ID References**: Support for both MongoDB ObjectIds and Broadstreet numeric IDs
@@ -587,6 +590,32 @@ The dual placement storage architecture has been successfully implemented and is
 **System Status: ✅ FULLY OPERATIONAL**
 
 All placement functionality is production-ready with comprehensive sync capabilities.
+
+### 🔧 **Recent Updates (Current Session)**
+
+#### **Enhanced Placement Creation API (`/api/create/placements`)**
+- ✅ **Improved Error Handling**: Added MongoDB ObjectId validation and detailed error messages
+- ✅ **Campaign Mirroring Debug**: Enhanced logging for campaign lookup and LocalCampaign mirror creation
+- ✅ **Synced Campaign Support**: Automatic mirroring of synced campaigns to LocalCampaign collection for placement storage
+- ✅ **Detailed Logging**: Comprehensive debug output for troubleshooting campaign reference issues
+
+#### **Placement Creation UI Improvements**
+- ✅ **RequiredEntitiesCard**: Replaced warning-based ValidationCard with entity display card
+- ✅ **Entity Information Display**: Shows Network, Advertiser, and Campaign names with IDs
+- ✅ **Consistent ID Display**: Uses `getEntityId()` utility for proper ID extraction and Badge display
+- ✅ **Blue Theme Design**: Clean, informative card design with proper icons and entity information
+
+#### **Campaign Mirroring Logic**
+The system now properly handles synced campaigns by:
+1. **Looking up campaigns** in both LocalCampaign and main Campaign collections
+2. **Creating LocalCampaign mirrors** for synced campaigns when needed for placement storage
+3. **Resolving network_id** from campaign or advertiser data
+4. **Comprehensive error handling** with detailed logging for troubleshooting
+
+**Error Resolution Pattern:**
+```
+"Local campaign not found" → Enhanced debugging → Automatic campaign mirroring → Successful placement creation
+```
 
 ## Zustand Store Usage Patterns
 
@@ -783,4 +812,57 @@ This will create all the placements including the ignored ones. It will also dis
 
 ##### "Create Placements without IGNORED" (green with white text)
 This will create all the placements excluding the ignored ones. It will also display a message saying that the ignored placements will not be created.
+
+## Current Placement Creation Workflow (Updated)
+
+### Page-Based Creation Flow
+The placement creation has been moved from modal to a dedicated page at `/placements/create-placements`.
+
+#### **Required Entities Display**
+The page now shows a **RequiredEntitiesCard** that displays:
+- **Network**: Name and ID (e.g., "FASH Medien Verlag GmbH - SCHWULISSIMO ID: 9396")
+- **Advertiser**: Name and ID (e.g., "28339 - UNBOUND MEDIA ID: 214951")
+- **Campaign**: Name and ID (e.g., "28339 - UNBOUND MEDIA - 59879 - 22.09. - 28.09.2025 - KW39 ID: 68cf3251fe8be49e7b9198f0")
+
+#### **Campaign Reference Handling**
+- **Local Campaigns**: Use MongoDB ObjectId (string) as `campaign_mongo_id`
+- **Synced Campaigns**: Use Broadstreet ID (number) as `campaign_id`
+- **Automatic Mirroring**: Synced campaigns are automatically mirrored to LocalCampaign collection for placement storage
+
+#### **Size Type Categorization**
+Placements are categorized by matching size types in zone/advertisement names:
+- **SQ** (Square): 350x200 ad sizes
+- **LS** (Leaderboard): 728x90 ad sizes
+- **PT** (Portrait): 300x600 ad sizes
+- **IGNORED**: Combinations without matching size types
+
+#### **Creation Options**
+- **"Create Placements with IGNORED"** (red button): Creates all combinations including ignored ones
+- **"Create Placements without IGNORED"** (green button): Creates only categorized combinations
+
+### API Integration Details
+
+#### **Campaign Mirroring Process**
+When creating placements with synced campaigns:
+1. API checks LocalCampaign collection first
+2. If not found, searches main Campaign collection
+3. Creates LocalCampaign mirror with resolved network_id
+4. Stores placements in the mirrored LocalCampaign
+
+#### **Error Handling & Debugging**
+Enhanced error handling provides detailed logging:
+- MongoDB ObjectId validation
+- Campaign lookup attempts in both collections
+- Network resolution from campaign or advertiser data
+- LocalCampaign mirror creation success/failure
+
+#### **Common Issues & Solutions**
+- **"Local campaign not found"**: Usually resolved by automatic campaign mirroring
+- **"Invalid campaign MongoDB ID format"**: Validates ObjectId format before processing
+- **"Unable to resolve network_id"**: Checks both campaign and advertiser for network information
+
+### Post-Creation Behavior
+- **Success**: Redirects to `/placements` page
+- **Error Display**: Shows specific error messages with troubleshooting context
+- **Logging**: Comprehensive backend logs for debugging placement creation issues
 

@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import QueryProvider from "@/lib/providers/query-client-provider";
+import AppInitializer from "@/components/app/AppInitializer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         <QueryProvider>
+          <AppInitializer />
           <div className="flex h-screen">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">

@@ -17,6 +17,7 @@ import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { SearchInput } from '@/components/ui/search-input';
 import CreationButton from '@/components/creation/CreationButton';
 import { FilterLoadingOverlay } from '@/components/ui/filter-loading-overlay';
+import { useFilterResetAfterDeletion } from '@/lib/utils/filter-reset-helpers';
 
 // Type for advertiser data from Zustand store
 type AdvertiserLean = {
@@ -86,6 +87,9 @@ function AdvertisersList() {
   const { selectedAdvertiser, setSelectedAdvertiser, selectedNetwork } = useFilterStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  // Get filter reset helpers
+  const { resetFiltersAfterDeletion } = useFilterResetAfterDeletion();
   const router = useRouter();
 
   // Use deferred filtering for better performance with loading states
@@ -181,6 +185,9 @@ function AdvertisersList() {
       if (String(getEntityId(selectedAdvertiser)) === String(advId)) {
         setSelectedAdvertiser(null);
       }
+
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterDeletion('advertiser', String(advId));
 
       // Soft refresh for any server components
       router.refresh();

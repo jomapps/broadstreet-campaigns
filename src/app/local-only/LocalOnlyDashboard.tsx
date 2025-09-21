@@ -21,6 +21,7 @@ import { getEntityId } from '@/lib/utils/entity-helpers';
 import { cardStateClasses } from '@/lib/ui/cardStateClasses';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { useAllEntities } from '@/stores';
+import { useFilterResetAfterDeletion } from '@/lib/utils/filter-reset-helpers';
 import {
   LocalZoneEntity,
   LocalAdvertiserEntity,
@@ -278,6 +279,9 @@ function LocalPlacementCard({
 export default function LocalOnlyDashboard() {
   const router = useRouter();
 
+  // Get filter reset helpers
+  const { resetFiltersAfterDeletion, resetFiltersAfterBulkDeletion } = useFilterResetAfterDeletion();
+
   // Get data from Zustand stores using exact names from variable registry
   const {
     localZones,
@@ -388,6 +392,9 @@ export default function LocalOnlyDashboard() {
         throw new Error(`Failed to delete ${entityType}`);
       }
 
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterDeletion(entityType, entityId);
+
       // Refresh the page to show updated data
       router.refresh();
     } catch (error) {
@@ -455,6 +462,9 @@ export default function LocalOnlyDashboard() {
       } else {
         alert(`Successfully deleted ${result.deleted} local ${sectionName}.`);
       }
+
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterBulkDeletion([sectionName], result.deleted || 0);
 
       // Refresh the page to show updated data
       router.refresh();
@@ -635,7 +645,10 @@ export default function LocalOnlyDashboard() {
 
       const result = await response.json();
       alert(`Successfully deleted all ${result.deleted} local entities.`);
-      
+
+      // Reset filters to prevent stale entity references
+      resetFiltersAfterBulkDeletion(['all entities'], result.deleted || 0);
+
       // Refresh the page to show updated data
       router.refresh();
     } catch (error) {
@@ -805,7 +818,7 @@ export default function LocalOnlyDashboard() {
       {data.campaigns.some((c: any) => Array.isArray(c.placements) && c.placements.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-semibold text-gray-900">Placements (Local Embedded)</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Placements</h2>
             <Badge variant="outline" className="text-sm">
               {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0)} {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0) === 1 ? 'item' : 'items'}
             </Badge>

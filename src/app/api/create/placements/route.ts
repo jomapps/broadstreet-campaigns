@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import connectDB from '@/lib/mongodb';
 import LocalCampaign from '@/lib/models/local-campaign';
 import Campaign from '@/lib/models/campaign';
@@ -50,44 +51,84 @@ export async function POST(request: NextRequest) {
     console.log('Looking for campaign with mongo_id:', campaignMongoId);
     console.log('Looking for campaign with broadstreet_id:', campaignId);
 
+    // Validate MongoDB ObjectId format if provided
+    if (campaignMongoId && !mongoose.Types.ObjectId.isValid(campaignMongoId)) {
+      console.log('Invalid MongoDB ObjectId format:', campaignMongoId);
+      return NextResponse.json(
+        { message: 'Invalid campaign MongoDB ID format' },
+        { status: 400 }
+      );
+    }
+
     let campaign: any = campaignMongoId
       ? await LocalCampaign.findById(campaignMongoId).lean()
       : await LocalCampaign.findOne({ original_broadstreet_id: campaignId }).lean();
+
+    console.log('Found campaign in LocalCampaign:', !!campaign);
 
 
 
     // If not found in LocalCampaign and we have a mongo_id, try to find in regular Campaign collection
     if (!campaign && campaignMongoId) {
+      console.log('Searching for campaign in main Campaign collection...');
       const sourceCampaign = await Campaign.findById(campaignMongoId).lean();
+      console.log('Found campaign in main Campaign collection:', !!sourceCampaign);
+
       if (sourceCampaign) {
+        console.log('Campaign data:', {
+          name: (sourceCampaign as any).name,
+          broadstreet_id: (sourceCampaign as any).broadstreet_id,
+          advertiser_id: (sourceCampaign as any).advertiser_id,
+          network_id: (sourceCampaign as any).network_id
+        });
+
         // Mirror the campaign to LocalCampaign for placement storage
         const advertiser = (sourceCampaign as any).advertiser_id
           ? (await Advertiser.findOne({ broadstreet_id: (sourceCampaign as any).advertiser_id }).lean()) as any
           : null;
+        console.log('Found advertiser for network resolution:', !!advertiser);
+
         const resolvedNetworkId = (sourceCampaign as any).network_id ?? (advertiser && typeof advertiser.network_id === 'number' ? advertiser.network_id : undefined);
+        console.log('Resolved network_id:', resolvedNetworkId);
 
 
 
         if (typeof resolvedNetworkId !== 'number') {
+          console.log('Failed to resolve network_id. Source network_id:', (sourceCampaign as any).network_id, 'Advertiser network_id:', advertiser?.network_id);
           return NextResponse.json(
             { message: 'Unable to resolve network_id for campaign mirroring' },
             { status: 422 }
           );
         }
 
-        // Create LocalCampaign mirror
-        const localCampaignData = {
-          ...sourceCampaign,
-          network_id: resolvedNetworkId,
-          original_broadstreet_id: (sourceCampaign as any).broadstreet_id,
-          created_locally: false,
-          synced_with_api: true,
-          placements: [],
-        };
-        delete (localCampaignData as any)._id;
-        delete (localCampaignData as any).broadstreet_id;
+        try {
+          // Create LocalCampaign mirror
+          const localCampaignData = {
+            ...sourceCampaign,
+            network_id: resolvedNetworkId,
+            original_broadstreet_id: (sourceCampaign as any).broadstreet_id,
+            created_locally: false,
+            synced_with_api: true,
+            placements: [],
+          };
+          delete (localCampaignData as any)._id;
+          delete (localCampaignData as any).broadstreet_id;
 
-        campaign = await LocalCampaign.create(localCampaignData);
+          console.log('Creating LocalCampaign mirror with data:', {
+            name: (localCampaignData as any).name,
+            network_id: localCampaignData.network_id,
+            original_broadstreet_id: localCampaignData.original_broadstreet_id
+          });
+
+          campaign = await LocalCampaign.create(localCampaignData);
+          console.log('Successfully created LocalCampaign mirror with _id:', campaign._id);
+        } catch (createError) {
+          console.error('Error creating LocalCampaign mirror:', createError);
+          return NextResponse.json(
+            { message: 'Failed to create campaign mirror: ' + (createError as Error).message },
+            { status: 500 }
+          );
+        }
       }
     }
 
