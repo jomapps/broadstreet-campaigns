@@ -131,13 +131,17 @@ export const useFilterStore = create<FilterState & FilterActions>()(
        */
       setSelectedTheme: (theme) => set((state) => {
         state.selectedTheme = theme;
-        
+
         // Update zones to match theme (enforces mutual exclusivity)
         if (theme) {
           state.selectedZones = theme.zone_ids.map(String);
           state.filterSource = 'theme';
+        } else {
+          // Clear zones when theme is cleared
+          state.selectedZones = [];
+          state.filterSource = 'user';
         }
-        
+
         state.lastFilterUpdate = new Date();
       }),
 

@@ -149,12 +149,13 @@ export default function ZonesList({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayZones.map((zone) => {
             const entityId = getEntityId(zone);
+            const selectionKey = String(entityId || zone._id);
             return (
               <UniversalEntityCard
-                key={String(entityId || zone._id)}
+                key={selectionKey}
                 {...mapZoneToUniversalProps(zone, {
                   networkName: networkMap.get(zone.network_id),
-                  isSelected: selectedZones.includes(String(zone.broadstreet_id || zone._id)),
+                  isSelected: selectedZones.includes(selectionKey),
                   onToggleSelection: toggleZoneSelection,
                   themes: zone.broadstreet_id ? themesByZone.get(zone.broadstreet_id) || [] : [],
                 })}

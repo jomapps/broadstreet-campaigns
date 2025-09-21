@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEntityStore, useAllFilters } from '@/stores';
 import { getEntityId } from '@/lib/utils/entity-helpers';
-import { categorizePlacementsBySize, validatePlacementCategories, getPlacementsForCreation } from '@/lib/utils/placement-categorization';
+import { categorizePlacementsBySize, getPlacementsForCreation } from '@/lib/utils/placement-categorization';
 import type { CategorizedPlacements } from '@/lib/utils/placement-categorization';
-import ValidationCard from './ValidationCard';
+import RequiredEntitiesCard from './RequiredEntitiesCard';
 import PlacementCategoryCards from './PlacementCategoryCards';
 import CreationButtons from './CreationButtons';
 
@@ -28,7 +28,6 @@ export default function CreatePlacementsClient({
   const { selectedNetwork, selectedAdvertiser, selectedCampaign, selectedZones, selectedAdvertisements } = useAllFilters();
   
   const [placementCategories, setPlacementCategories] = useState<CategorizedPlacements | null>(null);
-  const [validationResult, setValidationResult] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,20 +89,15 @@ export default function CreatePlacementsClient({
           selectedAdvertisementEntities
         );
 
-        const validation = validatePlacementCategories(categories);
-
         setPlacementCategories(categories);
-        setValidationResult(validation);
         setError(null);
       } catch (err) {
         console.error('Error categorizing placements:', err);
         setError(err instanceof Error ? err.message : 'Failed to categorize placements');
         setPlacementCategories(null);
-        setValidationResult(null);
       }
     } else {
       setPlacementCategories(null);
-      setValidationResult(null);
       setError(null);
     }
   }, [selectedNetwork, selectedAdvertiser, selectedCampaign, selectedZones, selectedAdvertisements, initialData]);
@@ -171,11 +165,15 @@ export default function CreatePlacementsClient({
 
   return (
     <div className="space-y-6">
-      {/* Validation Card */}
-      <ValidationCard
+      {/* Required Entities Card */}
+      <RequiredEntitiesCard
         hasRequiredSelections={hasRequiredSelections()}
         missingCriteria={getMissingCriteria()}
-        validationResult={validationResult}
+        selectedNetwork={selectedNetwork}
+        selectedAdvertiser={selectedAdvertiser}
+        selectedCampaign={selectedCampaign}
+        selectedZones={selectedZones}
+        selectedAdvertisements={selectedAdvertisements}
         error={error}
       />
 
@@ -189,7 +187,7 @@ export default function CreatePlacementsClient({
             onCreateWithIgnored={() => handleCreatePlacements(true)}
             onCreateWithoutIgnored={() => handleCreatePlacements(false)}
             isCreating={isCreating}
-            disabled={!validationResult?.valid}
+            disabled={false}
           />
         </>
       )}
