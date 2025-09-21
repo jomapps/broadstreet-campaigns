@@ -12,6 +12,7 @@ import SyncLog from './models/sync-log';
 import Network from './models/network';
 import Advertisement from './models/advertisement';
 import Advertiser from './models/advertiser';
+import Zone from './models/zone';
 
 import { auditService } from './audit-service';
 import { progressService } from './progress-service';
@@ -291,12 +292,16 @@ class SyncService {
               result.warnings.push(`Advertisement ID ${placement.advertisement_id} not found in local database`);
             }
 
-            // Check if zone exists and is synced
-            const localZone = await LocalZone.findOne({ 
+            // Check if zone exists and is synced (check both LocalZone and main Zone collections)
+            const localZone = await LocalZone.findOne({
               original_broadstreet_id: placement.zone_id,
-              synced_with_api: true 
+              synced_with_api: true
             });
-            if (!localZone) {
+            const syncedZone = await Zone.findOne({
+              broadstreet_id: placement.zone_id
+            });
+
+            if (!localZone && !syncedZone) {
               result.dependencyChecks.missingZones.push(
                 `Campaign "${campaign.name}" references unsynced zone ID: ${placement.zone_id}`
               );
