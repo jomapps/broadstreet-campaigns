@@ -168,7 +168,7 @@ export function usePaginatedEntities<T>(
  */
 export function useMultiplePaginatedEntities<T extends Record<string, any[]>>(
   entitiesByType: T,
-  config: Record<keyof T, PaginatedEntityConfig> = {}
+  config: Record<keyof T, PaginatedEntityConfig> = {} as Record<keyof T, PaginatedEntityConfig>
 ): Record<keyof T, PaginatedEntityResult<T[keyof T][0]>> {
   const results = {} as Record<keyof T, PaginatedEntityResult<T[keyof T][0]>>;
 

@@ -35,7 +35,7 @@ export default async function ZonesPage({ searchParams }: ZonesPageProps) {
 
   // Fetch zones and networks data in parallel using existing data fetchers
   const [zones, networks] = await Promise.all([
-    fetchZones(networkId, params),
+    fetchZones(networkId || undefined, params),
     fetchNetworks()
   ]);
 

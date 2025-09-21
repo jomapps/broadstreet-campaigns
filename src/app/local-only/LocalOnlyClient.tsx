@@ -19,12 +19,12 @@ import LocalOnlyDashboard from './LocalOnlyDashboard';
  */
 interface LocalOnlyClientProps {
   initialLocalEntities: {
-    zones: any[];
-    advertisers: any[];
-    campaigns: any[];
-    networks: any[];
-    advertisements: any[];
-    placements: any[];
+    localZones: any[];
+    localAdvertisers: any[];
+    localCampaigns: any[];
+    localNetworks: any[];
+    localAdvertisements: any[];
+    localPlacements: any[];
   };
   initialNetworks: any[];
   searchParams: any;
@@ -46,7 +46,15 @@ export default function LocalOnlyClient({
   // Initialize store with server data on mount
   useEffect(() => {
     // Set local entities using exact variable names from registry
-    setLocalEntities(initialLocalEntities);
+    // Transform local* properties to match store expectations
+    setLocalEntities({
+      zones: initialLocalEntities.localZones,
+      advertisers: initialLocalEntities.localAdvertisers,
+      campaigns: initialLocalEntities.localCampaigns,
+      networks: initialLocalEntities.localNetworks,
+      advertisements: initialLocalEntities.localAdvertisements,
+      placements: initialLocalEntities.localPlacements,
+    });
 
     // Set networks using exact variable names from registry
     setNetworks(initialNetworks);

@@ -14,17 +14,21 @@ import { Pagination } from '@/components/ui/pagination';
 import { UniversalEntityCard } from '@/components/ui/universal-entity-card';
 import { usePaginatedEntities, PaginatedEntityConfig } from '@/lib/hooks/use-paginated-entities';
 import { Trash2 } from 'lucide-react';
+import {
+  LocalZoneEntity,
+  LocalAdvertiserEntity,
+  LocalCampaignEntity,
+  LocalNetworkEntity,
+  LocalAdvertisementEntity
+} from '@/lib/types/database-models';
 
 // Entity type for local entities with type discrimination
-type LocalEntityWithType = {
-  _id: string;
-  name: string;
-  type: string;
-  created_at: string;
-  broadstreet_id?: number;
-  mongo_id?: string;
-  [key: string]: any;
-};
+type LocalEntityWithType =
+  | (LocalZoneEntity & { type: 'zone' })
+  | (LocalAdvertiserEntity & { type: 'advertiser' })
+  | (LocalCampaignEntity & { type: 'campaign' })
+  | (LocalNetworkEntity & { type: 'network' })
+  | (LocalAdvertisementEntity & { type: 'advertisement' });
 
 // Props interface for the paginated entity section
 interface PaginatedEntitySectionProps {

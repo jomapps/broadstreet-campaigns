@@ -33,8 +33,8 @@ export default async function PlacementsPage({ searchParams }: { searchParams: a
   // Fetch related data in parallel using existing data fetchers
   const [networks, advertisers, campaigns] = await Promise.all([
     fetchNetworks(),
-    fetchAdvertisers(networkId),
-    fetchCampaigns(advertiserId, params)
+    fetchAdvertisers(networkId || undefined),
+    fetchCampaigns(advertiserId || undefined, params)
   ]);
 
   return (

@@ -32,7 +32,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     fetchNetworks(),
     fetchAdvertisers(networkId),
     fetchZones(networkId),
-    fetchCampaigns(advertiserId, { networkId }),
+    fetchCampaigns(advertiserId, { networkId: networkId.toString() }),
     fetchThemes(),
     getEntityCounts(networkId),
   ]);

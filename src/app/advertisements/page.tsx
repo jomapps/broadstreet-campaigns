@@ -28,9 +28,9 @@ export default async function AdvertisementsPage({ searchParams }: { searchParam
 
   // Fetch advertisements, networks, and advertisers data in parallel using existing data fetchers
   const [advertisements, networks, advertisers] = await Promise.all([
-    fetchAdvertisements(advertiserId, params),
+    fetchAdvertisements(advertiserId || undefined, params),
     fetchNetworks(),
-    fetchAdvertisers(networkId)
+    fetchAdvertisers(networkId || undefined)
   ]);
 
   return (

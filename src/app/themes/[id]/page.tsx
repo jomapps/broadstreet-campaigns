@@ -34,7 +34,7 @@ export default async function ThemeDetailPage({ params }: ThemeDetailPageProps) 
   // Fetch theme and zones data in parallel using existing data fetchers
   const [theme, zones] = await Promise.all([
     fetchThemeById(id),
-    fetchZones(null) // Fetch all zones for zone management
+    fetchZones(undefined) // Fetch all zones for zone management
   ]);
 
   if (!theme) {

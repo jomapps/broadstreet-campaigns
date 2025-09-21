@@ -32,12 +32,18 @@ interface BaseQueryParams {
   search?: string;
   limit?: string;
   networkId?: string;
+  sort?: string;
+  order?: string;
+  status?: string;
+  type?: string;
 }
 
 interface PlacementQueryParams extends BaseQueryParams {
   advertiserId?: string;
   campaignId?: string;
   zoneId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 /**
@@ -364,9 +370,12 @@ export async function fetchCampaigns(advertiserId: string | number | undefined, 
     const localQuery: any = { ...query };
     if (advertiserId) {
       // For local campaigns, advertiser_id can be either number (broadstreet_id) or string (mongo_id)
+      const advertiserIdNum = typeof advertiserId === 'number' ? advertiserId : parseInt(advertiserId);
+      const advertiserIdStr = typeof advertiserId === 'string' ? advertiserId : advertiserId.toString();
+      
       localQuery.$or = [
-        { advertiser_id: Number.isFinite(Number(advertiserId)) ? parseInt(advertiserId) : undefined },
-        { advertiser_id: advertiserId }
+        { advertiser_id: Number.isFinite(advertiserIdNum) ? advertiserIdNum : undefined },
+        { advertiser_id: advertiserIdStr }
       ].filter((q: any) => q.advertiser_id !== undefined);
       delete localQuery.advertiser_id; // Remove the original filter since we're using $or
     }
@@ -516,12 +525,12 @@ export async function fetchLocalEntities(): Promise<{
     }));
 
     return {
-      zones: serializeEntities(transformedZones),
-      advertisers: serializeEntities(transformedAdvertisers),
-      campaigns: serializeEntities(transformedCampaigns),
-      networks: serializeEntities(transformedNetworks),
-      advertisements: serializeEntities(transformedAdvertisements),
-      placements: serializeEntities(transformedPlacements),
+      localZones: serializeEntities(transformedZones),
+      localAdvertisers: serializeEntities(transformedAdvertisers),
+      localCampaigns: serializeEntities(transformedCampaigns),
+      localNetworks: serializeEntities(transformedNetworks),
+      localAdvertisements: serializeEntities(transformedAdvertisements),
+      localPlacements: serializeEntities(transformedPlacements),
     };
   } catch (error) {
     console.error('Error fetching local entities:', error);
@@ -698,7 +707,10 @@ export async function fetchAuditData(params: {
   search?: string;
   limit?: string;
   page?: string;
+  type?: string;
+  offset?: string;
 } = {}): Promise<{
+  success: boolean;
   entities: any[];
   summary: {
     totalEntities: number;
@@ -706,6 +718,12 @@ export async function fetchAuditData(params: {
     currentPage: number;
     hasNextPage: boolean;
     hasPrevPage: boolean;
+  };
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    has_more: boolean;
   };
 }> {
   try {
@@ -831,6 +849,13 @@ export async function getEntityCounts(networkId: string | number | undefined): P
   campaigns: number;
   advertisements: number;
   placements: number;
+  localZones: number;
+  localAdvertisers: number;
+  localCampaigns: number;
+  localNetworks: number;
+  localAdvertisements: number;
+  localPlacements: number;
+  totalLocal: number;
 }> {
   try {
     await connectDB();
