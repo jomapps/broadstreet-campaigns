@@ -12,7 +12,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAllFilters } from '@/stores';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
 import { ProgressModal, useSyncProgress } from '@/components/ui/progress-modal';
 import { X, Upload, Trash2, Calendar, Globe, Users, Target, Image, FileText } from 'lucide-react';
@@ -172,21 +172,110 @@ function EntitySection({ title, entities, networkMap, advertiserMap, onDelete, s
   );
 }
 
+// Embedded Placement Card Component (for placements within campaigns)
+function EmbeddedPlacementCard({
+  placement,
+  campaign,
+  networkMap,
+  advertiserMap,
+  allLocalEntities
+}: {
+  placement: any; // Embedded placement from campaign
+  campaign: any; // Parent campaign
+  networkMap: Record<number, string>;
+  advertiserMap: Record<number, string>;
+  allLocalEntities: LocalOnlyData;
+}) {
+  // Find related entities from local data
+  const advertiser = advertiserMap[campaign.advertiser_id];
+
+  // Find advertisement entity
+  const advertisement = allLocalEntities.advertisements.find(ad =>
+    ad.broadstreet_id === placement.advertisement_id
+  );
+
+  // Find zone entity
+  const zone = placement.zone_id
+    ? allLocalEntities.zones.find(z => z.broadstreet_id === placement.zone_id)
+    : placement.zone_mongo_id
+      ? allLocalEntities.zones.find(z => z._id === placement.zone_mongo_id)
+      : null;
+
+  // Build breadcrumb hierarchy: Network > Advertiser > Campaign > Advertisement + Zone
+  const parentsBreadcrumb = [
+    // Network
+    {
+      name: networkMap[campaign.network_id] || `Network ${campaign.network_id}`,
+      broadstreet_id: campaign.network_id,
+      mongo_id: undefined,
+      entityType: 'network' as const,
+    },
+    // Advertiser
+    {
+      name: advertiser || `Advertiser ${campaign.advertiser_id}`,
+      broadstreet_id: campaign.advertiser_id,
+      mongo_id: undefined,
+      entityType: 'advertiser' as const,
+    },
+    // Campaign
+    {
+      name: campaign.name,
+      broadstreet_id: campaign.broadstreet_id,
+      mongo_id: campaign._id,
+      entityType: 'campaign' as const,
+    },
+    // Advertisement
+    advertisement && {
+      name: advertisement.name,
+      broadstreet_id: advertisement.broadstreet_id,
+      mongo_id: advertisement._id,
+      entityType: 'advertisement' as const,
+    },
+    // Zone
+    zone && {
+      name: zone.name,
+      broadstreet_id: zone.broadstreet_id,
+      mongo_id: zone._id,
+      entityType: 'zone' as const,
+    },
+  ].filter(Boolean) as any[];
+
+  // Display data for the card content
+  const displayData = [
+    { label: 'Campaign', value: campaign.name, type: 'string' as const },
+    { label: 'Advertisement', value: advertisement?.name ?? String(placement.advertisement_id), type: 'string' as const },
+    { label: 'Zone', value: zone?.name ?? (placement.zone_id ? `Zone ${placement.zone_id}` : placement.zone_mongo_id ? `Zone ${placement.zone_mongo_id}` : 'N/A'), type: 'string' as const },
+  ] as any[];
+
+  if (placement.restrictions && placement.restrictions.length > 0) {
+    displayData.push({ label: 'Restrictions', value: placement.restrictions.join(', '), type: 'string' as const });
+  }
+
+  return (
+    <UniversalEntityCard
+      title={advertisement?.name || `Advertisement ${placement.advertisement_id}`}
+      entityType="placement"
+      isLocal={true}
+      parentsBreadcrumb={parentsBreadcrumb}
+      displayData={displayData}
+      topTags={[{ label: 'embedded', variant: 'secondary' as const }]}
+    />
+  );
+}
+
 // Local Placement Card Component
 function LocalPlacementCard({
   placement,
   networkMap,
   advertiserMap,
   allLocalEntities,
-  onDelete,
-  isDeleting
+  onDelete
 }: {
   placement: LocalOnlyData['placements'][0];
   networkMap: Record<number, string>;
   advertiserMap: Record<number, string>;
   allLocalEntities: LocalOnlyData;
   onDelete: (entityId: string) => void;
-  isDeleting: boolean;
 }) {
   // Find related entities from local data
   const network = Object.values(networkMap).find((_, index) =>
@@ -818,9 +907,12 @@ export default function LocalOnlyDashboard() {
       {data.campaigns.some((c: any) => Array.isArray(c.placements) && c.placements.length > 0) && (
         <div className="space-y-4">
           <div className="flex items-center space-x-3">
-            <h2 className="text-xl font-semibold text-gray-900">Placements</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Embedded Placements</h2>
             <Badge variant="outline" className="text-sm">
               {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0)} {data.campaigns.reduce((total: number, c: any) => total + (c.placements?.length || 0), 0) === 1 ? 'item' : 'items'}
+            </Badge>
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+              In Campaigns
             </Badge>
             <Button
               onClick={() => handleDeleteSection('placements')}
@@ -835,28 +927,14 @@ export default function LocalOnlyDashboard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.campaigns.flatMap((c: any) => (c.placements || []).map((p: any, idx: number) => (
-              <Card key={`${c._id}-${p.advertisement_id}-${p.zone_id || p.zone_mongo_id || idx}`} className="p-4 border-2">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-semibold">Campaign: {c.name}</div>
-                  <Badge variant="outline" className="text-xs">Local</Badge>
-                </div>
-                <div className="text-sm space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Ad ID:</span>
-                    <span className="font-medium">{p.advertisement_id}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Zone:</span>
-                    <span className="font-medium">{p.zone_id ?? p.zone_mongo_id}</span>
-                  </div>
-                  {Array.isArray(p.restrictions) && p.restrictions.length > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Restrictions:</span>
-                      <span className="font-medium">{p.restrictions.join(', ')}</span>
-                    </div>
-                  )}
-                </div>
-              </Card>
+              <EmbeddedPlacementCard
+                key={`${c._id}-${p.advertisement_id}-${p.zone_id || p.zone_mongo_id || idx}`}
+                placement={p}
+                campaign={c}
+                networkMap={networkMap}
+                advertiserMap={advertiserMap}
+                allLocalEntities={data}
+              />
             )))}
           </div>
         </div>
@@ -893,7 +971,6 @@ export default function LocalOnlyDashboard() {
                 advertiserMap={advertiserMap}
                 allLocalEntities={data}
                 onDelete={handleDelete}
-                isDeleting={isDeleting === placement._id}
               />
             ))}
           </div>

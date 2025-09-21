@@ -116,17 +116,15 @@ export default function CreatePlacementsClient({
         throw new Error('No placements to create');
       }
 
-      // Extract unique advertisement and zone IDs from selected combinations
-      const advertisementIds = [...new Set(placementsToCreate.map(p => p.advertisement.id))];
-      const zoneIds = [...new Set(placementsToCreate.map(p => p.zone.id))];
-
       // Get campaign ID for API payload
       const campaignId = getEntityId(selectedCampaign);
 
-      // Prepare API payload - the API creates all combinations of ads × zones
+      // Prepare API payload - send exact placement combinations instead of unique IDs
       const payload: any = {
-        advertisementIds,
-        zoneIds,
+        placements: placementsToCreate.map(p => ({
+          advertisementId: p.advertisement.id,
+          zoneId: p.zone.id
+        }))
       };
 
       // Set campaign reference (XOR constraint)
@@ -137,6 +135,8 @@ export default function CreatePlacementsClient({
       }
 
       console.log('Creating placements with payload:', payload);
+      console.log('Placements to create count:', placementsToCreate.length);
+      console.log('Include ignored:', includeIgnored);
       console.log('Selected campaign:', selectedCampaign);
       console.log('Campaign ID:', campaignId, 'Type:', typeof campaignId);
 

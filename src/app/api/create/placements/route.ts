@@ -10,8 +10,14 @@ import Advertiser from '@/lib/models/advertiser';
 type RequestBody = {
   campaignId?: number;
   campaignMongoId?: string;
-  advertisementIds: Array<number | string>;
-  zoneIds: Array<number | string>;
+  // New format: exact placement combinations
+  placements?: Array<{
+    advertisementId: number | string;
+    zoneId: number | string;
+  }>;
+  // Legacy format: unique IDs (for backward compatibility)
+  advertisementIds?: Array<number | string>;
+  zoneIds?: Array<number | string>;
   restrictions?: string[];
 };
 
@@ -20,32 +26,101 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = (await request.json()) as RequestBody;
-    const { campaignId, campaignMongoId, advertisementIds, zoneIds, restrictions } = body || ({} as RequestBody);
+    const { campaignId, campaignMongoId, placements, advertisementIds, zoneIds, restrictions } = body || ({} as RequestBody);
 
+    console.log('Placement creation request:', {
+      campaignId,
+      campaignMongoId,
+      placementsCount: placements?.length,
+      advertisementIdsCount: advertisementIds?.length,
+      zoneIdsCount: zoneIds?.length,
+      hasNewFormat: Array.isArray(placements) && placements.length > 0,
+      hasLegacyFormat: Array.isArray(advertisementIds) && advertisementIds.length > 0 && Array.isArray(zoneIds) && zoneIds.length > 0
+    });
 
+    // Validate required fields - support both new and legacy formats
+    const hasNewFormat = Array.isArray(placements) && placements.length > 0;
+    const hasLegacyFormat = Array.isArray(advertisementIds) && advertisementIds.length > 0 &&
+                           Array.isArray(zoneIds) && zoneIds.length > 0;
 
-    // Validate required fields
     if (
       (!campaignMongoId && typeof campaignId !== 'number') ||
-      !Array.isArray(advertisementIds) || advertisementIds.length === 0 ||
-      !Array.isArray(zoneIds) || zoneIds.length === 0
+      (!hasNewFormat && !hasLegacyFormat)
     ) {
       return NextResponse.json(
-        { message: 'campaignMongoId OR campaignId, plus advertisementIds[] and zoneIds[] are required' },
+        { message: 'campaignMongoId OR campaignId, plus either placements[] or (advertisementIds[] and zoneIds[]) are required' },
         { status: 400 }
       );
     }
 
-    // Strictly normalize ads to numeric Broadstreet IDs; zones can be numeric or Mongo IDs, convert later
-    const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
-    const normalizedAdIdsAll = Array.isArray(advertisementIds) ? advertisementIds.map(toNum) : [];
-    const normalizedAdIds = normalizedAdIdsAll.filter((v) => Number.isFinite(v)) as number[];
-    if (normalizedAdIds.length !== normalizedAdIdsAll.length) {
-      return NextResponse.json(
-        { message: 'advertisementIds must be numbers or numeric strings' },
-        { status: 400 }
-      );
+    // Build combinations based on format
+    let combinations: Array<{ advertisement_id: number; zone_id: number; zone_mongo_id?: string; restrictions?: string[] }> = [];
+
+    if (hasNewFormat && placements) {
+      // New format: use exact placement combinations
+      const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
+
+      for (const placement of placements) {
+        const adId = toNum(placement.advertisementId);
+        if (!Number.isFinite(adId)) {
+          return NextResponse.json(
+            { message: 'All advertisementIds must be numbers or numeric strings' },
+            { status: 400 }
+          );
+        }
+
+        const zoneId = placement.zoneId;
+        if (typeof zoneId === 'number' || (typeof zoneId === 'string' && /^\d+$/.test(zoneId))) {
+          const asNum = typeof zoneId === 'number' ? zoneId : parseInt(zoneId, 10);
+          combinations.push({ advertisement_id: adId, zone_id: asNum, restrictions });
+        } else if (typeof zoneId === 'string') {
+          combinations.push({ advertisement_id: adId, zone_id: NaN as any, zone_mongo_id: zoneId, restrictions });
+        } else {
+          return NextResponse.json(
+            { message: 'All zoneIds must be numbers, numeric strings, or MongoDB ObjectId strings' },
+            { status: 400 }
+          );
+        }
+      }
+    } else {
+      // Legacy format: create Cartesian product
+      const toNum = (v: unknown) => typeof v === 'number' ? v : (typeof v === 'string' && /^\d+$/.test(v) ? parseInt(v, 10) : NaN);
+      const normalizedAdIdsAll = Array.isArray(advertisementIds) ? advertisementIds.map(toNum) : [];
+      const normalizedAdIds = normalizedAdIdsAll.filter((v) => Number.isFinite(v)) as number[];
+      if (normalizedAdIds.length !== normalizedAdIdsAll.length) {
+        return NextResponse.json(
+          { message: 'advertisementIds must be numbers or numeric strings' },
+          { status: 400 }
+        );
+      }
+
+      // Resolve zones: allow numeric Broadstreet IDs or Mongo IDs; store appropriately
+      const resolvedZoneIds: number[] = [];
+      const resolvedZoneMongoIds: string[] = [];
+      for (const zid of zoneIds!) {
+        if (typeof zid === 'number' || (typeof zid === 'string' && /^\d+$/.test(zid))) {
+          const asNum = typeof zid === 'number' ? zid : parseInt(zid, 10);
+          resolvedZoneIds.push(asNum);
+        } else if (typeof zid === 'string') {
+          resolvedZoneMongoIds.push(zid);
+        }
+      }
+
+      // Build combinations (Cartesian product)
+      for (const adId of normalizedAdIds) {
+        // Numeric zones
+        for (const zoneId of resolvedZoneIds) {
+          combinations.push({ advertisement_id: adId, zone_id: zoneId, restrictions });
+        }
+        // Local zones referenced by mongo_id
+        for (const zoneMongoId of resolvedZoneMongoIds) {
+          combinations.push({ advertisement_id: adId, zone_id: NaN as any, zone_mongo_id: zoneMongoId, restrictions });
+        }
+      }
     }
+
+    console.log('Built combinations count:', combinations.length);
+    console.log('Using format:', hasNewFormat ? 'new (exact placements)' : 'legacy (cartesian product)');
 
     // Find or create a local campaign by _id (for locally created) or by original_broadstreet_id (for synced mirror)
     console.log('Looking for campaign with mongo_id:', campaignMongoId);
@@ -237,30 +312,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve zones: allow numeric Broadstreet IDs or Mongo IDs; store appropriately
-    const resolvedZoneIds: number[] = [];
-    const resolvedZoneMongoIds: string[] = [];
-    for (const zid of zoneIds) {
-      if (typeof zid === 'number' || (typeof zid === 'string' && /^\d+$/.test(zid))) {
-        const asNum = typeof zid === 'number' ? zid : parseInt(zid, 10);
-        resolvedZoneIds.push(asNum);
-      } else if (typeof zid === 'string') {
-        resolvedZoneMongoIds.push(zid);
-      }
-    }
 
-    // Build combinations (Cartesian product)
-    const combinations = [] as Array<{ advertisement_id: number; zone_id: number; zone_mongo_id?: string; restrictions?: string[] }>;
-    for (const adId of normalizedAdIds) {
-      // Numeric zones
-      for (const zoneId of resolvedZoneIds) {
-        combinations.push({ advertisement_id: adId, zone_id: zoneId, restrictions });
-      }
-      // Local zones referenced by mongo_id
-      for (const zoneMongoId of resolvedZoneMongoIds) {
-        combinations.push({ advertisement_id: adId, zone_id: NaN as any, zone_mongo_id: zoneMongoId, restrictions });
-      }
-    }
 
     // Compute existing and toInsert for accurate created count and dedupe by ad+zone regardless of restrictions
     // CURRENT BEHAVIOR: If a placement already exists (same ad+zone), restrictions are NOT updated
