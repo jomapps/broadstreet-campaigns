@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Campaigns', href: '/campaigns' },
   { name: 'Placements', href: '/placements' },
   { name: 'Themes', href: '/themes' },
+  { name: 'Sales', href: '/sales' },
   { name: 'Local Only', href: '/local-only' },
 ];
 
