@@ -8,12 +8,13 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import QuickActions from '@/components/dashboard/QuickActions';
+import { useAllFilters } from '@/stores';
 
 /**
  * Props interface for StatsCard
@@ -119,41 +120,86 @@ interface DashboardContentProps {
  * Variable names follow docs/variable-origins.md registry
  */
 export default function DashboardContent({ entityCounts }: DashboardContentProps) {
-  // Build stats array from entity counts
+  // Get selected network from filter store
+  const { selectedNetwork } = useAllFilters();
+
+  // State for current entity counts (can be refreshed after sync)
+  const [currentEntityCounts, setCurrentEntityCounts] = useState(entityCounts);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Function to refresh entity counts from server
+  const refreshEntityCounts = async () => {
+    try {
+      setIsRefreshing(true);
+
+      // Get network ID from selected network, default to 9396
+      const networkId = (selectedNetwork as any)?.broadstreet_id || 9396;
+
+      const url = `/api/dashboard/entity-counts?network=${networkId}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const freshCounts = await response.json();
+        setCurrentEntityCounts(freshCounts);
+      }
+    } catch (error) {
+      console.error('Failed to refresh entity counts:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Listen for sync completion events to refresh counts
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      // Small delay to ensure database operations are complete
+      setTimeout(() => {
+        refreshEntityCounts();
+      }, 1000);
+    };
+
+    // Listen for custom sync completion events
+    window.addEventListener('syncComplete', handleSyncComplete);
+
+    return () => {
+      window.removeEventListener('syncComplete', handleSyncComplete);
+    };
+  }, []);
+
+  // Build stats array from current entity counts
   const stats = [
     {
       title: 'Networks',
-      count: entityCounts.networks || 0,
+      count: currentEntityCounts.networks || 0,
       href: '/networks',
       description: 'Different websites where campaigns run',
     },
     {
       title: 'Advertisers',
-      count: entityCounts.advertisers || 0,
+      count: currentEntityCounts.advertisers || 0,
       href: '/advertisers',
       description: 'Companies running campaigns',
     },
     {
       title: 'Advertisements',
-      count: entityCounts.advertisements || 0,
+      count: currentEntityCounts.advertisements || 0,
       href: '/advertisements',
       description: 'Actual ads shown on websites',
     },
     {
       title: 'Zones',
-      count: entityCounts.zones || 0,
+      count: currentEntityCounts.zones || 0,
       href: '/zones',
       description: 'Possible ad placements',
     },
     {
       title: 'Campaigns',
-      count: entityCounts.campaigns || 0,
+      count: currentEntityCounts.campaigns || 0,
       href: '/campaigns',
       description: 'Active advertising campaigns',
     },
     {
       title: 'Placements',
-      count: entityCounts.placements || 0,
+      count: currentEntityCounts.placements || 0,
       href: '/placements',
       description: 'Ad placements in campaigns',
     },

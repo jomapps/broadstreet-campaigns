@@ -19,6 +19,9 @@ export default function QuickActions() {
   const handleSyncComplete = (success: boolean) => {
     setIsSyncing(false);
     if (success) {
+      // Emit custom event to notify dashboard to refresh counts
+      window.dispatchEvent(new CustomEvent('syncComplete'));
+
       // Refresh server components so stats update immediately
       router.refresh();
       setShowSyncProgress(false);

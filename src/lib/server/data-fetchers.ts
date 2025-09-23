@@ -863,8 +863,9 @@ export async function getEntityCounts(networkId: string | number | undefined): P
     const query = networkId ? { network_id: networkId } : {};
 
     // Count embedded placements from campaigns (this is where sync stores them)
+    // TEMP FIX: Don't filter by network_id since campaigns don't have it set
     const placementCountResult = await Campaign.aggregate([
-      { $match: query },
+      { $match: {} },
       { $project: { placementCount: { $size: { $ifNull: ['$placements', []] } } } },
       { $group: { _id: null, totalPlacements: { $sum: '$placementCount' } } }
     ]);
@@ -881,9 +882,11 @@ export async function getEntityCounts(networkId: string | number | undefined): P
     ] = await Promise.all([
       networkId ? 1 : Network.countDocuments({}),
       Advertiser.countDocuments(query),
-      Campaign.countDocuments(query),
+      // TEMP FIX: Don't filter campaigns by network_id since they don't have it set
+      Campaign.countDocuments({}),
       Zone.countDocuments(query),
-      Advertisement.countDocuments(query),
+      // TEMP FIX: Don't filter advertisements by network_id since they don't have it set
+      Advertisement.countDocuments({}),
       // Count local placements from the Placement collection (local-only placements)
       Placement.countDocuments({ ...query, created_locally: true, synced_with_api: false }),
       Promise.all([

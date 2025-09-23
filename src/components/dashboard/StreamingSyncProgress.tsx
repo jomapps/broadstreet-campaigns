@@ -191,6 +191,11 @@ export default function StreamingSyncProgress({ onComplete, onClose }: Streaming
         setOverallProgress(100);
         setEstimatedTimeRemaining(0);
 
+        // Emit custom event to notify dashboard to refresh counts
+        if (data.overallSuccess) {
+          window.dispatchEvent(new CustomEvent('syncComplete'));
+        }
+
         onComplete(data.overallSuccess);
       } catch (error) {
         console.error('[StreamingSync] Failed to parse complete event data:', error, event.data);

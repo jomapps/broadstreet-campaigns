@@ -161,6 +161,11 @@ export default function SyncProgress({ onComplete, onClose }: SyncProgressProps)
           triggerSyncMonitoring();
         }
 
+        // Emit custom event to notify dashboard to refresh counts
+        if (result?.overallSuccess !== false) {
+          window.dispatchEvent(new CustomEvent('syncComplete'));
+        }
+
         onComplete(result?.overallSuccess !== false);
       } else {
         // Handle error shape for full sync: report per-entity failures when available
