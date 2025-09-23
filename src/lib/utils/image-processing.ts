@@ -135,10 +135,9 @@ export function getImageDimensionsFromFile(file: File): Promise<ImageDimensions>
  * Server-side image dimension detection using image-size package
  * This will be used in API routes
  */
-export async function getImageDimensionsFromBuffer(buffer: Buffer): Promise<ImageDimensions> {
+export function getImageDimensionsFromBuffer(buffer: Buffer): ImageDimensions {
   try {
-    // Dynamic import to handle cases where image-size might not be installed
-    const sizeOf = (await import('image-size')).default;
+    const sizeOf = require('image-size');
     const dimensions = sizeOf(buffer);
 
     if (!dimensions.width || !dimensions.height) {

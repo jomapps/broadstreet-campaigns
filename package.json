@@ -19,6 +19,8 @@
     "test:local-page": "playwright test tests/local-page.spec.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.894.0",
+    "@aws-sdk/s3-request-presigner": "^3.894.0",
     "@clerk/nextjs": "^6.32.2",
     "@headlessui/react": "^2.0.0",
     "@heroicons/react": "^2.0.0",
@@ -57,6 +59,7 @@
     "@playwright/test": "^1.40.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^20",
+    "@types/nodemailer": "^7.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

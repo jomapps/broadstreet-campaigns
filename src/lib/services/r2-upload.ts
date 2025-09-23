@@ -4,24 +4,17 @@
  * Based on official Cloudflare R2 documentation: https://developers.cloudflare.com/r2/examples/aws/aws-sdk-js-v3/
  */
 
-// Conditional imports for AWS SDK - will be loaded dynamically when available
-// import {
-//   S3Client,
-//   PutObjectCommand,
-//   DeleteObjectCommand,
-//   GetObjectCommand,
-//   ListObjectsV2Command,
-//   type PutObjectCommandInput,
-//   type DeleteObjectCommandInput,
-//   type GetObjectCommandInput,
-// } from '@aws-sdk/client-s3';
-// import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-
-// Type definitions for when AWS SDK is not available
-type S3Client = any;
-type PutObjectCommandInput = any;
-type DeleteObjectCommandInput = any;
-type GetObjectCommandInput = any;
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  type PutObjectCommandInput,
+  type DeleteObjectCommandInput,
+  type GetObjectCommandInput,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 // R2 Configuration following Cloudflare's recommended environment variable names
 const R2_CONFIG = {
@@ -45,26 +38,19 @@ function validateR2Config() {
 // Initialize S3 client for Cloudflare R2
 let s3Client: S3Client | null = null;
 
-async function getS3Client(): Promise<S3Client> {
+function getS3Client(): S3Client {
   if (!s3Client) {
     validateR2Config();
 
-    try {
-      // Dynamic import of AWS SDK
-      const { S3Client } = await import('@aws-sdk/client-s3');
-
-      // Create S3Client following Cloudflare R2 documentation
-      s3Client = new S3Client({
-        region: 'auto', // Cloudflare R2 uses 'auto' region
-        endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
-        credentials: {
-          accessKeyId: R2_CONFIG.accessKeyId,
-          secretAccessKey: R2_CONFIG.secretAccessKey,
-        },
-      });
-    } catch (error) {
-      throw new Error('AWS SDK not available. Please install @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner');
-    }
+    // Create S3Client following Cloudflare R2 documentation
+    s3Client = new S3Client({
+      region: 'auto', // Cloudflare R2 uses 'auto' region
+      endpoint: `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
+      credentials: {
+        accessKeyId: R2_CONFIG.accessKeyId,
+        secretAccessKey: R2_CONFIG.secretAccessKey,
+      },
+    });
   }
 
   return s3Client;
@@ -89,8 +75,7 @@ export async function uploadFileToR2(
   folder: string = 'advertising-requests'
 ): Promise<UploadResult> {
   try {
-    const client = await getS3Client();
-    const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const client = getS3Client();
     const key = `${folder}/${filename}`;
 
     const command: PutObjectCommandInput = {
@@ -133,8 +118,7 @@ export async function uploadFileToR2(
  */
 export async function deleteFileFromR2(filePath: string): Promise<boolean> {
   try {
-    const client = await getS3Client();
-    const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+    const client = getS3Client();
 
     const command: DeleteObjectCommandInput = {
       Bucket: R2_CONFIG.bucketName,
@@ -157,9 +141,7 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   expiresIn: number = 3600
 ): Promise<string> {
-  const client = await getS3Client();
-  const { PutObjectCommand } = await import('@aws-sdk/client-s3');
-  const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+  const client = getS3Client();
 
   const command = new PutObjectCommand({
     Bucket: R2_CONFIG.bucketName,
@@ -177,9 +159,7 @@ export async function generatePresignedDownloadUrl(
   key: string,
   expiresIn: number = 3600
 ): Promise<string> {
-  const client = await getS3Client();
-  const { GetObjectCommand } = await import('@aws-sdk/client-s3');
-  const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+  const client = getS3Client();
 
   const command = new GetObjectCommand({
     Bucket: R2_CONFIG.bucketName,
@@ -197,8 +177,7 @@ export async function listFiles(
   maxKeys?: number
 ): Promise<Array<{ key: string; size: number; lastModified: Date; etag: string }>> {
   try {
-    const client = await getS3Client();
-    const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+    const client = getS3Client();
 
     const command = new ListObjectsV2Command({
       Bucket: R2_CONFIG.bucketName,

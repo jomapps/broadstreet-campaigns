@@ -34,7 +34,7 @@ function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
     validateEmailConfig();
 
-    transporter = nodemailer.createTransporter({
+    transporter = nodemailer.createTransport({
       host: EMAIL_CONFIG.host,
       port: EMAIL_CONFIG.port,
       secure: EMAIL_CONFIG.secure,
