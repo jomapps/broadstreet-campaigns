@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useSyncStatus } from '@/hooks/use-sync-status';
+import { UserButton } from '@clerk/nextjs';
 
 const navigation = [
   { name: 'Broadstreet', href: 'https://my.broadstreetads.com/networks/9396/advertisers', external: true },
@@ -92,6 +93,13 @@ export default function Header() {
               <div className={`w-2 h-2 ${badgeProps.dotColor} rounded-full ${badgeProps.animate ? 'animate-pulse' : ''}`}></div>
               <span>{status.message}</span>
             </Badge>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "h-8 w-8"
+                }
+              }}
+            />
           </div>
         </div>
       </div>

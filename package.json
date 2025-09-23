@@ -19,6 +19,7 @@
     "test:local-page": "playwright test tests/local-page.spec.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.32.2",
     "@headlessui/react": "^2.0.0",
     "@heroicons/react": "^2.0.0",
     "@radix-ui/react-avatar": "^1.1.10",

@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
-import QueryProvider from "@/lib/providers/query-client-provider";
-import AppInitializer from "@/components/app/AppInitializer";
+import { ClerkProvider } from '@clerk/nextjs';
+import AuthenticatedLayout from "@/components/layout/AuthenticatedLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME || "Dashboard",
-  description: "Manage your Broadstreet advertising campaigns with ease",
+  title: process.env.NEXT_PUBLIC_APP_NAME || "Broadstreet Campaigns",
+  description: "Internal tool for managing Broadstreet advertising campaigns",
 };
 
 export default function RootLayout({
@@ -27,25 +25,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
-      >
-        <QueryProvider>
-          <AppInitializer />
-          <div className="flex h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-auto p-6">
-                <div className="max-w-7xl mx-auto">
-                  {children}
-                </div>
-              </main>
-            </div>
-          </div>
-        </QueryProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
+        >
+          <AuthenticatedLayout>
+            {children}
+          </AuthenticatedLayout>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
