@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useSyncStatus } from '@/hooks/use-sync-status';
 
 const navigation = [
+  { name: 'Broadstreet', href: 'https://my.broadstreetads.com/networks/9396/advertisers', external: true },
   { name: 'Dashboard', href: '/dashboard' },
   { name: 'Networks', href: '/networks' },
   { name: 'Advertisers', href: '/advertisers' },
@@ -69,9 +70,15 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-1">
             {navigation.map((item) => (
               <Button key={item.name} variant="ghost" size="sm" asChild>
-                <Link href={item.href}>
-                  {item.name}
-                </Link>
+                {item.external ? (
+                  <a href={item.href} target="_blank" rel="noopener noreferrer">
+                    {item.name}
+                  </a>
+                ) : (
+                  <Link href={item.href}>
+                    {item.name}
+                  </Link>
+                )}
               </Button>
             ))}
           </nav>
