@@ -8,6 +8,7 @@ import AdvertiserCreationForm from './forms/AdvertiserCreationForm';
 import CampaignCreationForm from './forms/CampaignCreationForm';
 import AdvertisementCreationForm from './forms/AdvertisementCreationForm';
 import ZoneCreationForm from './forms/ZoneCreationForm';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 
 interface CreationModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface CreationModalProps {
 
 export default function CreationModal({ isOpen, onClose, entityType }: CreationModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const entities = useSelectedEntities();
 
   // Close modal on escape key
   useEffect(() => {
@@ -45,7 +47,8 @@ export default function CreationModal({ isOpen, onClose, entityType }: CreationM
       case 'advertiser':
         return 'Create New Advertiser';
       case 'campaign':
-        return 'Create New Campaign';
+        const advertiserName = entities.advertiser?.name;
+        return advertiserName ? `Create New Campaign for ${advertiserName}` : 'Create New Campaign';
       case 'advertisement':
         return 'Create New Advertisement';
       case 'zone':

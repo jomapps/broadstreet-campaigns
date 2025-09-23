@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CreationModal from './CreationModal';
+import { useSelectedEntities } from '@/lib/hooks/use-selected-entities';
 
 interface CreationButtonProps {
   className?: string;
@@ -13,6 +14,7 @@ interface CreationButtonProps {
 export default function CreationButton({ className = '' }: CreationButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const pathname = usePathname();
+  const entities = useSelectedEntities();
 
   // Determine what type of entity to create based on current page
   const getEntityType = () => {
@@ -32,6 +34,12 @@ export default function CreationButton({ className = '' }: CreationButtonProps) 
   }
 
   const handleClick = () => {
+    // For campaign creation, check if advertiser is selected
+    if (entityType === 'campaign' && !entities.advertiser) {
+      alert('Please select an advertiser from the sidebar before creating a campaign.');
+      return;
+    }
+
     setIsModalOpen(true);
   };
 

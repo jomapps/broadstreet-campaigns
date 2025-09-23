@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       end_date: endDate || undefined,
       weight,
       max_impression_count: maxImpressionCount || undefined,
-      display_type: displayType || 'no_repeat',
+      display_type: displayType || 'allow_repeat_advertisement',
       pacing_type: pacingType || 'asap',
       impression_max_type: impressionMaxType || undefined,
       path: path || undefined,

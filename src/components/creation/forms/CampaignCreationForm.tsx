@@ -61,7 +61,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
     // Optional fields - empty by default
     end_date: '',
     max_impression_count: '',
-    display_type: 'no_repeat' as 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign',
+    display_type: 'allow_repeat_advertisement' as 'no_repeat' | 'allow_repeat_campaign' | 'allow_repeat_advertisement' | 'force_repeat_campaign',
     pacing_type: 'asap' as 'asap' | 'even',
     impression_max_type: 'cap' as 'cap' | 'goal',
     path: '',
@@ -72,6 +72,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidatingName, setIsValidatingName] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     basicSettings: false,
     displaySettings: false,
@@ -128,16 +129,60 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateCampaignName = async (name: string) => {
+    if (!name.trim() || !entities.advertiser) {
+      return; // Skip validation if name is empty or no advertiser selected
+    }
+
+    setIsValidatingName(true);
+    try {
+      const advertiserIdValue = typeof (entities.advertiser as any).broadstreet_id === 'number'
+        ? (entities.advertiser as any).broadstreet_id
+        : undefined;
+      const advertiserMongoId = (entities.advertiser as any)?.mongo_id;
+
+      const response = await fetch('/api/validate/campaign-name', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          advertiserId: advertiserIdValue,
+          advertiserMongoId: advertiserMongoId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.exists) {
+        setErrors(prev => ({ ...prev, name: result.message }));
+      } else {
+        // Clear name error if validation passes
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.name;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Campaign name validation failed:', error);
+      // Don't show error to user for validation failures, just log it
+    } finally {
+      setIsValidatingName(false);
+    }
+  };
+
   const handleInputChange = (field: string, value: any) => {
     let processedValue = value;
-    
+
     // Apply smart default times for date fields
     if (field === 'start_date') {
       processedValue = formatDateTimeWithDefaults(value, false);
     } else if (field === 'end_date') {
       processedValue = formatDateTimeWithDefaults(value, true);
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: processedValue }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -238,7 +283,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
         payload.maxImpressionCount = parseInt(formData.max_impression_count);
       }
 
-      if (formData.display_type && formData.display_type !== 'no_repeat') {
+      if (formData.display_type && formData.display_type !== 'allow_repeat_advertisement') {
         payload.displayType = formData.display_type;
       }
 
@@ -361,11 +406,13 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
             id="name"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
+            onBlur={(e) => validateCampaignName(e.target.value)}
             placeholder="e.g., Summer Sale Campaign"
             className={errors.name ? 'border-red-500' : ''}
             required
             data-testid="campaign-name-input"
           />
+          {isValidatingName && <p className="text-sm text-blue-500 mt-1">Checking campaign name availability...</p>}
           {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
         </div>
 

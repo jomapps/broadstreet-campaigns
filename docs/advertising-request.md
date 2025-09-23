@@ -40,13 +40,25 @@ The request page will have a form to create a new request. The form will have fo
 - Advertisement Name - Auto Created. format: [Advertiser ID] | [Advertiser - first 10 characters] - [Contract ID] - [Start Date YY.mm.dd] - [End Date YY.mm.dd] - [Image Name - first 10 characters] - [Image Size Coding] [width] x [height]
 - Target Url - required. Type has to be full url with https:// you may already show as htts://[inputbox]. Ensure that you remove any leading https:// when typing in the url in the input box. save the whole url with https://
 - html code - optional. textarea. It will have the html code for the advertisement. Often used for tracking pixels.
+- Ad Areas Sold - required. Comma separated list of ad areas sold. No control list. Min 1 
+- Theme - optional. Comma separated list of themes. Free form text. No control list.
 
 *AI Intelligence Section*
+- Keywords - optional. Comma separated list of keywords. No control list.
 - Info Url - optional. Type has to be full url with https:// you may already show as htts://[inputbox]. Ensure that you remove any leading https:// when typing in the url in the input box. save the whole url with https://
 - Extra Info - optional. textarea. Information that the sales team can provide to help with matching areas.
 
+## The Worflow
+We have different stages of the is process.
+it starts with submitting a request.
+Each request will have a status. The status will be:
+- New
+- In Progress
+- Completed
+- Cancelled
+There will be a username against every request of completion of a stage. The username will be attached automatically based on the logged in user.
 
 
-## 
+
 
 
