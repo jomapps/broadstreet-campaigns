@@ -2,70 +2,55 @@
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import Autosuggest, { AutosuggestOption } from '@/components/ui/autosuggest';
 
 interface AdvertiserInfo {
-  company_name: string;
-  contact_person: string;
-  email: string;
-  phone?: string;
-  website?: string;
-  notes?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    state?: string;
-    postal_code?: string;
-    country?: string;
-  };
+  advertiser_name: string;
+  advertiser_id: string;
+  contract_id: string;
+  contract_start_date: string;
+  contract_end_date: string;
+  campaign_name: string;
 }
 
 interface AdvertiserInfoSectionProps {
-  data?: AdvertiserInfo;
+  data: AdvertiserInfo;
   onChange: (data: Partial<AdvertiserInfo>) => void;
   errors: Record<string, string>;
 }
 
 /**
  * Advertiser Information Section
- * Collects company and contact details
+ * Required fields from sales team: advertiser, IDs, contract dates, campaign name
  */
 export default function AdvertiserInfoSection({
-  data = {
-    company_name: '',
-    contact_person: '',
-    email: '',
-    phone: '',
-    website: '',
-    notes: '',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      postal_code: '',
-      country: '',
-    },
-  },
+  data,
   onChange,
   errors,
 }: AdvertiserInfoSectionProps) {
-  
-  const handleChange = (field: string, value: string) => {
-    if (field.startsWith('address.')) {
-      const addressField = field.replace('address.', '');
-      onChange({
-        ...data,
-        address: {
-          ...data?.address,
-          [addressField]: value,
-        },
-      });
-    } else {
-      onChange({
-        ...data,
-        [field]: value,
-      });
+  // Search function for autosuggest
+  const searchAdvertisers = async (query: string): Promise<AutosuggestOption[]> => {
+    try {
+      const response = await fetch(`/api/advertisers/search?q=${encodeURIComponent(query)}&networkId=9396`);
+      if (!response.ok) throw new Error('Search failed');
+
+      const result = await response.json();
+      return result.advertisers || [];
+    } catch (error) {
+      console.error('Advertiser search error:', error);
+      return [];
     }
+  };
+
+  // Handle advertiser selection
+  const handleAdvertiserSelect = (option: AutosuggestOption | null) => {
+    if (option) {
+      onChange({ advertiser_name: option.name });
+    }
+  };
+
+  const handleChange = (field: keyof AdvertiserInfo, value: string) => {
+    onChange({ [field]: value });
   };
 
   return (
@@ -73,167 +58,118 @@ export default function AdvertiserInfoSection({
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Advertiser Information</h2>
         <p className="text-sm text-gray-600 mb-6">
-          Please provide the company and contact information for this advertising request.
+          Enter the advertiser and contract details from the sales team.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Company Name */}
+        {/* Advertiser Name with Autosuggest */}
         <div className="md:col-span-2">
-          <Label htmlFor="company_name" className="text-sm font-medium text-gray-700">
-            Company Name *
+          <Label htmlFor="advertiser_name" className="text-sm font-medium text-gray-700">
+            Advertiser *
+          </Label>
+          <Autosuggest
+            value={data.advertiser_name}
+            onChange={(value) => handleChange('advertiser_name', value)}
+            onSelect={handleAdvertiserSelect}
+            searchFunction={searchAdvertisers}
+            placeholder="Type to search or enter new advertiser name"
+            className={errors.advertiser_name ? 'border-red-500' : ''}
+          />
+          {errors.advertiser_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.advertiser_name}</p>
+          )}
+          <p className="mt-1 text-xs text-gray-500">
+            Search existing advertisers or enter a new name
+          </p>
+        </div>
+
+        {/* Advertiser ID */}
+        <div>
+          <Label htmlFor="advertiser_id" className="text-sm font-medium text-gray-700">
+            Advertiser ID *
           </Label>
           <Input
-            id="company_name"
+            id="advertiser_id"
             type="text"
-            value={data.company_name}
-            onChange={(e) => handleChange('company_name', e.target.value)}
-            className={errors.company_name ? 'border-red-500' : ''}
-            placeholder="Enter company name"
+            value={data.advertiser_id}
+            onChange={(e) => handleChange('advertiser_id', e.target.value)}
+            className={errors.advertiser_id ? 'border-red-500' : ''}
+            placeholder="Enter sales department advertiser ID"
           />
-          {errors.company_name && (
-            <p className="mt-1 text-sm text-red-600">{errors.company_name}</p>
+          {errors.advertiser_id && (
+            <p className="mt-1 text-sm text-red-600">{errors.advertiser_id}</p>
           )}
         </div>
 
-        {/* Contact Person */}
+        {/* Contract ID */}
         <div>
-          <Label htmlFor="contact_person" className="text-sm font-medium text-gray-700">
-            Contact Person *
+          <Label htmlFor="contract_id" className="text-sm font-medium text-gray-700">
+            Contract ID *
           </Label>
           <Input
-            id="contact_person"
+            id="contract_id"
             type="text"
-            value={data.contact_person}
-            onChange={(e) => handleChange('contact_person', e.target.value)}
-            className={errors.contact_person ? 'border-red-500' : ''}
-            placeholder="Enter contact person name"
+            value={data.contract_id}
+            onChange={(e) => handleChange('contract_id', e.target.value)}
+            className={errors.contract_id ? 'border-red-500' : ''}
+            placeholder="Enter contract identifier"
           />
-          {errors.contact_person && (
-            <p className="mt-1 text-sm text-red-600">{errors.contact_person}</p>
+          {errors.contract_id && (
+            <p className="mt-1 text-sm text-red-600">{errors.contract_id}</p>
           )}
         </div>
 
-        {/* Email */}
+        {/* Contract Start Date */}
         <div>
-          <Label htmlFor="email" className="text-sm font-medium text-gray-700">
-            Email Address *
+          <Label htmlFor="contract_start_date" className="text-sm font-medium text-gray-700">
+            Contract Start Date *
           </Label>
           <Input
-            id="email"
-            type="email"
-            value={data.email}
-            onChange={(e) => handleChange('email', e.target.value)}
-            className={errors.email ? 'border-red-500' : ''}
-            placeholder="Enter email address"
+            id="contract_start_date"
+            type="date"
+            value={data.contract_start_date}
+            onChange={(e) => handleChange('contract_start_date', e.target.value)}
+            className={errors.contract_start_date ? 'border-red-500' : ''}
           />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+          {errors.contract_start_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.contract_start_date}</p>
           )}
         </div>
 
-        {/* Phone */}
+        {/* Contract End Date */}
         <div>
-          <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-            Phone Number
+          <Label htmlFor="contract_end_date" className="text-sm font-medium text-gray-700">
+            Contract End Date
           </Label>
           <Input
-            id="phone"
-            type="tel"
-            value={data?.phone || ''}
-            onChange={(e) => handleChange('phone', e.target.value)}
-            placeholder="Enter phone number"
+            id="contract_end_date"
+            type="date"
+            value={data.contract_end_date}
+            onChange={(e) => handleChange('contract_end_date', e.target.value)}
+            className={errors.contract_end_date ? 'border-red-500' : ''}
           />
+          {errors.contract_end_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.contract_end_date}</p>
+          )}
         </div>
 
-        {/* Website */}
-        <div>
-          <Label htmlFor="website" className="text-sm font-medium text-gray-700">
-            Website
+        {/* Campaign Name */}
+        <div className="md:col-span-2">
+          <Label htmlFor="campaign_name" className="text-sm font-medium text-gray-700">
+            Campaign Name *
           </Label>
           <Input
-            id="website"
-            type="url"
-            value={data?.website || ''}
-            onChange={(e) => handleChange('website', e.target.value)}
-            placeholder="https://example.com"
+            id="campaign_name"
+            type="text"
+            value={data.campaign_name}
+            onChange={(e) => handleChange('campaign_name', e.target.value)}
+            className={errors.campaign_name ? 'border-red-500' : ''}
+            placeholder="Enter campaign name from sales team"
           />
-        </div>
-      </div>
-
-      {/* Address Section */}
-      <div>
-        <h3 className="text-md font-medium text-gray-900 mb-4">Address</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Street */}
-          <div className="md:col-span-2">
-            <Label htmlFor="street" className="text-sm font-medium text-gray-700">
-              Street Address
-            </Label>
-            <Input
-              id="street"
-              type="text"
-              value={data?.address?.street || ''}
-              onChange={(e) => handleChange('address.street', e.target.value)}
-              placeholder="Enter street address"
-            />
-          </div>
-
-          {/* City */}
-          <div>
-            <Label htmlFor="city" className="text-sm font-medium text-gray-700">
-              City
-            </Label>
-            <Input
-              id="city"
-              type="text"
-              value={data?.address?.city || ''}
-              onChange={(e) => handleChange('address.city', e.target.value)}
-              placeholder="Enter city"
-            />
-          </div>
-
-          {/* State */}
-          <div>
-            <Label htmlFor="state" className="text-sm font-medium text-gray-700">
-              State/Province
-            </Label>
-            <Input
-              id="state"
-              type="text"
-              value={data?.address?.state || ''}
-              onChange={(e) => handleChange('address.state', e.target.value)}
-              placeholder="Enter state or province"
-            />
-          </div>
-
-          {/* Postal Code */}
-          <div>
-            <Label htmlFor="postal_code" className="text-sm font-medium text-gray-700">
-              Postal Code
-            </Label>
-            <Input
-              id="postal_code"
-              type="text"
-              value={data?.address?.postal_code || ''}
-              onChange={(e) => handleChange('address.postal_code', e.target.value)}
-              placeholder="Enter postal code"
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <Label htmlFor="country" className="text-sm font-medium text-gray-700">
-              Country
-            </Label>
-            <Input
-              id="country"
-              type="text"
-              value={data?.address?.country || ''}
-              onChange={(e) => handleChange('address.country', e.target.value)}
-              placeholder="Enter country"
-            />
-          </div>
+          {errors.campaign_name && (
+            <p className="mt-1 text-sm text-red-600">{errors.campaign_name}</p>
+          )}
         </div>
       </div>
     </div>

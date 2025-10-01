@@ -125,103 +125,104 @@ export function validateAdvertisingRequestData(data: Partial<IAdvertisingRequest
   const errors: string[] = [];
   
   // Validate advertiser info
-  if (!data.advertiser_info?.company_name?.trim()) {
+  if (!data.advertiser_name?.trim()) {
     errors.push('Company name is required');
   }
-  
-  if (!data.advertiser_info?.contact_person?.trim()) {
-    errors.push('Contact person is required');
-  }
-  
-  if (!data.advertiser_info?.email?.trim()) {
+
+  if (!data.created_by_user_email?.trim()) {
     errors.push('Email is required');
-  } else if (!validateEmail(data.advertiser_info.email)) {
+  } else if (!validateEmail(data.created_by_user_email)) {
     errors.push('Invalid email format');
   }
-  
-  if (data.advertiser_info?.phone && !validatePhone(data.advertiser_info.phone)) {
-    errors.push('Invalid phone number format');
+
+  if (!data.campaign_name?.trim()) {
+    errors.push('Campaign name is required');
   }
   
-  if (data.advertiser_info?.website) {
-    const urlValidation = validateAndFormatUrl(data.advertiser_info.website);
+  if (data.info_url) {
+    const urlValidation = validateAndFormatUrl(data.info_url);
     if (!urlValidation.isValid) {
-      errors.push(`Invalid website URL: ${urlValidation.error}`);
+      errors.push(`Invalid info URL: ${urlValidation.error}`);
     }
   }
-  
-  // Validate advertisement info
-  if (!data.advertisement?.name?.trim()) {
-    errors.push('Advertisement name is required');
+
+  if (data.extra_info && data.extra_info.length > 1000) {
+    errors.push('Extra information is too long');
   }
-  
-  if (!data.advertisement?.target_url?.trim()) {
-    errors.push('Target URL is required');
-  } else {
-    const urlValidation = validateAndFormatUrl(data.advertisement.target_url);
-    if (!urlValidation.isValid) {
-      errors.push(`Invalid target URL: ${urlValidation.error}`);
-    }
+
+  if (!data.advertisements || data.advertisements.length === 0) {
+    errors.push('At least one advertisement is required');
   }
-  
-  // Validate image files
-  if (!data.advertisement?.image_files || data.advertisement.image_files.length === 0) {
-    errors.push('At least one image file is required');
-  }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
   };
 }
 
-/**
- * Check if status transition is valid
- */
 export function isValidStatusTransition(
   currentStatus: IAdvertisingRequest['status'],
   newStatus: IAdvertisingRequest['status']
 ): boolean {
   const validTransitions: Record<IAdvertisingRequest['status'], IAdvertisingRequest['status'][]> = {
-    'New': ['In Progress', 'Cancelled'],
-    'In Progress': ['Completed', 'Cancelled'],
-    'Completed': [], // Completed requests cannot be changed
-    'Cancelled': [], // Cancelled requests cannot be changed
+    new: ['in_progress', 'cancelled'],
+    in_progress: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: [],
   };
   
   return validTransitions[currentStatus]?.includes(newStatus) || false;
 }
 
-/**
- * Get next possible statuses for a request
- */
 export function getNextPossibleStatuses(currentStatus: IAdvertisingRequest['status']): IAdvertisingRequest['status'][] {
   const transitions: Record<IAdvertisingRequest['status'], IAdvertisingRequest['status'][]> = {
-    'New': ['In Progress', 'Cancelled'],
-    'In Progress': ['Completed', 'Cancelled'],
-    'Completed': [],
-    'Cancelled': [],
+    new: ['in_progress', 'cancelled'],
+    in_progress: ['completed', 'cancelled'],
+    completed: [],
+    cancelled: [],
   };
   
   return transitions[currentStatus] || [];
 }
 
-/**
- * Generate status badge color for UI
- */
 export function getStatusBadgeColor(status: IAdvertisingRequest['status']): string {
   switch (status) {
-    case 'New':
+    case 'new':
       return 'blue';
-    case 'In Progress':
+    case 'in_progress':
       return 'yellow';
-    case 'Completed':
+    case 'completed':
       return 'green';
-    case 'Cancelled':
+    case 'cancelled':
       return 'red';
     default:
       return 'gray';
   }
+}
+
+export function getReadableStatus(status: IAdvertisingRequest['status']): string {
+  switch (status) {
+    case 'new':
+      return 'New';
+    case 'in_progress':
+      return 'In Progress';
+    case 'completed':
+      return 'Completed';
+    case 'cancelled':
+      return 'Cancelled';
+    default:
+      return status;
+  }
+}
+
+export function generateStatusChangeSummary(request: IAdvertisingRequest): string {
+  const statusHistory = request.status_history || [];
+  if (statusHistory.length === 0) {
+    return 'No status history available';
+  }
+
+  const latestStatus = statusHistory[statusHistory.length - 1];
+  return `Status changed to ${getReadableStatus(latestStatus.status as IAdvertisingRequest['status'])} by ${latestStatus.changed_by_user_name} on ${latestStatus.changed_at.toLocaleString()}`;
 }
 
 /**
@@ -231,29 +232,33 @@ export function calculateRequestPriority(request: IAdvertisingRequest): 'Low' | 
   let score = 0;
   
   // Age factor (older requests get higher priority)
-  const ageInDays = (Date.now() - request.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+  const ageInDays = (Date.now() - request.created_at.getTime()) / (1000 * 60 * 60 * 24);
   if (ageInDays > 7) score += 3;
   else if (ageInDays > 3) score += 2;
   else if (ageInDays > 1) score += 1;
   
   // Status factor
-  if (request.status === 'In Progress') score += 2;
-  else if (request.status === 'New') score += 1;
+  if (request.status === 'in_progress') score += 2;
+  else if (request.status === 'new') score += 1;
   
   // Image count factor (more images = more complex)
-  const imageCount = request.advertisement.image_files.length;
+  const imageCount = request.advertisements?.reduce((count, ad) => count + (ad ? 1 : 0), 0) || 0;
   if (imageCount > 5) score += 2;
   else if (imageCount > 2) score += 1;
   
   // AI intelligence completeness (more complete = higher priority)
-  const aiFields = [
-    request.advertisement.target_audience,
-    request.advertisement.campaign_goals,
-    request.advertisement.budget_range,
-  ].filter(field => field && field.trim());
-  
+  const aiFields = (
+    request.advertisements?.flatMap(ad => [
+      ad.target_url,
+      ad.advertisement_name,
+    ]) || []
+  ).filter(Boolean);
+  if (request.keywords && request.keywords.length > 0) {
+    aiFields.push(request.keywords.join(','));
+  }
+  if (request.info_url) aiFields.push(request.info_url);
   if (aiFields.length >= 3) score += 2;
-  else if (aiFields.length >= 2) score += 1;
+  else if (aiFields.length >= 1) score += 1;
   
   // Determine priority based on score
   if (score >= 8) return 'Urgent';
@@ -276,22 +281,20 @@ export interface FormattedRequest {
   priority: 'Low' | 'Medium' | 'High' | 'Urgent';
   createdAt: Date;
   imageCount: number;
-  assignedTo?: string;
 }
 
 export function formatRequestForDisplay(request: IAdvertisingRequest): FormattedRequest {
   return {
     id: request.mongo_id,
-    requestNumber: request.request_number,
-    companyName: request.advertiser_info.company_name,
-    contactPerson: request.advertiser_info.contact_person,
-    email: request.advertiser_info.email,
-    advertisementName: request.advertisement.name,
+    requestNumber: String(request._id).slice(-8).toUpperCase(),
+    companyName: request.advertiser_name,
+    contactPerson: request.created_by_user_name,
+    email: request.created_by_user_email,
+    advertisementName: request.advertisements?.[0]?.advertisement_name || request.campaign_name,
     status: request.status,
     priority: calculateRequestPriority(request),
-    createdAt: request.createdAt,
-    imageCount: request.advertisement.image_files.length,
-    assignedTo: request.assigned_to,
+    createdAt: request.created_at,
+    imageCount: request.advertisements?.reduce((count, ad) => count + (ad ? 1 : 0), 0) || 0,
   };
 }
 
@@ -302,7 +305,6 @@ export function filterRequests(
   requests: IAdvertisingRequest[],
   filters: {
     status?: IAdvertisingRequest['status'];
-    assignedTo?: string;
     searchTerm?: string;
     dateFrom?: Date;
     dateTo?: Date;
@@ -314,19 +316,14 @@ export function filterRequests(
       return false;
     }
     
-    // Assigned to filter
-    if (filters.assignedTo && request.assigned_to !== filters.assignedTo) {
-      return false;
-    }
-    
     // Search term filter (searches in company name, contact person, advertisement name)
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       const searchableText = [
-        request.advertiser_info.company_name,
-        request.advertiser_info.contact_person,
-        request.advertisement.name,
-        request.request_number,
+        request.advertiser_name,
+        request.created_by_user_name,
+        request.advertisements?.[0]?.advertisement_name || request.campaign_name,
+        String(request._id).slice(-8).toUpperCase(),
       ].join(' ').toLowerCase();
       
       if (!searchableText.includes(searchLower)) {
@@ -335,14 +332,15 @@ export function filterRequests(
     }
     
     // Date range filter
-    if (filters.dateFrom && request.createdAt < filters.dateFrom) {
+    if (filters.dateFrom && request.created_at < filters.dateFrom) {
       return false;
     }
     
-    if (filters.dateTo && request.createdAt > filters.dateTo) {
+    if (filters.dateTo && request.created_at > filters.dateTo) {
       return false;
     }
     
     return true;
   });
 }
+

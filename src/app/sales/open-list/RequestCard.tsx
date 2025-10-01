@@ -44,16 +44,31 @@ export default function RequestCard({
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'New':
+      case 'new':
         return 'default';
-      case 'In Progress':
+      case 'in_progress':
         return 'secondary';
-      case 'Completed':
+      case 'completed':
         return 'default';
-      case 'Cancelled':
+      case 'cancelled':
         return 'destructive';
       default:
         return 'outline';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'new':
+        return 'New';
+      case 'in_progress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
     }
   };
 
@@ -84,6 +99,8 @@ export default function RequestCard({
     router.push(`/sales/requests/${String(request._id)}`);
   };
 
+  const requestNumber = String(request._id).slice(-8).toUpperCase();
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -91,35 +108,35 @@ export default function RequestCard({
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
               <h3 className="font-semibold text-lg text-gray-900">
-                {request.request_number}
+                {request.campaign_name || requestNumber}
               </h3>
               <Badge variant={getStatusBadgeVariant(request.status)}>
-                {request.status}
+                {getStatusLabel(request.status)}
               </Badge>
             </div>
             <p className="text-sm text-gray-600">
-              {request.advertiser_info.company_name}
+              {request.advertiser_name}
             </p>
           </div>
           
           <div className="flex items-center space-x-2">
             {/* Status Update Buttons */}
-            {request.status === 'New' && (
+            {request.status === 'new' && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleStatusUpdate('In Progress')}
+                onClick={() => handleStatusUpdate('in_progress')}
                 disabled={updating}
               >
                 Start Work
               </Button>
             )}
             
-            {request.status === 'In Progress' && (
+            {request.status === 'in_progress' && (
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleStatusUpdate('Completed')}
+                onClick={() => handleStatusUpdate('completed')}
                 disabled={updating}
               >
                 Complete
@@ -154,48 +171,46 @@ export default function RequestCard({
           <div className="flex items-center space-x-2 text-sm">
             <User className="w-4 h-4 text-gray-400" />
             <span className="text-gray-600">Contact:</span>
-            <span className="font-medium">{request.advertiser_info.contact_person}</span>
+            <span className="font-medium">{request.created_by_user_name}</span>
           </div>
           
           <div className="flex items-center space-x-2 text-sm">
             <Mail className="w-4 h-4 text-gray-400" />
             <span className="text-gray-600">Email:</span>
-            <span className="font-medium">{request.advertiser_info.email}</span>
+            <span className="font-medium">{request.created_by_user_email}</span>
           </div>
           
           <div className="flex items-center space-x-2 text-sm">
             <Calendar className="w-4 h-4 text-gray-400" />
             <span className="text-gray-600">Created:</span>
-            <span className="font-medium">{formatDate(request.createdAt)}</span>
+            <span className="font-medium">{formatDate(request.created_at)}</span>
           </div>
         </div>
 
         {/* Advertisement Info */}
-        {request.advertisement && (
+        {request.advertisements && request.advertisements.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-gray-900">Advertisement</h4>
-              {request.advertisement.image_files && request.advertisement.image_files.length > 0 && (
-                <div className="flex items-center space-x-1 text-sm text-gray-600">
-                  <ImageIcon className="w-4 h-4" />
-                  <span>{request.advertisement.image_files.length} files</span>
-                </div>
-              )}
+              <h4 className="font-medium text-gray-900">Advertisements</h4>
+              <div className="flex items-center space-x-1 text-sm text-gray-600">
+                <ImageIcon className="w-4 h-4" />
+                <span>{request.advertisements.length} file{request.advertisements.length !== 1 ? 's' : ''}</span>
+              </div>
             </div>
             
             <p className="text-sm text-gray-700 mb-2">
-              <strong>Name:</strong> {request.advertisement.name}
+              <strong>Contract:</strong> {request.contract_id}
             </p>
             
-            {request.advertisement?.target_audience && (
+            {request.ad_areas_sold && request.ad_areas_sold.length > 0 && (
               <p className="text-sm text-gray-700 mb-2">
-                <strong>Target:</strong> {request.advertisement.target_audience}
+                <strong>Ad Areas:</strong> {request.ad_areas_sold.length}
               </p>
             )}
 
-            {request.advertisement?.budget_range && (
+            {request.themes && request.themes.length > 0 && (
               <p className="text-sm text-gray-700">
-                <strong>Budget:</strong> {request.advertisement.budget_range}
+                <strong>Themes:</strong> {request.themes.join(', ')}
               </p>
             )}
           </div>
@@ -225,29 +240,37 @@ export default function RequestCard({
           {expanded && (
             <div className="mt-3 space-y-3">
               {/* Description */}
-              {request.advertisement?.description && (
+              {request.extra_info && (
                 <div>
-                  <h5 className="font-medium text-gray-900 mb-1">Description</h5>
-                  <p className="text-sm text-gray-700">{request.advertisement.description}</p>
+                  <h5 className="font-medium text-gray-900 mb-1">Details</h5>
+                  <p className="text-sm text-gray-700">{request.extra_info}</p>
                 </div>
               )}
 
               {/* Campaign Goals */}
-              {request.advertisement?.campaign_goals && (
+              {request.advertisements && request.advertisements.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 mb-1">Campaign Goals</h5>
-                  <p className="text-sm text-gray-700">{request.advertisement.campaign_goals}</p>
+                  <h5 className="font-medium text-gray-900 mb-1">Advertisement Details</h5>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    {request.advertisements.map((ad, index) => (
+                      <div key={index}>
+                        <p><strong>Name:</strong> {ad.advertisement_name}</p>
+                        <p><strong>Size:</strong> {ad.width}x{ad.height} ({ad.size_coding})</p>
+                        <p><strong>Target URL:</strong> {ad.target_url}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
               {/* Preferred Zones */}
-              {request.advertisement?.preferred_zones && request.advertisement.preferred_zones.length > 0 && (
+              {request.ad_areas_sold && request.ad_areas_sold.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 mb-1">Preferred Zones</h5>
+                  <h5 className="font-medium text-gray-900 mb-1">Ad Areas</h5>
                   <div className="flex flex-wrap gap-1">
-                    {request.advertisement.preferred_zones.map((zone, index) => (
+                    {request.ad_areas_sold.map((area, index) => (
                       <Badge key={index} variant="outline" className="text-xs">
-                        {zone}
+                        {getStatusLabel(area)}
                       </Badge>
                     ))}
                   </div>
@@ -255,18 +278,15 @@ export default function RequestCard({
               )}
 
               {/* AI Intelligence */}
-              {request.ai_intelligence && (
+              {(request.keywords || request.info_url) && (
                 <div>
                   <h5 className="font-medium text-gray-900 mb-1">AI Intelligence</h5>
                   <div className="text-sm text-gray-700 space-y-1">
-                    {request.ai_intelligence.target_demographics && (
-                      <p><strong>Demographics:</strong> {request.ai_intelligence.target_demographics}</p>
+                    {request.keywords && request.keywords.length > 0 && (
+                      <p><strong>Keywords:</strong> {request.keywords.join(', ')}</p>
                     )}
-                    {request.ai_intelligence.interests && request.ai_intelligence.interests.length > 0 && (
-                      <p><strong>Interests:</strong> {request.ai_intelligence.interests.join(', ')}</p>
-                    )}
-                    {request.ai_intelligence.optimal_timing && (
-                      <p><strong>Timing:</strong> {request.ai_intelligence.optimal_timing}</p>
+                    {request.info_url && (
+                      <p><strong>Info URL:</strong> {request.info_url}</p>
                     )}
                   </div>
                 </div>
@@ -276,20 +296,11 @@ export default function RequestCard({
               <div>
                 <h5 className="font-medium text-gray-900 mb-1">Contact Details</h5>
                 <div className="text-sm text-gray-700 space-y-1">
-                  {request.advertiser_info.phone && (
-                    <p><strong>Phone:</strong> {request.advertiser_info.phone}</p>
-                  )}
-                  {request.advertiser_info.website && (
-                    <p><strong>Website:</strong> {request.advertiser_info.website}</p>
-                  )}
-                  {request.advertiser_info.address && (
-                    <p><strong>Address:</strong> {[
-                      request.advertiser_info.address.street,
-                      request.advertiser_info.address.city,
-                      request.advertiser_info.address.state,
-                      request.advertiser_info.address.postal_code,
-                      request.advertiser_info.address.country
-                    ].filter(Boolean).join(', ')}</p>
+                  <p><strong>Created By:</strong> {request.created_by_user_name}</p>
+                  <p><strong>Email:</strong> {request.created_by_user_email}</p>
+                  <p><strong>Created At:</strong> {formatDate(request.created_at)}</p>
+                  {request.completed_at && (
+                    <p><strong>Completed At:</strong> {formatDate(request.completed_at)}</p>
                   )}
                 </div>
               </div>

@@ -2,298 +2,117 @@ import mongoose, { Schema, Document } from 'mongoose';
 import leanVirtuals from 'mongoose-lean-virtuals';
 
 export interface IAdvertisingRequest extends Document {
-  mongo_id: string;
-  
-  // Request identification
-  request_number: string;
-  
-  // Status workflow
-  status: 'New' | 'In Progress' | 'Completed' | 'Cancelled';
-  
+  // MongoDB identifiers
+  _id: mongoose.Types.ObjectId;
+  mongo_id: string; // Virtual field: _id.toString()
+
   // User tracking
-  created_by: string;
-  assigned_to?: string;
-  last_modified_by: string;
-  
-  // Advertiser Information Section
-  advertiser_info: {
-    company_name: string;
-    contact_person: string;
-    email: string;
-    phone?: string;
-    website?: string;
-    notes?: string;
-    address?: {
-      street?: string;
-      city?: string;
-      state?: string;
-      postal_code?: string;
-      country?: string;
-    };
-  };
-  
-  // Advertisement Upload Section
-  advertisement: {
-    name: string;
-    description?: string;
-    target_url: string;
-    target_audience?: string;
-    campaign_goals?: string;
-    budget_range?: string;
-    preferred_zones?: string[];
-    image_files: Array<{
-      name: string;
-      size: number;
-      type: string;
-      url?: string;
-      dimensions?: { width: number; height: number };
-      size_coding?: string;
-    }>;
-  };
-  
-  // AI Intelligence Section
-  ai_intelligence: {
-    target_demographics?: string;
-    interests?: string[];
-    behavioral_patterns?: string;
-    optimal_timing?: string;
-    content_preferences?: string;
-    competitive_analysis?: string;
-    performance_predictions?: string;
-  };
-  
-  // Completion data (when status becomes 'Completed')
-  completion_data?: {
-    selected_campaign_id?: number;
-    selected_advertisement_id?: number;
-    completion_notes?: string;
-    completed_at?: Date;
-    completed_by?: string;
-  };
-  
-  // Audit trail
+  created_by_user_id: string; // Clerk user ID
+  created_by_user_name: string; // Clerk user display name
+  created_by_user_email: string; // Clerk user email
+
+  // Status and workflow
+  status: 'new' | 'in_progress' | 'completed' | 'cancelled';
   status_history: Array<{
-    status: 'New' | 'In Progress' | 'Completed' | 'Cancelled';
-    changed_by: string;
+    status: string;
+    changed_by_user_id: string;
+    changed_by_user_name: string;
+    changed_by_user_email: string;
     changed_at: Date;
     notes?: string;
   }>;
-  
+
+  // Advertiser Information
+  advertiser_name: string; // Required
+  advertiser_id: string; // Required - Sales dept ID
+  contract_id: string; // Required
+  contract_start_date: Date; // Required
+  contract_end_date?: Date; // Optional
+  campaign_name: string; // Required
+
+  // Advertisement Information (array of ads)
+  advertisements: Array<{
+    // File information
+    image_url: string; // Cloudflare R2 public URL
+    image_name: string; // Original/edited filename
+    image_alt_text: string; // Auto-generated, editable
+
+    // Image properties
+    width: number; // Auto-detected
+    height: number; // Auto-detected
+    file_size: number; // In bytes
+    mime_type: string; // e.g., 'image/jpeg'
+
+    // Size coding
+    size_coding: 'SQ' | 'PT' | 'LS'; // Auto-selected, editable
+
+    // Advertisement details
+    advertisement_name: string; // Auto-generated
+    target_url: string; // Required, validated URL
+    html_code?: string; // Optional tracking code
+
+    // Upload metadata
+    uploaded_at: Date;
+    r2_key: string; // Internal R2 object key
+  }>;
+
+  // Marketing information
+  ad_areas_sold: string[]; // Required, min 1
+  themes?: string[]; // Optional
+
+  // AI Intelligence
+  keywords?: string[]; // Optional
+  info_url?: string; // Optional, validated URL
+  extra_info?: string; // Optional
+
+  // Completion tracking
+  completed_campaign_id?: number; // Broadstreet campaign ID when completed
+  completed_advertisement_ids?: number[]; // Broadstreet ad IDs when completed
+  completed_by_user_id?: string; // Clerk user ID who completed
+  completed_by_user_name?: string; // Clerk user name who completed
+  completed_at?: Date;
+
   // Timestamps
-  createdAt: Date;
-  updatedAt: Date;
+  created_at: Date;
+  updated_at: Date;
 }
 
 const AdvertisingRequestSchema = new Schema<IAdvertisingRequest>({
-  // Request identification
-  request_number: {
+  // User tracking
+  created_by_user_id: {
     type: String,
     required: true,
-    unique: true,
   },
-  
-  // Status workflow
+  created_by_user_name: {
+    type: String,
+    required: true,
+  },
+  created_by_user_email: {
+    type: String,
+    required: true,
+  },
+
+  // Status and workflow
   status: {
     type: String,
-    enum: ['New', 'In Progress', 'Completed', 'Cancelled'],
-    default: 'New',
+    enum: ['new', 'in_progress', 'completed', 'cancelled'],
+    default: 'new',
     required: true,
   },
-  
-  // User tracking
-  created_by: {
-    type: String,
-    required: true,
-  },
-  assigned_to: {
-    type: String,
-  },
-  last_modified_by: {
-    type: String,
-    required: true,
-  },
-  
-  // Advertiser Information Section
-  advertiser_info: {
-    company_name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    contact_person: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    phone: {
-      type: String,
-      trim: true,
-    },
-    website: {
-      type: String,
-      trim: true,
-    },
-    notes: {
-      type: String,
-      trim: true,
-    },
-    address: {
-      street: {
-        type: String,
-        trim: true,
-      },
-      city: {
-        type: String,
-        trim: true,
-      },
-      state: {
-        type: String,
-        trim: true,
-      },
-      postal_code: {
-        type: String,
-        trim: true,
-      },
-      country: {
-        type: String,
-        trim: true,
-      },
-    },
-  },
-  
-  // Advertisement Upload Section
-  advertisement: {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    description: {
-      type: String,
-      trim: true,
-    },
-    target_url: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    target_audience: {
-      type: String,
-      trim: true,
-    },
-    campaign_goals: {
-      type: String,
-      trim: true,
-    },
-    budget_range: {
-      type: String,
-      trim: true,
-    },
-    preferred_zones: [{
-      type: String,
-      trim: true,
-    }],
-    image_files: [{
-      name: {
-        type: String,
-        required: true,
-      },
-      size: {
-        type: Number,
-        required: true,
-        min: 0,
-        max: 20 * 1024 * 1024, // 20MB limit
-      },
-      type: {
-        type: String,
-        required: true,
-      },
-      url: {
-        type: String,
-      },
-      dimensions: {
-        width: {
-          type: Number,
-          min: 1,
-        },
-        height: {
-          type: Number,
-          min: 1,
-        },
-      },
-      size_coding: {
-        type: String,
-        enum: ['SQ', 'PT', 'LS'],
-      },
-    }],
-  },
-  
-  // AI Intelligence Section
-  ai_intelligence: {
-    target_demographics: {
-      type: String,
-      trim: true,
-    },
-    interests: [{
-      type: String,
-      trim: true,
-    }],
-    behavioral_patterns: {
-      type: String,
-      trim: true,
-    },
-    optimal_timing: {
-      type: String,
-      trim: true,
-    },
-    content_preferences: {
-      type: String,
-      trim: true,
-    },
-    competitive_analysis: {
-      type: String,
-      trim: true,
-    },
-    performance_predictions: {
-      type: String,
-      trim: true,
-    },
-  },
-  
-  // Completion data (when status becomes 'Completed')
-  completion_data: {
-    selected_campaign_id: {
-      type: Number,
-    },
-    selected_advertisement_id: {
-      type: Number,
-    },
-    completion_notes: {
-      type: String,
-      trim: true,
-    },
-    completed_at: {
-      type: Date,
-    },
-    completed_by: {
-      type: String,
-    },
-  },
-  
-  // Audit trail
   status_history: [{
     status: {
       type: String,
-      enum: ['New', 'In Progress', 'Completed', 'Cancelled'],
       required: true,
     },
-    changed_by: {
+    changed_by_user_id: {
+      type: String,
+      required: true,
+    },
+    changed_by_user_name: {
+      type: String,
+      required: true,
+    },
+    changed_by_user_email: {
       type: String,
       required: true,
     },
@@ -303,17 +122,169 @@ const AdvertisingRequestSchema = new Schema<IAdvertisingRequest>({
     },
     notes: {
       type: String,
-      trim: true,
     },
   }],
+
+  // Advertiser Information
+  advertiser_name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  advertiser_id: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  contract_id: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  contract_start_date: {
+    type: Date,
+    required: true,
+  },
+  contract_end_date: {
+    type: Date,
+    required: false,
+  },
+  campaign_name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+
+  // Advertisement Information
+  advertisements: {
+    type: [{
+      // File information
+      image_url: {
+        type: String,
+        required: true,
+      },
+      image_name: {
+        type: String,
+        required: true,
+      },
+      image_alt_text: {
+        type: String,
+        required: true,
+      },
+
+      // Image properties
+      width: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      height: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      file_size: {
+        type: Number,
+        required: true,
+        min: 0,
+        max: 20 * 1024 * 1024, // 20MB limit
+      },
+      mime_type: {
+        type: String,
+        required: true,
+      },
+
+      // Size coding
+      size_coding: {
+        type: String,
+        enum: ['SQ', 'PT', 'LS'],
+        required: true,
+      },
+
+      // Advertisement details
+      advertisement_name: {
+        type: String,
+        required: true,
+      },
+      target_url: {
+        type: String,
+        required: true,
+      },
+      html_code: {
+        type: String,
+      },
+
+      // Upload metadata
+      uploaded_at: {
+        type: Date,
+        default: Date.now,
+      },
+      r2_key: {
+        type: String,
+        required: true,
+      },
+    }],
+    required: true,
+    validate: {
+      validator: function(v: any[]) {
+        return v && v.length > 0;
+      },
+      message: 'At least one advertisement is required',
+    },
+  },
+
+  // Marketing information
+  ad_areas_sold: {
+    type: [String],
+    required: true,
+    validate: {
+      validator: function(v: string[]) {
+        return v && v.length > 0;
+      },
+      message: 'At least one ad area is required',
+    },
+  },
+  themes: {
+    type: [String],
+  },
+
+  // AI Intelligence
+  keywords: {
+    type: [String],
+  },
+  info_url: {
+    type: String,
+    trim: true,
+  },
+  extra_info: {
+    type: String,
+    trim: true,
+  },
+
+  // Completion tracking
+  completed_campaign_id: {
+    type: Number,
+  },
+  completed_advertisement_ids: {
+    type: [Number],
+  },
+  completed_by_user_id: {
+    type: String,
+  },
+  completed_by_user_name: {
+    type: String,
+  },
+  completed_at: {
+    type: Date,
+  },
 }, {
-  timestamps: true,
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
   toJSON: { virtuals: true },
   toObject: { virtuals: true },
   id: false,
 });
 
-// Virtual getters for standardized three-tier ID system
+// Virtual getters for standardized ID system
 AdvertisingRequestSchema.virtual('mongo_id').get(function (this: any) {
   return this._id?.toString();
 });
@@ -321,30 +292,27 @@ AdvertisingRequestSchema.virtual('mongo_id').get(function (this: any) {
 // Ensure virtuals are present in lean() results
 AdvertisingRequestSchema.plugin(leanVirtuals);
 
-// Pre-save middleware to generate request number
+// Pre-save middleware to initialize status history
 AdvertisingRequestSchema.pre('save', async function (next) {
-  if (this.isNew && !this.request_number) {
-    const count = await mongoose.model('AdvertisingRequest').countDocuments();
-    this.request_number = `AR-${String(count + 1).padStart(6, '0')}`;
-  }
-  
   // Initialize status history if not present
   if (this.isNew && (!this.status_history || this.status_history.length === 0)) {
     this.status_history = [{
       status: this.status,
-      changed_by: this.created_by,
+      changed_by_user_id: this.created_by_user_id,
+      changed_by_user_name: this.created_by_user_name,
+      changed_by_user_email: this.created_by_user_email,
       changed_at: new Date(),
       notes: 'Request created',
     }];
   }
-  
+
   next();
 });
 
-// Index for efficient queries
+// Indexes for efficient queries
 AdvertisingRequestSchema.index({ status: 1 });
-AdvertisingRequestSchema.index({ created_by: 1 });
-AdvertisingRequestSchema.index({ request_number: 1 });
-AdvertisingRequestSchema.index({ createdAt: -1 });
+AdvertisingRequestSchema.index({ created_by_user_id: 1 });
+AdvertisingRequestSchema.index({ created_at: -1 });
+AdvertisingRequestSchema.index({ advertiser_name: 1 });
 
 export default mongoose.models.AdvertisingRequest || mongoose.model<IAdvertisingRequest>('AdvertisingRequest', AdvertisingRequestSchema);

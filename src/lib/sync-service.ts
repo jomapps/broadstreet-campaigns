@@ -541,13 +541,23 @@ class SyncService {
           return result;
         }
 
-        // Normalize date strings to YYYY-MM-DD for API
-        const normalizeDate = (d?: string) => {
+        // Normalize date strings to YYYY-MM-DD HH:mm:ss format for API
+        // Start dates default to 00:00:00 UTC, end dates default to 23:59:59 UTC
+        const normalizeDateWithTime = (d?: string, isEndDate: boolean = false) => {
           if (!d) return undefined;
           try {
-            // Accept either YYYY-MM-DD or YYYY-MM-DDTHH:mm and output YYYY-MM-DD
-            const onlyDate = d.split('T')[0];
-            return onlyDate;
+            // Extract date part (handles YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss formats)
+            const datePart = d.split('T')[0].split(' ')[0];
+            
+            // Check if time is already included
+            if (d.includes(' ') && d.match(/\d{2}:\d{2}:\d{2}/)) {
+              // Time already present, use as-is
+              return d.split('T')[0]; // Remove T if present, keep space format
+            }
+            
+            // Add appropriate time: 00:00:00 for start, 23:59:59 for end
+            const time = isEndDate ? '23:59:59' : '00:00:00';
+            return `${datePart} ${time}`;
           } catch {
             return undefined;
           }
@@ -558,10 +568,10 @@ class SyncService {
           advertiser_id: advertiserBroadstreetId,
         };
 
-        const startDate = normalizeDate(localCampaign.start_date);
+        const startDate = normalizeDateWithTime(localCampaign.start_date, false);
         if (startDate) payload.start_date = startDate;
 
-        const endDate = normalizeDate(localCampaign.end_date);
+        const endDate = normalizeDateWithTime(localCampaign.end_date, true);
         if (endDate) payload.end_date = endDate;
 
         if (typeof localCampaign.max_impression_count === 'number') payload.max_impression_count = localCampaign.max_impression_count;

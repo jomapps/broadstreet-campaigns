@@ -4,7 +4,9 @@
       "Bash(npm run lint)",
       "Bash(npx tsc:*)",
       "Bash(pnpm lint:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "mcp__byterover-mcp__byterover-retrieve-knowledge",
+      "mcp__byterover-mcp__byterover-store-knowledge"
     ],
     "deny": [],
     "ask": []

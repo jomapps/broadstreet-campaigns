@@ -48,7 +48,7 @@ The request page will have a form to create a new request. The form will have fo
 - **Advertiser ID** - Required. Sales department provided identifier
 - **Contract ID** - Required. Sales department provided contract identifier
 - **Contract Start Date** - Required. Date picker, sales department provided
-- **Contract End Date** - Required. Date picker, sales department provided
+- **Contract End Date** - Optional. Date picker, sales department provided
 - **Campaign Name** - Required. Sales department provided campaign name
 
 #### Advertisement Info Section
@@ -145,7 +145,7 @@ interface IAdvertisingRequest extends Document {
   advertiser_id: string; // Required - Sales dept ID
   contract_id: string; // Required
   contract_start_date: Date; // Required
-  contract_end_date: Date; // Required
+  contract_end_date?: Date; // Optional
   campaign_name: string; // Required
 
   // Advertisement Information

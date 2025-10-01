@@ -1,119 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import sizeOf from 'image-size';
 import { auth } from '@clerk/nextjs/server';
-import { uploadFileToR2 } from '@/lib/services/r2-upload';
-import { getImageDimensionsFromBuffer, analyzeImageDimensions, validateImageFile, generateSafeFilename } from '@/lib/utils/image-processing';
+
+// Initialize S3 Client for Cloudflare R2
+const s3Client = new S3Client({
+  region: process.env.S3_REGION || 'auto',
+  endpoint: process.env.S3_EP,
+  credentials: {
+    accessKeyId: process.env.S3_ID!,
+    secretAccessKey: process.env.S3_KEY!,
+  },
+});
+
+const BUCKET_NAME = process.env.S3_BUCKET || 'travelm-bucket';
+const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET || 'https://media.travelm.de/travelm-bucket/';
 
 /**
  * POST /api/advertising-requests/upload
- * Upload image files for advertising requests
+ * Upload image to Cloudflare R2 and return metadata
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get authenticated user
+    // Check authentication
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
+    // Parse form data
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
-    const requestNumber = formData.get('requestNumber') as string;
-    
-    if (!files || files.length === 0) {
-      return NextResponse.json(
-        { error: 'No files provided' },
-        { status: 400 }
-      );
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
-    
-    if (!requestNumber) {
-      return NextResponse.json(
-        { error: 'Request number is required' },
-        { status: 400 }
-      );
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Only image files are allowed' }, { status: 400 });
     }
-    
-    const uploadResults = [];
-    const errors = [];
-    
-    for (const file of files) {
-      try {
-        // Validate file
-        const validation = validateImageFile(file);
-        if (!validation.isValid) {
-          errors.push({
-            filename: file.name,
-            error: validation.errors.join(', '),
-          });
-          continue;
-        }
-        
-        // Convert file to buffer
-        const buffer = Buffer.from(await file.arrayBuffer());
-        
-        // Get image dimensions
-        const dimensions = await getImageDimensionsFromBuffer(buffer);
-        const imageInfo = analyzeImageDimensions(dimensions.width, dimensions.height);
-        
-        // Generate safe filename
-        const safeFilename = generateSafeFilename(file.name, requestNumber);
-        
-        // Upload to R2
-        const uploadResult = await uploadFileToR2(
-          buffer,
-          safeFilename,
-          file.type,
-          'advertising-requests'
-        );
-        
-        if (uploadResult.success) {
-          uploadResults.push({
-            filename: safeFilename,
-            original_name: file.name,
-            file_path: uploadResult.filePath,
-            public_url: uploadResult.publicUrl,
-            file_size: file.size,
-            mime_type: file.type,
-            width: imageInfo.width,
-            height: imageInfo.height,
-            size_coding: imageInfo.size_coding,
-            aspect_ratio: imageInfo.aspect_ratio,
-            uploaded_at: new Date(),
-          });
-        } else {
-          errors.push({
-            filename: file.name,
-            error: uploadResult.error || 'Upload failed',
-          });
-        }
-        
-      } catch (fileError) {
-        console.error(`Error processing file ${file.name}:`, fileError);
-        errors.push({
-          filename: file.name,
-          error: fileError instanceof Error ? fileError.message : 'Processing failed',
-        });
+
+    // Validate file size (20MB max)
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: 'File size must be less than 20MB' }, { status: 400 });
+    }
+
+    // Convert file to buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Get image dimensions using image-size
+    let dimensions: { width: number; height: number };
+    try {
+      const imageDimensions = sizeOf(buffer);
+      if (!imageDimensions.width || !imageDimensions.height) {
+        throw new Error('Could not determine image dimensions');
       }
+      dimensions = {
+        width: imageDimensions.width,
+        height: imageDimensions.height,
+      };
+    } catch (error) {
+      console.error('Error detecting image dimensions:', error);
+      return NextResponse.json(
+        { error: 'Failed to detect image dimensions. Please ensure the file is a valid image.' },
+        { status: 400 }
+      );
     }
-    
-    return NextResponse.json({
-      message: `Processed ${files.length} files`,
-      successful_uploads: uploadResults,
-      failed_uploads: errors,
-      summary: {
-        total: files.length,
-        successful: uploadResults.length,
-        failed: errors.length,
-      },
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const fileExtension = file.name.split('.').pop() || 'jpg';
+    const fileName = `advertising-requests/${timestamp}-${randomString}.${fileExtension}`;
+
+    // Upload to Cloudflare R2
+    const uploadCommand = new PutObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: fileName,
+      Body: buffer,
+      ContentType: file.type,
     });
-    
+
+    await s3Client.send(uploadCommand);
+
+    // Generate public URL
+    const publicUrl = `${PUBLIC_BUCKET_URL}${fileName}`;
+
+    // Return upload result with metadata
+    return NextResponse.json({
+      success: true,
+      url: publicUrl,
+      key: fileName,
+      width: dimensions.width,
+      height: dimensions.height,
+      size: file.size,
+      type: file.type,
+    });
   } catch (error) {
-    console.error('Error in file upload:', error);
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'File upload failed' },
+      { error: error instanceof Error ? error.message : 'Failed to upload image' },
       { status: 500 }
     );
   }
@@ -129,9 +118,8 @@ export async function GET() {
       config: {
         max_file_size: 20 * 1024 * 1024, // 20MB
         allowed_types: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
-        max_files_per_request: 10,
         size_coding: {
-          SQ: 'Square (1:1 ratio)',
+          SQ: 'Square (roughly 1:1 ratio)',
           PT: 'Portrait (height > width)',
           LS: 'Landscape (width > height)',
         },

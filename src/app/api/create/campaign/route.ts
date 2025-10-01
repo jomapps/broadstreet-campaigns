@@ -66,13 +66,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure dates have time component (00:00:00 for start, 23:59:59 for end)
+    const formatDateWithTime = (dateStr: string, isEndDate: boolean = false) => {
+      if (!dateStr) return undefined;
+      // Check if time is already included
+      if (dateStr.includes(' ') || dateStr.includes('T')) {
+        return dateStr;
+      }
+      // Add appropriate time: 00:00:00 for start, 23:59:59 for end
+      const time = isEndDate ? '23:59:59' : '00:00:00';
+      return `${dateStr} ${time}`;
+    };
+
+    const formattedStartDate = formatDateWithTime(startDate, false);
+    const formattedEndDate = endDate ? formatDateWithTime(endDate, true) : undefined;
+
     // Create new local campaign
     const newCampaign = new LocalCampaign({
       name: name.trim(),
       network_id: networkId,
       advertiser_id: normalizedAdvertiserId,
-      start_date: startDate,
-      end_date: endDate || undefined,
+      start_date: formattedStartDate,
+      end_date: formattedEndDate,
       weight,
       max_impression_count: maxImpressionCount || undefined,
       display_type: displayType || 'allow_repeat_advertisement',

@@ -1,351 +1,400 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface Advertisement {
-  name: string;
-  description?: string;
+  id: string; // Temporary ID for managing array
+  image_url: string;
+  image_name: string;
+  image_alt_text: string;
+  width: number;
+  height: number;
+  file_size: number;
+  mime_type: string;
+  size_coding: 'SQ' | 'PT' | 'LS';
+  advertisement_name: string;
   target_url: string;
-  target_audience?: string;
-  campaign_goals?: string;
-  budget_range?: string;
-  preferred_zones?: string[];
-  image_files: Array<{
-    name: string;
-    size: number;
-    type: string;
-    url?: string;
-    dimensions?: { width: number; height: number };
-    size_coding?: string;
-  }>;
+  html_code?: string;
+  r2_key: string;
+  uploaded_at: Date;
+}
+
+interface AdvertisementData {
+  advertisements: Advertisement[];
+  ad_areas_sold: string;
+  themes: string;
 }
 
 interface AdvertisementSectionProps {
-  data?: Advertisement;
-  onChange: (data: Partial<Advertisement>) => void;
+  data: AdvertisementData;
+  onChange: (data: Partial<AdvertisementData>) => void;
   errors: Record<string, string>;
+  advertiserInfo: {
+    advertiser_name: string;
+    advertiser_id: string;
+    contract_id: string;
+    contract_start_date: string;
+    contract_end_date: string;
+    campaign_name: string;
+  };
 }
 
 /**
  * Advertisement Section
- * Collects advertisement details and handles file uploads
+ * Image upload with auto-generation of names, size coding, and metadata
  */
 export default function AdvertisementSection({
-  data = {
-    name: '',
-    description: '',
-    target_url: '',
-    target_audience: '',
-    campaign_goals: '',
-    budget_range: '',
-    preferred_zones: [],
-    image_files: [],
-  },
+  data,
   onChange,
   errors,
+  advertiserInfo,
 }: AdvertisementSectionProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string>('');
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
 
-  const handleChange = (field: string, value: string | string[]) => {
-    onChange({
-      ...data,
-      [field]: value,
-    });
+  // Auto-select size coding based on dimensions
+  const getSizeCoding = (width: number, height: number): 'SQ' | 'PT' | 'LS' => {
+    const ratio = width / height;
+
+    // Portrait: height > width (ratio < 1)
+    if (ratio < 0.9) return 'PT';
+
+    // Landscape: width > height significantly (ratio > 1.5)
+    if (ratio > 1.5) return 'LS';
+
+    // Square: roughly equal dimensions
+    return 'SQ';
   };
 
-  const handleZoneInput = (value: string) => {
-    // Convert comma-separated string to array
-    const zones = value.split(',').map(zone => zone.trim()).filter(zone => zone.length > 0);
-    handleChange('preferred_zones', zones);
+  // Generate advertisement name according to spec
+  const generateAdvertisementName = (
+    imageName: string,
+    width: number,
+    height: number,
+    sizeCoding: 'SQ' | 'PT' | 'LS'
+  ): string => {
+    const { advertiser_id, advertiser_name, contract_id, contract_start_date, contract_end_date } = advertiserInfo;
+
+    // Format dates as YY.mm.dd
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return '00.00.00';
+      const date = new Date(dateStr);
+      const yy = date.getFullYear().toString().slice(-2);
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      return `${yy}.${mm}.${dd}`;
+    };
+
+    const startDate = formatDate(contract_start_date);
+    const endDate = formatDate(contract_end_date);
+    const advertiserShort = advertiser_name.substring(0, 10);
+    const imageShort = imageName.substring(0, 10);
+
+    return `${advertiser_id} | ${advertiserShort} - ${contract_id} - ${startDate} - ${endDate} - ${imageShort} - ${sizeCoding} ${width} x ${height}`;
   };
 
-  const handleFileUpload = async (files: FileList) => {
-    if (!files.length) return;
-
-    setUploading(true);
-    setUploadError('');
-
+  // Handle image upload
+  const handleImageUpload = async (file: File) => {
     try {
-      const uploadPromises = Array.from(files).map(async (file) => {
-        // Validate file
-        if (file.size > 20 * 1024 * 1024) { // 20MB limit
-          throw new Error(`File ${file.name} is too large (max 20MB)`);
-        }
+      setUploadingIndex(data.advertisements.length);
 
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`File ${file.name} is not an image`);
-        }
+      // Validate file size (20MB max)
+      if (file.size > 20 * 1024 * 1024) {
+        alert('File size must be less than 20MB');
+        return;
+      }
 
-        // Create form data
-        const formData = new FormData();
-        formData.append('file', file);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Only image files are allowed');
+        return;
+      }
 
-        // Upload file
-        const response = await fetch('/api/advertising-requests/upload', {
-          method: 'POST',
-          body: formData,
-        });
+      // Upload to API
+      const formData = new FormData();
+      formData.append('file', file);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Failed to upload ${file.name}`);
-        }
-
-        const result = await response.json();
-        return {
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: result.url,
-          dimensions: result.dimensions,
-          size_coding: result.size_coding,
-        };
+      const response = await fetch('/api/advertising-requests/upload', {
+        method: 'POST',
+        body: formData,
       });
 
-      const uploadedFiles = await Promise.all(uploadPromises);
-      
-      // Add uploaded files to the current list
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const uploadResult = await response.json();
+
+      // Generate metadata
+      const imageName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      const sizeCoding = getSizeCoding(uploadResult.width, uploadResult.height);
+      const advertisementName = generateAdvertisementName(
+        imageName,
+        uploadResult.width,
+        uploadResult.height,
+        sizeCoding
+      );
+      const altText = `${advertiserInfo.campaign_name} - ${imageName}`;
+
+      // Create new advertisement object
+      const newAd: Advertisement = {
+        id: Date.now().toString(),
+        image_url: uploadResult.url,
+        image_name: imageName,
+        image_alt_text: altText,
+        width: uploadResult.width,
+        height: uploadResult.height,
+        file_size: file.size,
+        mime_type: file.type,
+        size_coding: sizeCoding,
+        advertisement_name: advertisementName,
+        target_url: 'https://',
+        html_code: '',
+        r2_key: uploadResult.key,
+        uploaded_at: new Date(),
+      };
+
+      // Add to advertisements array
       onChange({
-        ...data,
-        image_files: [...(data?.image_files || []), ...uploadedFiles],
+        advertisements: [...data.advertisements, newAd],
       });
-
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+      alert(error instanceof Error ? error.message : 'Failed to upload image');
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setUploadingIndex(null);
     }
   };
 
-  const removeFile = (index: number) => {
-    const newFiles = (data?.image_files || []).filter((_, i) => i !== index);
-    onChange({
-      ...data,
-      image_files: newFiles,
-    });
+  // Handle advertisement field update
+  const handleAdUpdate = (index: number, field: keyof Advertisement, value: any) => {
+    const updatedAds = [...data.advertisements];
+    updatedAds[index] = { ...updatedAds[index], [field]: value };
+
+    // If size_coding changes, regenerate advertisement_name
+    if (field === 'size_coding' || field === 'image_name') {
+      const ad = updatedAds[index];
+      updatedAds[index].advertisement_name = generateAdvertisementName(
+        ad.image_name,
+        ad.width,
+        ad.height,
+        ad.size_coding
+      );
+    }
+
+    // If image_name changes, update alt text
+    if (field === 'image_name') {
+      updatedAds[index].image_alt_text = `${advertiserInfo.campaign_name} - ${value}`;
+    }
+
+    onChange({ advertisements: updatedAds });
   };
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  // Remove advertisement
+  const handleRemoveAd = (index: number) => {
+    const updatedAds = data.advertisements.filter((_, i) => i !== index);
+    onChange({ advertisements: updatedAds });
+  };
+
+  // Handle target URL input - auto-clean duplicate https://
+  const handleTargetUrlChange = (index: number, value: string) => {
+    // Remove duplicate https:// if user types it
+    const cleanValue = value.replace(/^https?:\/\/(https?:\/\/)/i, 'https://');
+    handleAdUpdate(index, 'target_url', cleanValue);
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Advertisement Details</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Advertisement Information</h2>
         <p className="text-sm text-gray-600 mb-6">
-          Provide details about the advertisement and upload any creative assets.
+          Upload advertisement images. Image names and metadata will be auto-generated.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Advertisement Name */}
-        <div className="md:col-span-2">
-          <Label htmlFor="ad_name" className="text-sm font-medium text-gray-700">
-            Advertisement Name *
-          </Label>
-          <Input
-            id="ad_name"
-            type="text"
-            value={data.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            className={errors.ad_name ? 'border-red-500' : ''}
-            placeholder="Enter advertisement name"
-          />
-          {errors.ad_name && (
-            <p className="mt-1 text-sm text-red-600">{errors.ad_name}</p>
-          )}
-        </div>
-
-        {/* Target URL */}
-        <div>
-          <Label htmlFor="target_url" className="text-sm font-medium text-gray-700">
-            Target URL *
-          </Label>
-          <Input
-            id="target_url"
-            type="url"
-            value={data?.target_url || ''}
-            onChange={(e) => handleChange('target_url', e.target.value)}
-            className={errors.target_url ? 'border-red-500' : ''}
-            placeholder="https://example.com/landing-page"
-          />
-          {errors.target_url && (
-            <p className="mt-1 text-sm text-red-600">{errors.target_url}</p>
-          )}
-        </div>
-
-        {/* Target Audience */}
-        <div>
-          <Label htmlFor="target_audience" className="text-sm font-medium text-gray-700">
-            Target Audience
-          </Label>
-          <Input
-            id="target_audience"
-            type="text"
-            value={data?.target_audience || ''}
-            onChange={(e) => handleChange('target_audience', e.target.value)}
-            placeholder="e.g., Adults 25-45, Tech enthusiasts"
-          />
-        </div>
-
-        {/* Budget Range */}
-        <div>
-          <Label htmlFor="budget_range" className="text-sm font-medium text-gray-700">
-            Budget Range
-          </Label>
-          <Input
-            id="budget_range"
-            type="text"
-            value={data?.budget_range || ''}
-            onChange={(e) => handleChange('budget_range', e.target.value)}
-            placeholder="e.g., $1000-$5000"
-          />
-        </div>
-
-        {/* Preferred Zones */}
-        <div className="md:col-span-2">
-          <Label htmlFor="preferred_zones" className="text-sm font-medium text-gray-700">
-            Preferred Zones
-          </Label>
-          <Input
-            id="preferred_zones"
-            type="text"
-            value={(data?.preferred_zones || []).join(', ')}
-            onChange={(e) => handleZoneInput(e.target.value)}
-            placeholder="Enter zone names separated by commas"
-          />
-          {(data?.preferred_zones || []).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(data?.preferred_zones || []).map((zone, index) => (
-                <Badge key={index} variant="secondary">
-                  {zone}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Description */}
-      <div>
-        <Label htmlFor="ad_description" className="text-sm font-medium text-gray-700">
-          Advertisement Description *
-        </Label>
-        <Textarea
-          id="ad_description"
-          value={data?.description || ''}
-          onChange={(e) => handleChange('description', e.target.value)}
-          className={errors.ad_description ? 'border-red-500' : ''}
-          placeholder="Describe the advertisement, its purpose, and key messaging"
-          rows={4}
+      {/* Upload Button */}
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImageUpload(file);
+            e.target.value = ''; // Reset input
+          }}
+          className="hidden"
+          id="image-upload"
+          disabled={uploadingIndex !== null}
         />
-        {errors.ad_description && (
-          <p className="mt-1 text-sm text-red-600">{errors.ad_description}</p>
-        )}
+        <label
+          htmlFor="image-upload"
+          className="cursor-pointer flex flex-col items-center"
+        >
+          <Upload className="w-12 h-12 text-gray-400 mb-2" />
+          <span className="text-sm font-medium text-gray-700">
+            {uploadingIndex !== null ? 'Uploading...' : 'Click to upload image'}
+          </span>
+          <span className="text-xs text-gray-500 mt-1">
+            Max 20MB • JPEG, PNG, GIF, WebP
+          </span>
+        </label>
       </div>
 
-      {/* Campaign Goals */}
-      <div>
-        <Label htmlFor="campaign_goals" className="text-sm font-medium text-gray-700">
-          Campaign Goals
-        </Label>
-        <Textarea
-          id="campaign_goals"
-          value={data?.campaign_goals || ''}
-          onChange={(e) => handleChange('campaign_goals', e.target.value)}
-          placeholder="What are the main objectives of this campaign?"
-          rows={3}
-        />
-      </div>
+      {errors.advertisements && (
+        <p className="text-sm text-red-600">{errors.advertisements}</p>
+      )}
 
-      {/* File Upload Section */}
-      <div>
-        <Label className="text-sm font-medium text-gray-700 mb-3 block">
-          Creative Assets
-        </Label>
-        
-        {/* Upload Button */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-            className="hidden"
-          />
-          
-          <ImageIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-sm text-gray-600 mb-2">
-            Upload image files (JPG, PNG, GIF, WebP)
-          </p>
-          <p className="text-xs text-gray-500 mb-4">
-            Maximum file size: 20MB per file
-          </p>
-          
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="mb-2"
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            {uploading ? 'Uploading...' : 'Choose Files'}
-          </Button>
-          
-          {uploadError && (
-            <p className="text-sm text-red-600 mt-2">{uploadError}</p>
-          )}
-        </div>
-
-        {/* Uploaded Files List */}
-        {(data?.image_files || []).length > 0 && (
-          <div className="mt-4 space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Uploaded Files:</h4>
-            {(data?.image_files || []).map((file, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <ImageIcon className="w-5 h-5 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatFileSize(file.size)}
-                      {file.dimensions && ` • ${file.dimensions.width}×${file.dimensions.height}`}
-                      {file.size_coding && ` • ${file.size_coding}`}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile(index)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
+      {/* Advertisements List */}
+      {data.advertisements.map((ad, index) => (
+        <div key={ad.id} className="border border-gray-200 rounded-lg p-6 space-y-4">
+          <div className="flex items-start justify-between">
+            <h3 className="text-md font-medium text-gray-900">Advertisement {index + 1}</h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleRemoveAd(index)}
+              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
+
+          {/* Image Preview */}
+          <div className="flex items-center gap-4">
+            <img
+              src={ad.image_url}
+              alt={ad.image_alt_text}
+              className="w-[300px] h-auto border border-gray-200 rounded"
+            />
+            <div className="text-sm text-gray-600">
+              <p><strong>Dimensions:</strong> {ad.width} x {ad.height}px</p>
+              <p><strong>Size:</strong> {(ad.file_size / 1024).toFixed(2)} KB</p>
+              <p><strong>Type:</strong> {ad.mime_type}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Image Name */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700">
+                Image Name *
+              </Label>
+              <Input
+                value={ad.image_name}
+                onChange={(e) => handleAdUpdate(index, 'image_name', e.target.value)}
+              />
+            </div>
+
+            {/* Size Coding */}
+            <div>
+              <Label className="text-sm font-medium text-gray-700">
+                Size Coding *
+              </Label>
+              <div className="flex gap-4 mt-2">
+                {(['SQ', 'PT', 'LS'] as const).map((code) => (
+                  <label key={code} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`size-coding-${index}`}
+                      value={code}
+                      checked={ad.size_coding === code}
+                      onChange={(e) => handleAdUpdate(index, 'size_coding', e.target.value)}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm">{code} - {code === 'SQ' ? 'Square' : code === 'PT' ? 'Portrait' : 'Landscape'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Advertisement Name (read-only, auto-generated) */}
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Advertisement Name (auto-generated)
+              </Label>
+              <Input
+                value={ad.advertisement_name}
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
+
+            {/* Image Alt Text */}
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Image Alt Text *
+              </Label>
+              <Input
+                value={ad.image_alt_text}
+                onChange={(e) => handleAdUpdate(index, 'image_alt_text', e.target.value)}
+              />
+            </div>
+
+            {/* Target URL */}
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium text-gray-700">
+                Target URL *
+              </Label>
+              <Input
+                value={ad.target_url}
+                onChange={(e) => handleTargetUrlChange(index, e.target.value)}
+                placeholder="https://example.com"
+              />
+            </div>
+
+            {/* HTML Code */}
+            <div className="md:col-span-2">
+              <Label className="text-sm font-medium text-gray-700">
+                HTML Code (Optional)
+              </Label>
+              <Textarea
+                value={ad.html_code || ''}
+                onChange={(e) => handleAdUpdate(index, 'html_code', e.target.value)}
+                placeholder="Paste tracking pixels or custom HTML here"
+                rows={3}
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Ad Areas Sold */}
+      <div>
+        <Label className="text-sm font-medium text-gray-700">
+          Ad Areas Sold * (comma-separated)
+        </Label>
+        <Input
+          value={data.ad_areas_sold}
+          onChange={(e) => onChange({ ad_areas_sold: e.target.value })}
+          placeholder="e.g., Homepage Banner, Sidebar, Footer"
+          className={errors.ad_areas_sold ? 'border-red-500' : ''}
+        />
+        {errors.ad_areas_sold && (
+          <p className="mt-1 text-sm text-red-600">{errors.ad_areas_sold}</p>
         )}
+        <p className="mt-1 text-xs text-gray-500">
+          Enter at least one ad area, separated by commas
+        </p>
+      </div>
+
+      {/* Themes */}
+      <div>
+        <Label className="text-sm font-medium text-gray-700">
+          Themes (Optional, comma-separated)
+        </Label>
+        <Input
+          value={data.themes}
+          onChange={(e) => onChange({ themes: e.target.value })}
+          placeholder="e.g., Travel, Tourism, Adventure"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Optional themes for categorization
+        </p>
       </div>
     </div>
   );

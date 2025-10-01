@@ -27,7 +27,7 @@ export async function PUT(
     }
     
     const body = await request.json();
-    const { status, notes, assigned_to, completion_data } = body;
+    const { status, notes, assigned_to_user_id, completion_data } = body;
     
     if (!status) {
       return NextResponse.json(
@@ -53,8 +53,8 @@ export async function PUT(
       );
     }
     
-    // Validate completion data if status is 'Completed'
-    if (status === 'Completed') {
+    // Validate completion data if status is 'completed'
+    if (status === 'completed') {
       if (!completion_data?.selected_campaign_id || !completion_data?.selected_advertisement_id) {
         return NextResponse.json(
           { error: 'Campaign and Advertisement selection required for completion' },
@@ -62,31 +62,26 @@ export async function PUT(
         );
       }
       
-      // Set completion data
-      existingRequest.completion_data = {
-        selected_campaign_id: completion_data.selected_campaign_id,
-        selected_advertisement_id: completion_data.selected_advertisement_id,
-        completion_notes: completion_data.completion_notes || '',
-        completed_at: new Date(),
-        completed_by: userId,
-      };
+      existingRequest.completed_campaign_id = completion_data.selected_campaign_id;
+      existingRequest.completed_advertisement_ids = [completion_data.selected_advertisement_id];
+      existingRequest.completed_at = new Date();
+      existingRequest.completed_by_user_id = userId;
     }
     
     const oldStatus = existingRequest.status;
-    const oldAssignedTo = existingRequest.assigned_to;
+    const oldAssignedTo = existingRequest.assigned_to_user_id;
     
-    // Update status and assignment
     existingRequest.status = status;
-    existingRequest.last_modified_by = userId;
     
-    if (assigned_to !== undefined) {
-      existingRequest.assigned_to = assigned_to;
+    if (assigned_to_user_id !== undefined) {
+      existingRequest.assigned_to_user_id = assigned_to_user_id;
     }
     
-    // Add to status history
     const statusHistoryEntry = {
       status,
-      changed_by: userId,
+      changed_by_user_id: userId,
+      changed_by_user_name: existingRequest.created_by_user_name,
+      changed_by_user_email: existingRequest.created_by_user_email,
       changed_at: new Date(),
       notes: notes || `Status changed to ${status}`,
     };
@@ -113,10 +108,10 @@ export async function PUT(
       }
       
       // Assignment notification (if assignment changed)
-      if (assigned_to && assigned_to !== oldAssignedTo && recipients.length > 0) {
+      if (assigned_to_user_id && assigned_to_user_id !== oldAssignedTo && recipients.length > 0) {
         await notifyRequestAssigned(
           existingRequest,
-          assigned_to,
+          assigned_to_user_id,
           userId,
           recipients
         );

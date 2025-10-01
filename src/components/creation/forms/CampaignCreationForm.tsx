@@ -430,7 +430,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
               />
               {errors.start_date && <p className="text-sm text-red-500 mt-1">{errors.start_date}</p>}
               <p className="text-sm text-gray-500 mt-1">
-                When the campaign will go live (defaults to 12:00 AM)
+                When the campaign will go live (time will be set to 00:00:00 UTC)
               </p>
             </div>
 
@@ -445,7 +445,7 @@ export default function CampaignCreationForm({ onClose, setIsLoading }: Campaign
               />
               {errors.end_date && <p className="text-sm text-red-500 mt-1">{errors.end_date}</p>}
               <p className="text-sm text-gray-500 mt-1">
-                When the campaign will end (defaults to 11:59 PM)
+                When the campaign will end (time will be set to 23:59:59 UTC)
               </p>
             </div>
           </div>

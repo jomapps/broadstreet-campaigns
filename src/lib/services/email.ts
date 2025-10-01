@@ -98,8 +98,8 @@ interface AssignmentEmailData extends BaseEmailData {
  * Generate email subject based on template and data
  */
 function generateSubject(template: EmailTemplate, data: BaseEmailData): string {
-  const requestNumber = data.request.request_number;
-  const companyName = data.request.advertiser_info.company_name;
+  const requestNumber = String(data.request._id).slice(-8).toUpperCase();
+  const companyName = data.request.advertiser_name;
   
   switch (template) {
     case 'request_created':
@@ -123,12 +123,13 @@ function generateSubject(template: EmailTemplate, data: BaseEmailData): string {
 function generateEmailContent(template: EmailTemplate, data: any): string {
   const { request } = data;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const requestUrl = `${baseUrl}/sales/audit-log?request=${request.request_number}`;
+  const requestNumber = String(request._id).slice(-8).toUpperCase();
+  const requestUrl = `${baseUrl}/sales/audit-log?request=${request._id}`;
   
   const commonFooter = `
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
     <p style="color: #666; font-size: 12px;">
-      View this request: <a href="${requestUrl}">${request.request_number}</a><br>
+      View this request: <a href="${requestUrl}">${requestNumber}</a><br>
       This is an automated notification from the Broadstreet Campaigns system.
     </p>
   `;
@@ -137,11 +138,11 @@ function generateEmailContent(template: EmailTemplate, data: any): string {
     case 'request_created':
       return `
         <h2>New Advertising Request Created</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
-        <p><strong>Contact:</strong> ${request.advertiser_info.contact_person} (${request.advertiser_info.email})</p>
-        <p><strong>Advertisement:</strong> ${request.advertisement.name}</p>
-        <p><strong>Created By:</strong> ${request.created_by}</p>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
+        <p><strong>Contact:</strong> ${request.created_by_user_name} (${request.created_by_user_email})</p>
+        <p><strong>Campaign:</strong> ${request.campaign_name}</p>
+        <p><strong>Created By:</strong> ${request.created_by_user_name}</p>
         <p><strong>Status:</strong> ${request.status}</p>
         ${commonFooter}
       `;
@@ -150,20 +151,20 @@ function generateEmailContent(template: EmailTemplate, data: any): string {
       const assignmentData = data as AssignmentEmailData;
       return `
         <h2>Advertising Request Assigned</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
         <p><strong>Assigned To:</strong> ${assignmentData.assignedTo}</p>
         <p><strong>Assigned By:</strong> ${assignmentData.assignedBy}</p>
-        <p><strong>Advertisement:</strong> ${request.advertisement.name}</p>
+        <p><strong>Campaign:</strong> ${request.campaign_name}</p>
         ${commonFooter}
       `;
       
     case 'status_changed':
       const statusData = data as StatusChangeEmailData;
       return `
-        <h2>Request Status Updated</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
+        <h2>Status Changed</h2>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
         <p><strong>Status Changed:</strong> ${statusData.oldStatus} → ${statusData.newStatus}</p>
         <p><strong>Changed By:</strong> ${statusData.changedBy}</p>
         ${statusData.notes ? `<p><strong>Notes:</strong> ${statusData.notes}</p>` : ''}
@@ -172,9 +173,9 @@ function generateEmailContent(template: EmailTemplate, data: any): string {
       
     case 'request_completed':
       return `
-        <h2>Advertising Request Completed</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
+        <h2>Request Completed</h2>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
         <p><strong>Advertisement:</strong> ${request.advertisement.name}</p>
         <p><strong>Completed By:</strong> ${request.completion_data?.completed_by}</p>
         ${request.completion_data?.completion_notes ? 
@@ -184,9 +185,9 @@ function generateEmailContent(template: EmailTemplate, data: any): string {
       
     case 'request_cancelled':
       return `
-        <h2>Advertising Request Cancelled</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
+        <h2>Request Cancelled</h2>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
         <p><strong>Advertisement:</strong> ${request.advertisement.name}</p>
         <p>This request has been cancelled and will not be processed further.</p>
         ${commonFooter}
@@ -195,8 +196,8 @@ function generateEmailContent(template: EmailTemplate, data: any): string {
     default:
       return `
         <h2>Advertising Request Update</h2>
-        <p><strong>Request Number:</strong> ${request.request_number}</p>
-        <p><strong>Company:</strong> ${request.advertiser_info.company_name}</p>
+        <p><strong>Request Number:</strong> ${requestNumber}</p>
+        <p><strong>Company:</strong> ${request.advertiser_name}</p>
         <p>An update has been made to this advertising request.</p>
         ${commonFooter}
       `;
@@ -218,7 +219,7 @@ export async function sendEmailNotification(
       template,
       to: data.recipient,
       subject,
-      requestNumber: data.request.request_number,
+      requestNumber: String(data.request._id).slice(-8).toUpperCase(),
     });
 
     const transporter = getTransporter();

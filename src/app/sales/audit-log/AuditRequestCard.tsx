@@ -64,8 +64,8 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
   };
 
   const getDuration = () => {
-    const created = new Date(request.createdAt);
-    const updated = new Date(request.updatedAt);
+    const created = new Date(request.created_at);
+    const updated = new Date(request.updated_at);
     const diffMs = updated.getTime() - created.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
@@ -84,6 +84,9 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
     router.push(`/sales/requests/${String(request._id)}`);
   };
 
+  // Generate request number from ID
+  const requestNumber = String(request._id).slice(-8).toUpperCase();
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -92,14 +95,14 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
             <div className="flex items-center space-x-2">
               {getStatusIcon(request.status)}
               <h3 className="font-semibold text-lg text-gray-900">
-                {request.request_number}
+                {request.campaign_name || requestNumber}
               </h3>
               <Badge variant={getStatusBadgeVariant(request.status)}>
                 {request.status}
               </Badge>
             </div>
             <p className="text-sm text-gray-600">
-              {request.advertiser_info.company_name}
+              {request.advertiser_name}
             </p>
           </div>
           
@@ -121,20 +124,20 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="flex items-center space-x-2 text-sm">
             <User className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-600">Contact:</span>
-            <span className="font-medium">{request.advertiser_info.contact_person}</span>
+            <span className="text-gray-600">Created By:</span>
+            <span className="font-medium">{request.created_by_user_name}</span>
           </div>
           
           <div className="flex items-center space-x-2 text-sm">
             <Calendar className="w-4 h-4 text-gray-400" />
             <span className="text-gray-600">Created:</span>
-            <span className="font-medium">{formatDate(request.createdAt)}</span>
+            <span className="font-medium">{formatDate(request.created_at)}</span>
           </div>
 
           <div className="flex items-center space-x-2 text-sm">
             <Clock className="w-4 h-4 text-gray-400" />
             <span className="text-gray-600">Completed:</span>
-            <span className="font-medium">{formatDate(request.updatedAt)}</span>
+            <span className="font-medium">{formatDate(request.updated_at)}</span>
           </div>
           
           <div className="flex items-center space-x-2 text-sm">
@@ -145,41 +148,39 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
         </div>
 
         {/* Advertisement Summary */}
-        {request.advertisement && (
+        {request.advertisements && request.advertisements.length > 0 && (
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="font-medium text-gray-900">Advertisement</h4>
-              {request.advertisement.image_files && request.advertisement.image_files.length > 0 && (
-                <Badge variant="outline" className="text-xs">
-                  {request.advertisement.image_files.length} files
-                </Badge>
-              )}
+              <h4 className="font-medium text-gray-900">Advertisements</h4>
+              <Badge variant="outline" className="text-xs">
+                {request.advertisements.length} file{request.advertisements.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-gray-600">Name:</span>
-                <span className="ml-2 font-medium">{request.advertisement.name}</span>
+                <span className="text-gray-600">Contract:</span>
+                <span className="ml-2 font-medium">{request.contract_id}</span>
               </div>
               
-              {request.advertisement?.target_audience && (
+              {request.ad_areas_sold && request.ad_areas_sold.length > 0 && (
                 <div>
-                  <span className="text-gray-600">Target:</span>
-                  <span className="ml-2 font-medium">{request.advertisement.target_audience}</span>
+                  <span className="text-gray-600">Ad Areas:</span>
+                  <span className="ml-2 font-medium">{request.ad_areas_sold.length} area{request.ad_areas_sold.length !== 1 ? 's' : ''}</span>
                 </div>
               )}
 
-              {request.advertisement?.budget_range && (
+              {request.themes && request.themes.length > 0 && (
                 <div>
-                  <span className="text-gray-600">Budget:</span>
-                  <span className="ml-2 font-medium">{request.advertisement.budget_range}</span>
+                  <span className="text-gray-600">Themes:</span>
+                  <span className="ml-2 font-medium">{request.themes.length} theme{request.themes.length !== 1 ? 's' : ''}</span>
                 </div>
               )}
 
-              {request.advertisement?.preferred_zones && request.advertisement.preferred_zones.length > 0 && (
+              {request.completed_campaign_id && (
                 <div>
-                  <span className="text-gray-600">Zones:</span>
-                  <span className="ml-2 font-medium">{request.advertisement.preferred_zones.length} selected</span>
+                  <span className="text-gray-600">Campaign ID:</span>
+                  <span className="ml-2 font-medium">{request.completed_campaign_id}</span>
                 </div>
               )}
             </div>
@@ -201,7 +202,7 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
                     </div>
                     <div>
                       <span className="text-gray-600">By:</span>
-                      <span className="ml-2 font-medium">{lastStatus.changed_by}</span>
+                      <span className="ml-2 font-medium">{lastStatus.changed_by_user_name}</span>
                     </div>
                   </div>
                 );
@@ -242,45 +243,50 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
 
           {expanded && (
             <div className="mt-3 space-y-3">
-              {/* Full Contact Details */}
+              {/* Full Advertiser Details */}
               <div>
-                <h5 className="font-medium text-gray-900 mb-2">Contact Information</h5>
+                <h5 className="font-medium text-gray-900 mb-2">Advertiser Information</h5>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
-                  <div><strong>Email:</strong> {request.advertiser_info.email}</div>
-                  {request.advertiser_info.phone && (
-                    <div><strong>Phone:</strong> {request.advertiser_info.phone}</div>
-                  )}
-                  {request.advertiser_info.website && (
-                    <div><strong>Website:</strong> {request.advertiser_info.website}</div>
+                  <div><strong>Advertiser ID:</strong> {request.advertiser_id}</div>
+                  <div><strong>Contract ID:</strong> {request.contract_id}</div>
+                  <div><strong>Contract Start:</strong> {formatDate(request.contract_start_date)}</div>
+                  {request.contract_end_date && (
+                    <div><strong>Contract End:</strong> {formatDate(request.contract_end_date)}</div>
                   )}
                 </div>
               </div>
 
               {/* Full Advertisement Details */}
-              {request.advertisement && (
+              {request.advertisements && request.advertisements.length > 0 && (
                 <div>
                   <h5 className="font-medium text-gray-900 mb-2">Advertisement Details</h5>
                   <div className="text-sm text-gray-700 space-y-2">
-                    {request.advertisement.description && (
-                      <div><strong>Description:</strong> {request.advertisement.description}</div>
-                    )}
-                    {request.advertisement?.campaign_goals && (
-                      <div><strong>Goals:</strong> {request.advertisement.campaign_goals}</div>
-                    )}
+                    {request.advertisements.map((ad, index) => (
+                      <div key={index} className="p-2 bg-gray-50 rounded">
+                        <div><strong>Name:</strong> {ad.advertisement_name}</div>
+                        <div><strong>Size:</strong> {ad.width}x{ad.height} ({ad.size_coding})</div>
+                        {ad.target_url && (
+                          <div><strong>URL:</strong> {ad.target_url}</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* AI Intelligence Summary */}
-              {request.ai_intelligence && (
+              {(request.keywords || request.info_url || request.extra_info) && (
                 <div>
                   <h5 className="font-medium text-gray-900 mb-2">AI Intelligence</h5>
                   <div className="text-sm text-gray-700 space-y-1">
-                    {request.ai_intelligence.target_demographics && (
-                      <div><strong>Demographics:</strong> {request.ai_intelligence.target_demographics}</div>
+                    {request.keywords && request.keywords.length > 0 && (
+                      <div><strong>Keywords:</strong> {request.keywords.join(', ')}</div>
                     )}
-                    {request.ai_intelligence.interests && request.ai_intelligence.interests.length > 0 && (
-                      <div><strong>Interests:</strong> {request.ai_intelligence.interests.join(', ')}</div>
+                    {request.info_url && (
+                      <div><strong>Info URL:</strong> {request.info_url}</div>
+                    )}
+                    {request.extra_info && (
+                      <div><strong>Extra Info:</strong> {request.extra_info}</div>
                     )}
                   </div>
                 </div>
@@ -299,7 +305,7 @@ export default function AuditRequestCard({ request }: AuditRequestCardProps) {
                           </Badge>
                           <span className="text-gray-600">{formatDate(status.changed_at)}</span>
                         </div>
-                        <span className="text-gray-600">{status.changed_by}</span>
+                        <span className="text-gray-600">{status.changed_by_user_name}</span>
                       </div>
                     ))}
                   </div>

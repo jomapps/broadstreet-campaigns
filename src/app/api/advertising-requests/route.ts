@@ -30,15 +30,15 @@ export async function GET(request: NextRequest) {
     }
     
     if (assignedTo) {
-      filter.assigned_to = assignedTo;
+      filter.assigned_to_user_id = assignedTo;
     }
     
     if (searchTerm) {
       filter.$or = [
-        { 'advertiser_info.company_name': { $regex: searchTerm, $options: 'i' } },
-        { 'advertiser_info.contact_person': { $regex: searchTerm, $options: 'i' } },
-        { 'advertisement.name': { $regex: searchTerm, $options: 'i' } },
-        { request_number: { $regex: searchTerm, $options: 'i' } },
+        { advertiser_name: { $regex: searchTerm, $options: 'i' } },
+        { created_by_user_name: { $regex: searchTerm, $options: 'i' } },
+        { campaign_name: { $regex: searchTerm, $options: 'i' } },
+        { _id: { $regex: searchTerm, $options: 'i' } },
       ];
     }
     
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-    
+
     // Get authenticated user
     const { userId } = await auth();
     if (!userId) {
@@ -94,43 +94,81 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const body = await request.json();
-    
-    // Validate request data
-    const validation = validateAdvertisingRequestData(body);
-    if (!validation.isValid) {
+
+    // Basic validation
+    if (!body.advertiser_name || !body.advertiser_id || !body.contract_id) {
       return NextResponse.json(
-        { 
-          error: 'Validation failed',
-          details: validation.errors 
-        },
+        { error: 'Missing required fields: advertiser_name, advertiser_id, contract_id' },
         { status: 400 }
       );
     }
-    
-    // Create new advertising request
+
+    if (!body.contract_start_date || !body.contract_end_date || !body.campaign_name) {
+      return NextResponse.json(
+        { error: 'Missing required fields: contract_start_date, contract_end_date, campaign_name' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.advertisements || body.advertisements.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one advertisement is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.ad_areas_sold || body.ad_areas_sold.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one ad area is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create new advertising request with user info already in body
     const requestData = {
-      ...body,
-      created_by: userId,
-      last_modified_by: userId,
-      status: 'New',
+      // User tracking (from body, set by client from Clerk)
+      created_by_user_id: body.created_by_user_id,
+      created_by_user_name: body.created_by_user_name,
+      created_by_user_email: body.created_by_user_email,
+
+      // Status
+      status: body.status || 'new',
+
+      // Advertiser Info
+      advertiser_name: body.advertiser_name,
+      advertiser_id: body.advertiser_id,
+      contract_id: body.contract_id,
+      contract_start_date: new Date(body.contract_start_date),
+      contract_end_date: new Date(body.contract_end_date),
+      campaign_name: body.campaign_name,
+
+      // Advertisement Info
+      advertisements: body.advertisements,
+      ad_areas_sold: body.ad_areas_sold,
+      themes: body.themes,
+
+      // AI Intelligence
+      keywords: body.keywords,
+      info_url: body.info_url,
+      extra_info: body.extra_info,
     };
-    
+
     const advertisingRequest = new AdvertisingRequest(requestData);
     await advertisingRequest.save();
-    
-    // Send notification emails (placeholder)
+
+    // Send notification emails (placeholder - future implementation)
     try {
-      const recipients = getNotificationRecipients('request_created');
-      if (recipients.length > 0) {
-        await notifyRequestCreated(advertisingRequest, recipients);
-      }
+      // const recipients = getNotificationRecipients('request_created');
+      // if (recipients.length > 0) {
+      //   await notifyRequestCreated(advertisingRequest, recipients);
+      // }
     } catch (emailError) {
       console.error('Email notification failed:', emailError);
       // Don't fail the request creation if email fails
     }
-    
+
     return NextResponse.json(
       {
         message: 'Advertising request created successfully',
@@ -138,32 +176,24 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-    
+
   } catch (error: any) {
     console.error('Error creating advertising request:', error);
-    
-    // Handle duplicate key error (request_number should be unique)
-    if (error.code === 11000) {
-      return NextResponse.json(
-        { error: 'Request with this number already exists' },
-        { status: 409 }
-      );
-    }
-    
+
     // Handle validation errors
     if (error.name === 'ValidationError') {
       const validationErrors = Object.values(error.errors).map((err: any) => err.message);
       return NextResponse.json(
-        { 
+        {
           error: 'Validation failed',
-          details: validationErrors 
+          details: validationErrors
         },
         { status: 400 }
       );
     }
-    
+
     return NextResponse.json(
-      { error: 'Failed to create advertising request' },
+      { error: error.message || 'Failed to create advertising request' },
       { status: 500 }
     );
   }
