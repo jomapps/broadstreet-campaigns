@@ -45,9 +45,9 @@ export default function OpenListClient({ searchParams }: OpenListClientProps) {
         search: searchQuery,
       });
 
-      // Only show open requests (New and In Progress)
+      // Only show open requests (new and in_progress)
       if (!statusFilter || statusFilter === 'all') {
-        params.set('status', 'New,In Progress');
+        params.set('status', 'new,in_progress');
       }
 
       const response = await fetch(`/api/advertising-requests?${params}`);

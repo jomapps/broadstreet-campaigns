@@ -45,10 +45,10 @@ export default function AuditLogClient({ searchParams }: AuditLogClientProps) {
       });
 
       // Only show completed and cancelled requests for audit log
-      if (statusFilter && (statusFilter === 'Completed' || statusFilter === 'Cancelled')) {
+      if (statusFilter && (statusFilter === 'completed' || statusFilter === 'cancelled')) {
         params.set('status', statusFilter);
       } else {
-        params.set('status', 'Completed,Cancelled');
+        params.set('status', 'completed,cancelled');
       }
 
       // Add date range filter if specified
@@ -114,7 +114,7 @@ export default function AuditLogClient({ searchParams }: AuditLogClientProps) {
   const handleExport = async () => {
     try {
       const params = new URLSearchParams({
-        status: statusFilter || 'Completed,Cancelled',
+        status: statusFilter || 'completed,cancelled',
         search: searchQuery,
         export: 'csv',
       });

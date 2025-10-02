@@ -96,7 +96,7 @@ export default function RequestCard({
   };
 
   const handleView = () => {
-    router.push(`/sales/requests/${String(request._id)}`);
+    router.push(`/sales/request/${String(request._id)}/view`);
   };
 
   const requestNumber = String(request._id).slice(-8).toUpperCase();

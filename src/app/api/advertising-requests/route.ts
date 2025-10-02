@@ -24,9 +24,15 @@ export async function GET(request: NextRequest) {
     
     // Build filter query
     const filter: any = {};
-    
+
     if (status) {
-      filter.status = status;
+      // Handle comma-separated status values (e.g., "New,In Progress" or "Completed,Cancelled")
+      const statusList = status.split(',').map((s: string) => s.trim());
+      if (statusList.length > 1) {
+        filter.status = { $in: statusList };
+      } else {
+        filter.status = status;
+      }
     }
     
     if (assignedTo) {

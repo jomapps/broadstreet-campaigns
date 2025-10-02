@@ -75,9 +75,9 @@ export default function AuditLogContent({
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'Completed':
+      case 'completed':
         return 'default';
-      case 'Cancelled':
+      case 'cancelled':
         return 'destructive';
       default:
         return 'outline';
@@ -172,8 +172,8 @@ export default function AuditLogContent({
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
           >
             <option value="">All Closed</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
           </select>
 
           {/* Date Range Filter */}
